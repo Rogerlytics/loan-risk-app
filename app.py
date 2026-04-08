@@ -1,5 +1,13 @@
+import streamlit as st
+import pickle
+import pandas as pd
+
 # ==============================
-# PROFESSIONAL HEADER
+# LOAD MODEL
+# ==============================
+model = pickle.load(open("loan_model.pkl", "rb"))
+# ==============================
+# UI STARTS HERE (AFTER import)
 # ==============================
 st.title("AI Loan Risk Assessment System")
 st.markdown("Built with Machine Learning • Real-time Risk Prediction")
