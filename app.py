@@ -7,8 +7,9 @@ import pandas as pd
 # ==============================
 model = pickle.load(open("loan_model.pkl", "rb"))
 
-st.title("💰 Loan Risk & Repayment System")
-st.header("📥 Enter Loan Details")
+st.title("AI Loan Risk Assessment System")
+st.header("Built with Machine Learning • Real-time Risk Prediction")
+st.markdown("---")
 
 # ==============================
 # USER INPUTS
@@ -124,7 +125,7 @@ if st.button("Check Loan Risk"):
     # ==============================
     prediction = model.predict(input_data)[0]
 
-    st.subheader("🤖 AI Risk Prediction")
+    st.subheader("AI Risk Prediction")
     if prediction == 1:
         st.error("❌ High Risk of Default")
     else:
