@@ -36,7 +36,7 @@ def explain_risk(data):
 # ==============================
 # UI HEADER
 # ==============================
-st.title("💰 AI Loan Risk Assessment System")
+st.title("AI Loan Risk Assessment System")
 st.markdown("Built with Machine Learning • Real-time Risk Prediction")
 st.markdown("---")
 
