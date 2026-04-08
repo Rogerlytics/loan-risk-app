@@ -34,7 +34,7 @@ def explain_risk(data):
     return reasons
 
 # ==============================
-# PROFESSIONAL HEADER
+# UI HEADER
 # ==============================
 st.title("💰 AI Loan Risk Assessment System")
 st.markdown("Built with Machine Learning • Real-time Risk Prediction")
@@ -119,7 +119,9 @@ with btn1:
 with btn2:
     if st.button("🤖 Check Loan Risk"):
 
+        # ==============================
         # Encode employment
+        # ==============================
         if employment_type == "salaried":
             emp_type = 0
         elif employment_type == "self-employed":
@@ -127,8 +129,10 @@ with btn2:
         else:
             emp_type = 2
 
-        # Create DataFrame
-        input_data = pd.DataFrame({
+        # ==============================
+        # CREATE RAW DATA (for explanation)
+        # ==============================
+        raw_data = pd.DataFrame({
             'age': [age],
             'monthly_income': [income],
             'loan_amount': [loan_amount],
@@ -143,25 +147,26 @@ with btn2:
         })
 
         # Derived features
-        input_data['loan_to_value_ratio'] = (
-            input_data['loan_amount'] / input_data['car_value']
+        raw_data['loan_to_value_ratio'] = (
+            raw_data['loan_amount'] / raw_data['car_value']
             if car_value > 0 else 0
         )
 
-        input_data['income_to_loan_ratio'] = (
-            input_data['monthly_income'] / input_data['loan_amount']
+        raw_data['income_to_loan_ratio'] = (
+            raw_data['monthly_income'] / raw_data['loan_amount']
             if loan_amount > 0 else 0
         )
 
-        # Match model columns
+        # ==============================
+        # MODEL INPUT (strict)
+        # ==============================
+        input_data = raw_data.copy()
         input_data = input_data[model.feature_names_in_]
 
-        # Prediction
+        # ==============================
+        # PREDICTION
+        # ==============================
         prediction = model.predict(input_data)[0]
-
-        # ==============================
-        # 🔥 RISK SCORE
-        # ==============================
         probability = model.predict_proba(input_data)[0]
         risk_score = probability[1] * 100
 
@@ -176,13 +181,12 @@ with btn2:
             st.success("✅ Low Risk of Default")
 
         # ==============================
-        # 📊 RISK SCORE DISPLAY
+        # 📊 RISK SCORE
         # ==============================
         st.subheader("📊 Risk Score")
         st.progress(int(risk_score))
         st.write(f"Risk Probability: {risk_score:.2f}%")
 
-        # Interpretation
         if risk_score > 70:
             st.error("🔴 Very High Risk")
         elif risk_score > 40:
@@ -191,10 +195,10 @@ with btn2:
             st.success("🟢 Low Risk")
 
         # ==============================
-        # 🧠 EXPLANATION
+        # 🧠 EXPLANATION (uses raw_data)
         # ==============================
         st.subheader("📊 Risk Explanation")
-        reasons = explain_risk(input_data)
+        reasons = explain_risk(raw_data)
 
         for r in reasons:
             st.write(f"• {r}")
