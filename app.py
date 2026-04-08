@@ -6,17 +6,44 @@ import pandas as pd
 # LOAD MODEL
 # ==============================
 model = pickle.load(open("loan_model.pkl", "rb"))
+
 # ==============================
-# UI STARTS HERE (AFTER import)
+# 🔥 RISK EXPLANATION FUNCTION
 # ==============================
-st.title("AI Loan Risk Assessment System")
+def explain_risk(data):
+    reasons = []
+
+    if data['income_to_loan_ratio'].values[0] < 0.3:
+        reasons.append("Low income compared to loan amount")
+
+    if data['loan_to_value_ratio'].values[0] > 0.8:
+        reasons.append("Loan amount is high relative to car value")
+
+    if data['previous_defaults'].values[0] > 0:
+        reasons.append("History of previous loan defaults")
+
+    if data['previous_loans'].values[0] > 3:
+        reasons.append("Too many previous loans")
+
+    if data['age'].values[0] < 25:
+        reasons.append("Very young borrower (higher risk group)")
+
+    if len(reasons) == 0:
+        reasons.append("Strong financial profile")
+
+    return reasons
+
+# ==============================
+# PROFESSIONAL HEADER
+# ==============================
+st.title("💰 AI Loan Risk Assessment System")
 st.markdown("Built with Machine Learning • Real-time Risk Prediction")
 st.markdown("---")
 
 # ==============================
-# INPUT SECTION (COLUMNS)
+# INPUT SECTION
 # ==============================
-st.subheader(" Enter Loan Details")
+st.subheader("📥 Enter Loan Details")
 
 col1, col2 = st.columns(2)
 
@@ -42,19 +69,19 @@ employment_type = st.selectbox(
 st.markdown("---")
 
 # ==============================
-# SUMMARY SECTION
+# SUMMARY
 # ==============================
 st.subheader("📊 Input Summary")
 
-summary_col1, summary_col2 = st.columns(2)
+col3, col4 = st.columns(2)
 
-with summary_col1:
+with col3:
     st.write(f"💼 Income: KES {income:,}")
     st.write(f"💳 Loan: KES {loan_amount:,}")
     st.write(f"🚗 Car Value: KES {car_value:,}")
     st.write(f"📆 Loan Term: {loan_term} months")
 
-with summary_col2:
+with col4:
     st.write(f"👤 Age: {age}")
     st.write(f"🚘 Car Age: {car_age} years")
     st.write(f"📍 Mileage: {mileage:,} km")
@@ -63,7 +90,7 @@ with summary_col2:
 st.markdown("---")
 
 # ==============================
-# ACTION BUTTONS (SIDE BY SIDE)
+# BUTTONS
 # ==============================
 btn1, btn2 = st.columns(2)
 
@@ -92,7 +119,7 @@ with btn1:
 with btn2:
     if st.button("🤖 Check Loan Risk"):
 
-        # Encode employment type
+        # Encode employment
         if employment_type == "salaried":
             emp_type = 0
         elif employment_type == "self-employed":
@@ -129,11 +156,45 @@ with btn2:
         # Match model columns
         input_data = input_data[model.feature_names_in_]
 
+        # Prediction
         prediction = model.predict(input_data)[0]
 
+        # ==============================
+        # 🔥 RISK SCORE
+        # ==============================
+        probability = model.predict_proba(input_data)[0]
+        risk_score = probability[1] * 100
+
+        # ==============================
+        # RESULT
+        # ==============================
         st.subheader("🤖 AI Decision")
 
         if prediction == 1:
             st.error("❌ High Risk of Default")
         else:
             st.success("✅ Low Risk of Default")
+
+        # ==============================
+        # 📊 RISK SCORE DISPLAY
+        # ==============================
+        st.subheader("📊 Risk Score")
+        st.progress(int(risk_score))
+        st.write(f"Risk Probability: {risk_score:.2f}%")
+
+        # Interpretation
+        if risk_score > 70:
+            st.error("🔴 Very High Risk")
+        elif risk_score > 40:
+            st.warning("🟠 Moderate Risk")
+        else:
+            st.success("🟢 Low Risk")
+
+        # ==============================
+        # 🧠 EXPLANATION
+        # ==============================
+        st.subheader("📊 Risk Explanation")
+        reasons = explain_risk(input_data)
+
+        for r in reasons:
+            st.write(f"• {r}")
