@@ -8,36 +8,59 @@ import pandas as pd
 st.set_page_config(page_title="AI Loan Risk System", layout="wide")
 
 # ==============================
-# PREMIUM UI STYLING
+# DARK BLUE PREMIUM THEME
 # ==============================
 st.markdown("""
 <style>
-.main { background-color: #0e1117; }
 
-h1, h2, h3 { color: white; }
+.main {
+    background-color: #0b1426;
+}
 
+h1, h2, h3 {
+    color: #e6edf3;
+}
+
+/* Cards */
 .card {
-    background-color: #1c1f26;
+    background: linear-gradient(145deg, #111c36, #0d162b);
     padding: 20px;
-    border-radius: 15px;
+    border-radius: 16px;
     margin-bottom: 20px;
-    box-shadow: 0px 4px 12px rgba(0,0,0,0.4);
+    box-shadow: 0px 6px 20px rgba(0,0,0,0.6);
+    border: 1px solid rgba(0, 194, 255, 0.1);
 }
 
+/* KPI Cards */
 .kpi {
-    background-color: #111827;
+    background: #0f1c35;
     padding: 15px;
-    border-radius: 10px;
+    border-radius: 12px;
     text-align: center;
+    border: 1px solid rgba(0, 194, 255, 0.15);
 }
 
+/* Buttons */
 .stButton>button {
-    background-color: #00c2ff;
-    color: black;
+    background: linear-gradient(90deg, #00c2ff, #007bff);
+    color: white;
     border-radius: 10px;
     height: 3em;
     width: 100%;
+    font-weight: 600;
+    border: none;
 }
+
+/* Progress bar */
+.stProgress > div > div {
+    background-color: #00c2ff;
+}
+
+/* Sidebar */
+section[data-testid="stSidebar"] {
+    background-color: #0a1222;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -67,7 +90,7 @@ def explain_risk(data):
     if data['age'].values[0] < 25:
         reasons.append("Young borrower risk profile")
 
-    if not reasons:
+    if len(reasons) == 0:
         reasons.append("Strong financial profile")
 
     return reasons
@@ -91,7 +114,7 @@ def suggest_improvements(data):
     return suggestions
 
 # ==============================
-# SIDEBAR NAVIGATION
+# SIDEBAR
 # ==============================
 st.sidebar.title("Navigation")
 page = st.sidebar.radio("Go to", ["Loan Analysis", "About"])
@@ -100,34 +123,39 @@ page = st.sidebar.radio("Go to", ["Loan Analysis", "About"])
 # HEADER
 # ==============================
 st.markdown("""
-<h1 style='text-align:center;'>AI Loan Risk Assessment System</h1>
-<p style='text-align:center;color:gray;'>Machine Learning • Financial Risk Intelligence</p>
+<h1 style='text-align:center; color:#00c2ff;'>
+AI Loan Risk Assessment System
+</h1>
+<p style='text-align:center; color:#8b9bb4;'>
+Machine Learning • Financial Risk Intelligence
+</p>
 """, unsafe_allow_html=True)
 
 st.divider()
 
 # ==============================
-# LOAN ANALYSIS PAGE
+# MAIN PAGE
 # ==============================
 if page == "Loan Analysis":
 
     # ==============================
-    # INPUTS
+    # INPUT CARD
     # ==============================
     st.markdown('<div class="card">', unsafe_allow_html=True)
+
     st.subheader("Enter Loan Details")
 
     col1, col2 = st.columns(2)
 
     with col1:
         age = st.number_input("Age", 0, 100, 30)
-        income = st.number_input("Monthly Income", 0, 1000000, 50000)
-        loan_amount = st.number_input("Loan Amount", 0, 1000000, 200000)
+        income = st.number_input("Monthly Income (KES)", 0, 1000000, 50000)
+        loan_amount = st.number_input("Loan Amount (KES)", 0, 1000000, 200000)
         interest_rate = st.number_input("Interest Rate (%)", 0.0, 100.0, 12.5)
         loan_term = st.selectbox("Loan Term", [12, 24, 36, 48, 60])
 
     with col2:
-        car_value = st.number_input("Car Value", 0, 1000000, 400000)
+        car_value = st.number_input("Car Value (KES)", 0, 1000000, 400000)
         car_age = st.slider("Car Age", 0, 50, 5)
         mileage = st.number_input("Mileage", 0, 500000, 80000)
         previous_loans = st.number_input("Previous Loans", 0, 10, 1)
@@ -218,14 +246,14 @@ if page == "Loan Analysis":
             st.subheader("Risk Decision")
 
             if pred == 1:
-                st.error("High Risk")
+                st.error("❌ High Risk of Default")
             else:
-                st.success("Low Risk")
+                st.success("✅ Low Risk of Default")
 
             st.metric("Risk Score (%)", f"{prob:.2f}")
             st.progress(int(prob))
 
-            st.subheader("Explanation")
+            st.subheader("Risk Explanation")
             for r in explain_risk(raw):
                 st.write("- " + r)
 
@@ -240,15 +268,16 @@ if page == "Loan Analysis":
 # ==============================
 elif page == "About":
     st.markdown('<div class="card">', unsafe_allow_html=True)
+
     st.subheader("About This Project")
 
     st.write("""
 AI-powered system for assessing loan risk using borrower financial data.
 
-Designed for:
+Built for:
 - Financial institutions
+- Credit analysts
 - Loan officers
-- Credit risk analysts
 """)
 
     st.markdown('</div>', unsafe_allow_html=True)
