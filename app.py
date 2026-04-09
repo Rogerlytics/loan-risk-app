@@ -3,12 +3,51 @@ import pickle
 import pandas as pd
 
 # ==============================
+# PAGE CONFIG
+# ==============================
+st.set_page_config(page_title="AI Loan Risk System", layout="wide")
+
+# ==============================
+# PREMIUM UI STYLING
+# ==============================
+st.markdown("""
+<style>
+.main {
+    background-color: #0e1117;
+}
+
+h1, h2, h3 {
+    color: #ffffff;
+}
+
+/* Card container */
+.card {
+    background-color: #1c1f26;
+    padding: 20px;
+    border-radius: 15px;
+    margin-bottom: 20px;
+    box-shadow: 0px 4px 12px rgba(0,0,0,0.4);
+}
+
+/* Buttons */
+.stButton>button {
+    background-color: #00c2ff;
+    color: black;
+    border-radius: 10px;
+    height: 3em;
+    width: 100%;
+    font-weight: bold;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ==============================
 # LOAD MODEL
 # ==============================
 model = pickle.load(open("loan_model.pkl", "rb"))
 
 # ==============================
-# 🧠 RISK EXPLANATION FUNCTION
+# FUNCTIONS
 # ==============================
 def explain_risk(data):
     reasons = []
@@ -33,9 +72,7 @@ def explain_risk(data):
 
     return reasons
 
-# ==============================
-# 💡 RECOMMENDATION FUNCTION
-# ==============================
+
 def suggest_improvements(data):
     suggestions = []
 
@@ -54,15 +91,20 @@ def suggest_improvements(data):
     return suggestions
 
 # ==============================
-# UI HEADER
+# HEADER
 # ==============================
-st.title("💰 AI Loan Risk Assessment System")
-st.markdown("Built with Machine Learning • Real-time Risk Prediction")
-st.markdown("---")
+st.markdown("""
+<h1 style='text-align:center;'>💰 AI Loan Risk Assessment System</h1>
+<p style='text-align:center; color: gray;'>Built with Machine Learning • Real-time Risk Prediction</p>
+""", unsafe_allow_html=True)
+
+st.divider()
 
 # ==============================
-# INPUT SECTION
+# INPUT SECTION (CARD)
 # ==============================
+st.markdown('<div class="card">', unsafe_allow_html=True)
+
 st.subheader("📥 Enter Loan Details")
 
 col1, col2 = st.columns(2)
@@ -86,11 +128,13 @@ employment_type = st.selectbox(
     ["salaried", "self-employed", "informal"]
 )
 
-st.markdown("---")
+st.markdown('</div>', unsafe_allow_html=True)
 
 # ==============================
-# SUMMARY
+# SUMMARY (CARD)
 # ==============================
+st.markdown('<div class="card">', unsafe_allow_html=True)
+
 st.subheader("📊 Input Summary")
 
 col3, col4 = st.columns(2)
@@ -107,7 +151,9 @@ with col4:
     st.write(f"📍 Mileage: {mileage:,} km")
     st.write(f"📉 Defaults: {previous_defaults}")
 
-st.markdown("---")
+st.markdown('</div>', unsafe_allow_html=True)
+
+st.divider()
 
 # ==============================
 # BUTTONS
@@ -115,10 +161,13 @@ st.markdown("---")
 btn1, btn2 = st.columns(2)
 
 # ==============================
-# 💵 REPAYMENT CALCULATOR (UPGRADED)
+# REPAYMENT (CARD)
 # ==============================
 with btn1:
     if st.button("💵 Calculate Repayment"):
+
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+
         if loan_amount > 0 and interest_rate > 0 and loan_term > 0:
             monthly_rate = interest_rate / 100 / 12
 
@@ -127,26 +176,28 @@ with btn1:
             ) / ((1 + monthly_rate) ** loan_term - 1)
 
             total_payment = monthly_payment * loan_term
-
-            # ✅ NEW CALCULATIONS
             weekly_payment = monthly_payment / 4.33
             daily_payment = monthly_payment / 30
 
             st.success("📊 Repayment Results")
 
             st.write(f"💳 Monthly Payment: KES {monthly_payment:,.2f}")
-            st.write(f"📅 Weekly Payment: KES {weekly_payment:,.2f}")   # ✅ ADDED
-            st.write(f"🗓️ Daily Payment: KES {daily_payment:,.2f}")     # ✅ ADDED
+            st.write(f"📅 Weekly Payment: KES {weekly_payment:,.2f}")
+            st.write(f"🗓️ Daily Payment: KES {daily_payment:,.2f}")
             st.write(f"💰 Total Repayment: KES {total_payment:,.2f}")
 
         else:
             st.warning("Please enter valid loan details")
 
+        st.markdown('</div>', unsafe_allow_html=True)
+
 # ==============================
-# 🤖 LOAN RISK PREDICTION
+# RISK ANALYSIS (CARD)
 # ==============================
 with btn2:
     if st.button("🤖 Check Loan Risk"):
+
+        st.markdown('<div class="card">', unsafe_allow_html=True)
 
         if employment_type == "salaried":
             emp_type = 0
@@ -216,3 +267,5 @@ with btn2:
                 st.info(f"👉 {s}")
         else:
             st.success("✅ Your profile is financially healthy")
+
+        st.markdown('</div>', unsafe_allow_html=True)
