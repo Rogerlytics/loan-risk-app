@@ -51,7 +51,7 @@ The system provides:
 
 ##  Live Demo
 
-👉 [Click here to use the app](loan-risk-app-frgbfmd4vf3slainz4kvmv)
+👉 [Click here to use the app]([loan-risk-app-frgbfmd4vf3slainz4kvmv](https://loan-risk-app-pfjcxqbqzrdqkz9q7kx7ux.streamlit.app/))
 
 ---
 
