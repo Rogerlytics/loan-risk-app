@@ -138,11 +138,8 @@ st.divider()
 # ==============================
 if page == "Loan Analysis":
 
-    # ==============================
     # INPUT CARD
-    # ==============================
     st.markdown('<div class="card">', unsafe_allow_html=True)
-
     st.subheader("Enter Loan Details")
 
     col1, col2 = st.columns(2)
@@ -165,23 +162,17 @@ if page == "Loan Analysis":
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # ==============================
-    # KPI CARDS
-    # ==============================
+    # KPI
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.subheader("Key Metrics")
 
     k1, k2, k3 = st.columns(3)
-
     k1.markdown(f"<div class='kpi'><h3>Income</h3><p>KES {income:,}</p></div>", unsafe_allow_html=True)
     k2.markdown(f"<div class='kpi'><h3>Loan</h3><p>KES {loan_amount:,}</p></div>", unsafe_allow_html=True)
     k3.markdown(f"<div class='kpi'><h3>Interest</h3><p>{interest_rate}%</p></div>", unsafe_allow_html=True)
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # ==============================
-    # BUTTONS
-    # ==============================
     btn1, btn2 = st.columns(2)
 
     # ==============================
@@ -211,7 +202,7 @@ if page == "Loan Analysis":
             st.markdown('</div>', unsafe_allow_html=True)
 
     # ==============================
-    # RISK ANALYSIS
+    # RISK ANALYSIS (UPDATED FLOW)
     # ==============================
     with btn2:
         if st.button("Analyze Risk"):
@@ -220,7 +211,7 @@ if page == "Loan Analysis":
 
             emp = 0 if employment_type == "salaried" else 1 if employment_type == "self-employed" else 2
 
-            raw = pd.DataFrame({
+            raw_data = pd.DataFrame({
                 'age':[age],
                 'monthly_income':[income],
                 'loan_amount':[loan_amount],
@@ -234,32 +225,50 @@ if page == "Loan Analysis":
                 'employment_type':[emp]
             })
 
-            raw['loan_to_value_ratio'] = loan_amount / car_value if car_value > 0 else 0
-            raw['income_to_loan_ratio'] = income / loan_amount if loan_amount > 0 else 0
+            raw_data['loan_to_value_ratio'] = loan_amount / car_value if car_value > 0 else 0
+            raw_data['income_to_loan_ratio'] = income / loan_amount if loan_amount > 0 else 0
 
-            inp = raw.copy()
-            inp = inp[model.feature_names_in_]
+            input_data = raw_data.copy()
+            input_data = input_data[model.feature_names_in_]
 
-            pred = model.predict(inp)[0]
-            prob = model.predict_proba(inp)[0][1] * 100
+            prediction = model.predict(input_data)[0]
+            probability = model.predict_proba(input_data)[0]
+            risk_score = probability[1] * 100
 
-            st.subheader("Risk Decision")
+            # RESULT
+            st.subheader("AI Decision")
 
-            if pred == 1:
+            if prediction == 1:
                 st.error("❌ High Risk of Default")
             else:
                 st.success("✅ Low Risk of Default")
 
-            st.metric("Risk Score (%)", f"{prob:.2f}")
-            st.progress(int(prob))
+            # RISK SCORE
+            st.subheader("Risk Score")
+            st.progress(int(risk_score))
+            st.write(f"Risk Probability: {risk_score:.2f}%")
 
+            if risk_score > 70:
+                st.error("🔴 Very High Risk")
+            elif risk_score > 40:
+                st.warning("🟠 Moderate Risk")
+            else:
+                st.success("🟢 Low Risk")
+
+            # EXPLANATION
             st.subheader("Risk Explanation")
-            for r in explain_risk(raw):
-                st.write("- " + r)
+            for r in explain_risk(raw_data):
+                st.write(f"• {r}")
 
+            # RECOMMENDATIONS
             st.subheader("Recommendations")
-            for s in suggest_improvements(raw):
-                st.write("- " + s)
+            suggestions = suggest_improvements(raw_data)
+
+            if suggestions:
+                for s in suggestions:
+                    st.info(f"👉 {s}")
+            else:
+                st.success("✅ Your profile is financially healthy")
 
             st.markdown('</div>', unsafe_allow_html=True)
 
@@ -274,7 +283,7 @@ elif page == "About":
     st.write("""
 AI-powered system for assessing loan risk using borrower financial data.
 
-Built for:
+Designed for:
 - Financial institutions
 - Credit analysts
 - Loan officers
