@@ -1,24 +1,24 @@
 # loan-risk-app
-# 💰 AI Loan Risk Assessment System
+#  AI Loan Risk Assessment System
 
-## 📌 Project Overview
+##  Project Overview
 This project is a Machine Learning-powered web application that predicts the risk of loan default based on borrower and vehicle data.
 
 It helps simulate real-world financial decision-making by assessing whether a loan applicant is high or low risk.
 
 ---
 
-## 🚀 Features
+##  Features
 
-- 🤖 AI-powered loan risk prediction
-- 📊 Risk score (probability of default)
-- 🧠 Explainable AI (why the decision was made)
-- 💵 Loan repayment calculator
-- 🎨 Clean and interactive UI (Streamlit)
+-  AI-powered loan risk prediction
+-  Risk score (probability of default)
+-  Explainable AI (why the decision was made)
+-  Loan repayment calculator
+-  Clean and interactive UI (Streamlit)
 
 ---
 
-## 🧠 Machine Learning
+##  Machine Learning
 
 The model was trained using features such as:
 - Borrower demographics (age, income)
@@ -32,7 +32,7 @@ The model was trained using features such as:
 
 ---
 
-## 📊 Risk Interpretation
+##  Risk Interpretation
 
 The system provides:
 - Risk classification (High / Low)
@@ -41,7 +41,7 @@ The system provides:
 
 ---
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 - Python
 - Pandas
@@ -50,19 +50,19 @@ The system provides:
 
 ---
 
-## 🌐 Live Demo
+##  Live Demo
 
 👉 [Click here to use the app](YOUR_STREAMLIT_LINK_HERE)
 
 ---
 
-## 📂 Project Structure
+##  Project Structure
 
 
 
 ---
 
-## 🎯 Key Insights
+##  Key Insights
 
 - High loan-to-value ratio increases risk
 - Low income relative to loan increases default probability
@@ -70,7 +70,7 @@ The system provides:
 
 ---
 
-## 📌 Future Improvements
+##  Future Improvements
 
 - Add recommendation engine (how to reduce risk)
 - Add visual analytics (charts)
@@ -78,7 +78,7 @@ The system provides:
 
 ---
 
-## 👤 Author
+##  Author
 
 Mr. Rogers  
 Data Analyst | Machine Learning Enthusiast
