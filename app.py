@@ -1,6 +1,7 @@
 import streamlit as st
 import pickle
 import pandas as pd
+import matplotlib.pyplot as plt  # ✅ ADDED FOR CHARTS
 
 # ==============================
 # LOAD MODEL
@@ -115,7 +116,7 @@ st.markdown("---")
 btn1, btn2 = st.columns(2)
 
 # ==============================
-#  REPAYMENT CALCULATOR (UPGRADED)
+#  REPAYMENT CALCULATOR
 # ==============================
 with btn1:
     if st.button(" Calculate Repayment"):
@@ -128,26 +129,27 @@ with btn1:
 
             total_payment = monthly_payment * loan_term
 
-            # ✅ NEW CALCULATIONS
+            # ✅ NEW
             weekly_payment = monthly_payment / 4.33
             daily_payment = monthly_payment / 30
 
             st.success(" Repayment Results")
 
             st.write(f" Monthly Payment: KES {monthly_payment:,.2f}")
-            st.write(f" Weekly Payment: KES {weekly_payment:,.2f}")   # ✅ ADDED
-            st.write(f" Daily Payment: KES {daily_payment:,.2f}")     # ✅ ADDED
+            st.write(f" Weekly Payment: KES {weekly_payment:,.2f}")
+            st.write(f" Daily Payment: KES {daily_payment:,.2f}")
             st.write(f" Total Repayment: KES {total_payment:,.2f}")
 
         else:
             st.warning("Please enter valid loan details")
 
 # ==============================
-# 🤖 LOAN RISK PREDICTION
+#  LOAN RISK PREDICTION
 # ==============================
 with btn2:
     if st.button(" Check Loan Risk"):
 
+        # Encode employment
         if employment_type == "salaried":
             emp_type = 0
         elif employment_type == "self-employed":
@@ -155,6 +157,7 @@ with btn2:
         else:
             emp_type = 2
 
+        # RAW DATA
         raw_data = pd.DataFrame({
             'age': [age],
             'monthly_income': [income],
@@ -169,6 +172,7 @@ with btn2:
             'employment_type': [emp_type]
         })
 
+        # Derived features
         raw_data['loan_to_value_ratio'] = (
             raw_data['loan_amount'] / raw_data['car_value']
             if car_value > 0 else 0
@@ -179,13 +183,16 @@ with btn2:
             if loan_amount > 0 else 0
         )
 
+        # MODEL INPUT
         input_data = raw_data.copy()
         input_data = input_data[model.feature_names_in_]
 
+        # Prediction
         prediction = model.predict(input_data)[0]
         probability = model.predict_proba(input_data)[0]
         risk_score = probability[1] * 100
 
+        # RESULT
         st.subheader("🤖 AI Decision")
 
         if prediction == 1:
@@ -193,6 +200,7 @@ with btn2:
         else:
             st.success("✅ Low Risk of Default")
 
+        # RISK SCORE
         st.subheader(" Risk Score")
         st.progress(int(risk_score))
         st.write(f"Risk Probability: {risk_score:.2f}%")
@@ -204,11 +212,37 @@ with btn2:
         else:
             st.success("🟢 Low Risk")
 
+        # ==============================
+        #  CHART 1: Loan vs Income
+        # ==============================
+        st.subheader(" Loan vs Income Analysis")
+
+        fig1, ax1 = plt.subplots()
+        ax1.bar(['Income', 'Loan Amount'], [income, loan_amount])
+        ax1.set_title("Income vs Loan Amount")
+
+        st.pyplot(fig1)
+
+        # ==============================
+        #  CHART 2: Risk Score
+        # ==============================
+        st.subheader(" Risk Visualization")
+
+        fig2, ax2 = plt.subplots()
+        ax2.barh(['Risk Level'], [risk_score])
+        ax2.set_xlim(0, 100)
+        ax2.set_title("Risk Score (%)")
+
+        st.pyplot(fig2)
+
+        # EXPLANATION
         st.subheader(" Risk Explanation")
         for r in explain_risk(raw_data):
             st.write(f"• {r}")
 
+        # RECOMMENDATIONS
         st.subheader(" Recommendations")
+
         suggestions = suggest_improvements(raw_data)
 
         if suggestions:
