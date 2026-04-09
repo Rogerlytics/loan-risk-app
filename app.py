@@ -33,9 +33,8 @@ def explain_risk(data):
 
     return reasons
 
-
 # ==============================
-#  SMART RECOMMENDATION FUNCTION (NEW)
+#  RECOMMENDATION FUNCTION
 # ==============================
 def suggest_improvements(data):
     suggestions = []
@@ -53,7 +52,6 @@ def suggest_improvements(data):
         suggestions.append("Reduce existing loan obligations")
 
     return suggestions
-
 
 # ==============================
 # UI HEADER
@@ -117,31 +115,39 @@ st.markdown("---")
 btn1, btn2 = st.columns(2)
 
 # ==============================
-# REPAYMENT CALCULATOR
+#  REPAYMENT CALCULATOR (UPGRADED)
 # ==============================
 with btn1:
     if st.button(" Calculate Repayment"):
         if loan_amount > 0 and interest_rate > 0 and loan_term > 0:
             monthly_rate = interest_rate / 100 / 12
+
             monthly_payment = (
                 loan_amount * monthly_rate * (1 + monthly_rate) ** loan_term
             ) / ((1 + monthly_rate) ** loan_term - 1)
 
             total_payment = monthly_payment * loan_term
 
+            # ✅ NEW CALCULATIONS
+            weekly_payment = monthly_payment / 4.33
+            daily_payment = monthly_payment / 30
+
             st.success(" Repayment Results")
-            st.write(f"Monthly Payment: KES {monthly_payment:,.2f}")
-            st.write(f"Total Repayment: KES {total_payment:,.2f}")
+
+            st.write(f" Monthly Payment: KES {monthly_payment:,.2f}")
+            st.write(f" Weekly Payment: KES {weekly_payment:,.2f}")   # ✅ ADDED
+            st.write(f" Daily Payment: KES {daily_payment:,.2f}")     # ✅ ADDED
+            st.write(f" Total Repayment: KES {total_payment:,.2f}")
+
         else:
             st.warning("Please enter valid loan details")
 
 # ==============================
-# LOAN RISK PREDICTION
+# 🤖 LOAN RISK PREDICTION
 # ==============================
 with btn2:
     if st.button(" Check Loan Risk"):
 
-        # Encode employment
         if employment_type == "salaried":
             emp_type = 0
         elif employment_type == "self-employed":
@@ -149,9 +155,6 @@ with btn2:
         else:
             emp_type = 2
 
-        # ==============================
-        # RAW DATA (for explanation + recommendations)
-        # ==============================
         raw_data = pd.DataFrame({
             'age': [age],
             'monthly_income': [income],
@@ -166,7 +169,6 @@ with btn2:
             'employment_type': [emp_type]
         })
 
-        # Derived features
         raw_data['loan_to_value_ratio'] = (
             raw_data['loan_amount'] / raw_data['car_value']
             if car_value > 0 else 0
@@ -177,32 +179,20 @@ with btn2:
             if loan_amount > 0 else 0
         )
 
-        # ==============================
-        # MODEL INPUT (strict)
-        # ==============================
         input_data = raw_data.copy()
         input_data = input_data[model.feature_names_in_]
 
-        # ==============================
-        # PREDICTION
-        # ==============================
         prediction = model.predict(input_data)[0]
         probability = model.predict_proba(input_data)[0]
         risk_score = probability[1] * 100
 
-        # ==============================
-        # RESULT
-        # ==============================
-        st.subheader(" AI Decision")
+        st.subheader("🤖 AI Decision")
 
         if prediction == 1:
             st.error("❌ High Risk of Default")
         else:
             st.success("✅ Low Risk of Default")
 
-        # ==============================
-        #  RISK SCORE
-        # ==============================
         st.subheader(" Risk Score")
         st.progress(int(risk_score))
         st.write(f"Risk Probability: {risk_score:.2f}%")
@@ -214,20 +204,11 @@ with btn2:
         else:
             st.success("🟢 Low Risk")
 
-        # ==============================
-        #  EXPLANATION
-        # ==============================
         st.subheader(" Risk Explanation")
-        reasons = explain_risk(raw_data)
-
-        for r in reasons:
+        for r in explain_risk(raw_data):
             st.write(f"• {r}")
 
-        # ==============================
-        #  RECOMMENDATIONS (NEW)
-        # ==============================
         st.subheader(" Recommendations")
-
         suggestions = suggest_improvements(raw_data)
 
         if suggestions:
