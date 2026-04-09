@@ -1,37 +1,7 @@
 import streamlit as st
 import pickle
 import pandas as pd
-import matplotlib.pyplot as plt
-
-# ==============================
-# PAGE CONFIG
-# ==============================
-st.set_page_config(page_title="AI Loan Risk System", layout="wide")
-
-# ==============================
-# PREMIUM UI
-# ==============================
-st.markdown("""
-<style>
-.main { background-color: #0e1117; }
-h1, h2, h3 { color: white; }
-
-.card {
-    background-color: #1c1f26;
-    padding: 20px;
-    border-radius: 15px;
-    margin-bottom: 15px;
-}
-
-.stButton>button {
-    background-color: #00c2ff;
-    color: black;
-    border-radius: 10px;
-    height: 3em;
-    width: 100%;
-}
-</style>
-""", unsafe_allow_html=True)
+import matplotlib.pyplot as plt  # ✅ ADDED FOR CHARTS
 
 # ==============================
 # LOAD MODEL
@@ -39,7 +9,7 @@ h1, h2, h3 { color: white; }
 model = pickle.load(open("loan_model.pkl", "rb"))
 
 # ==============================
-# FUNCTIONS
+# 🧠 RISK EXPLANATION FUNCTION
 # ==============================
 def explain_risk(data):
     reasons = []
@@ -48,115 +18,138 @@ def explain_risk(data):
         reasons.append("Low income compared to loan amount")
 
     if data['loan_to_value_ratio'].values[0] > 0.8:
-        reasons.append("Loan too high vs car value")
+        reasons.append("Loan amount is high relative to car value")
 
     if data['previous_defaults'].values[0] > 0:
-        reasons.append("Previous defaults")
+        reasons.append("History of previous loan defaults")
 
     if data['previous_loans'].values[0] > 3:
-        reasons.append("Too many loans")
+        reasons.append("Too many previous loans")
 
-    if not reasons:
-        reasons.append("Strong profile")
+    if data['age'].values[0] < 25:
+        reasons.append("Very young borrower (higher risk group)")
+
+    if len(reasons) == 0:
+        reasons.append("Strong financial profile")
 
     return reasons
 
-
+# ==============================
+# 💡 RECOMMENDATION FUNCTION
+# ==============================
 def suggest_improvements(data):
     suggestions = []
 
     if data['income_to_loan_ratio'].values[0] < 0.3:
-        suggestions.append("Increase income or reduce loan")
+        suggestions.append("Consider increasing income or reducing loan amount")
 
     if data['loan_to_value_ratio'].values[0] > 0.8:
-        suggestions.append("Reduce loan or increase collateral")
+        suggestions.append("Reduce loan amount or increase collateral value")
 
     if data['previous_defaults'].values[0] > 0:
-        suggestions.append("Improve credit history")
+        suggestions.append("Improve credit history before applying")
+
+    if data['previous_loans'].values[0] > 3:
+        suggestions.append("Reduce existing loan obligations")
 
     return suggestions
 
 # ==============================
-# HEADER
+# UI HEADER
 # ==============================
-st.markdown("""
-<h1 style='text-align:center;'>AI Loan Risk Assessment System</h1>
-<p style='text-align:center;color:gray;'>Machine Learning • Financial Insights</p>
-""", unsafe_allow_html=True)
-
-st.divider()
+st.title("💰 AI Loan Risk Assessment System")
+st.markdown("Built with Machine Learning • Real-time Risk Prediction")
+st.markdown("---")
 
 # ==============================
-# SIDEBAR
+# INPUT SECTION
 # ==============================
-section = st.sidebar.radio("Navigation", ["Loan Analysis", "About"])
+st.subheader("📥 Enter Loan Details")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    age = st.number_input("Borrower Age", min_value=0, value=30)
+    income = st.number_input("Monthly Income (KES)", min_value=0, value=50000)
+    loan_amount = st.number_input("Loan Amount (KES)", min_value=0, value=200000)
+    interest_rate = st.number_input("Interest Rate (%)", min_value=0.0, value=12.5)
+    loan_term = st.selectbox("Loan Term (Months)", [12, 18, 24, 36, 48, 60])
+
+with col2:
+    car_value = st.number_input("Car Value (KES)", min_value=0, value=400000)
+    car_age = st.slider("Car Age (Years)", 0, 50, 5)
+    mileage = st.number_input("Car Mileage (km)", min_value=0, value=80000)
+    previous_loans = st.number_input("Previous Loans", min_value=0, value=1)
+    previous_defaults = st.number_input("Previous Defaults", min_value=0, value=0)
+
+employment_type = st.selectbox(
+    "Employment Type",
+    ["salaried", "self-employed", "informal"]
+)
+
+st.markdown("---")
 
 # ==============================
-# MAIN
+# SUMMARY
 # ==============================
-if section == "Loan Analysis":
+st.subheader("📊 Input Summary")
 
-    # INPUT CARD
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.subheader("Enter Loan Details")
+col3, col4 = st.columns(2)
 
-    col1, col2 = st.columns(2)
+with col3:
+    st.write(f"💼 Income: KES {income:,}")
+    st.write(f"💳 Loan: KES {loan_amount:,}")
+    st.write(f"🚗 Car Value: KES {car_value:,}")
+    st.write(f"📆 Loan Term: {loan_term} months")
 
-    with col1:
-        age = st.number_input("Age", 0, 100, 30)
-        income = st.number_input("Monthly Income", 0, 1000000, 50000)
-        loan_amount = st.number_input("Loan Amount", 0, 1000000, 200000)
-        interest_rate = st.number_input("Interest Rate", 0.0, 100.0, 12.5)
-        loan_term = st.selectbox("Loan Term", [12, 24, 36, 48, 60])
+with col4:
+    st.write(f"👤 Age: {age}")
+    st.write(f"🚘 Car Age: {car_age} years")
+    st.write(f"📍 Mileage: {mileage:,} km")
+    st.write(f"📉 Defaults: {previous_defaults}")
 
-    with col2:
-        car_value = st.number_input("Car Value", 0, 1000000, 400000)
-        car_age = st.slider("Car Age", 0, 50, 5)
-        mileage = st.number_input("Mileage", 0, 500000, 80000)
-        previous_loans = st.number_input("Previous Loans", 0, 10, 1)
-        previous_defaults = st.number_input("Previous Defaults", 0, 10, 0)
+st.markdown("---")
 
-    employment_type = st.selectbox("Employment Type", ["salaried", "self-employed", "informal"])
+# ==============================
+# BUTTONS
+# ==============================
+btn1, btn2 = st.columns(2)
 
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.divider()
-
-    btn1, btn2 = st.columns(2)
-
-    # ==============================
-    # REPAYMENT
-    # ==============================
-    with btn1:
-        if st.button("Calculate Repayment"):
+# ==============================
+# 💵 REPAYMENT CALCULATOR
+# ==============================
+with btn1:
+    if st.button("💵 Calculate Repayment"):
+        if loan_amount > 0 and interest_rate > 0 and loan_term > 0:
             monthly_rate = interest_rate / 100 / 12
 
-            monthly = (
+            monthly_payment = (
                 loan_amount * monthly_rate * (1 + monthly_rate) ** loan_term
             ) / ((1 + monthly_rate) ** loan_term - 1)
 
-            weekly = monthly / 4.33
-            daily = monthly / 30
+            total_payment = monthly_payment * loan_term
 
-            st.markdown('<div class="card">', unsafe_allow_html=True)
-            st.subheader("Repayment")
+            # ✅ NEW
+            weekly_payment = monthly_payment / 4.33
+            daily_payment = monthly_payment / 30
 
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Monthly", f"{monthly:,.2f}")
-            c2.metric("Weekly", f"{weekly:,.2f}")
-            c3.metric("Daily", f"{daily:,.2f}")
+            st.success("📊 Repayment Results")
 
-            st.markdown('</div>', unsafe_allow_html=True)
+            st.write(f"💳 Monthly Payment: KES {monthly_payment:,.2f}")
+            st.write(f"📅 Weekly Payment: KES {weekly_payment:,.2f}")
+            st.write(f"🗓️ Daily Payment: KES {daily_payment:,.2f}")
+            st.write(f"💰 Total Repayment: KES {total_payment:,.2f}")
+
+        else:
+            st.warning("Please enter valid loan details")
 
 # ==============================
-# LOAN RISK PREDICTION
+# 🤖 LOAN RISK PREDICTION
 # ==============================
 with btn2:
     if st.button("🤖 Check Loan Risk"):
 
-        # ==============================
         # Encode employment
-        # ==============================
         if employment_type == "salaried":
             emp_type = 0
         elif employment_type == "self-employed":
@@ -164,9 +157,7 @@ with btn2:
         else:
             emp_type = 2
 
-        # ==============================
-        # CREATE RAW DATA (for explanation)
-        # ==============================
+        # RAW DATA
         raw_data = pd.DataFrame({
             'age': [age],
             'monthly_income': [income],
@@ -192,22 +183,16 @@ with btn2:
             if loan_amount > 0 else 0
         )
 
-        # ==============================
-        # MODEL INPUT (strict)
-        # ==============================
+        # MODEL INPUT
         input_data = raw_data.copy()
         input_data = input_data[model.feature_names_in_]
 
-        # ==============================
-        # PREDICTION
-        # ==============================
+        # Prediction
         prediction = model.predict(input_data)[0]
         probability = model.predict_proba(input_data)[0]
         risk_score = probability[1] * 100
 
-        # ==============================
         # RESULT
-        # ==============================
         st.subheader("🤖 AI Decision")
 
         if prediction == 1:
@@ -215,9 +200,7 @@ with btn2:
         else:
             st.success("✅ Low Risk of Default")
 
-        # ==============================
-        # 📊 RISK SCORE
-        # ==============================
+        # RISK SCORE
         st.subheader("📊 Risk Score")
         st.progress(int(risk_score))
         st.write(f"Risk Probability: {risk_score:.2f}%")
@@ -230,10 +213,40 @@ with btn2:
             st.success("🟢 Low Risk")
 
         # ==============================
-        # 🧠 EXPLANATION (uses raw_data)
+        # 📊 CHART 1: Loan vs Income
         # ==============================
-        st.subheader("📊 Risk Explanation")
-        reasons = explain_risk(raw_data)
+        st.subheader("📊 Loan vs Income Analysis")
 
-        for r in reasons:
+        fig1, ax1 = plt.subplots()
+        ax1.bar(['Income', 'Loan Amount'], [income, loan_amount])
+        ax1.set_title("Income vs Loan Amount")
+
+        st.pyplot(fig1)
+
+        # ==============================
+        # 📉 CHART 2: Risk Score
+        # ==============================
+        st.subheader("📉 Risk Visualization")
+
+        fig2, ax2 = plt.subplots()
+        ax2.barh(['Risk Level'], [risk_score])
+        ax2.set_xlim(0, 100)
+        ax2.set_title("Risk Score (%)")
+
+        st.pyplot(fig2)
+
+        # EXPLANATION
+        st.subheader("📊 Risk Explanation")
+        for r in explain_risk(raw_data):
             st.write(f"• {r}")
+
+        # RECOMMENDATIONS
+        st.subheader("💡 Recommendations")
+
+        suggestions = suggest_improvements(raw_data)
+
+        if suggestions:
+            for s in suggestions:
+                st.info(f"👉 {s}")
+        else:
+            st.success("✅ Your profile is financially healthy")
