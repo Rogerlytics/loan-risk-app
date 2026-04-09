@@ -57,3 +57,28 @@ The system provides:
 ---
 
 ## 📂 Project Structure
+
+
+
+---
+
+## 🎯 Key Insights
+
+- High loan-to-value ratio increases risk
+- Low income relative to loan increases default probability
+- Previous defaults strongly impact risk classification
+
+---
+
+## 📌 Future Improvements
+
+- Add recommendation engine (how to reduce risk)
+- Add visual analytics (charts)
+- Improve model performance with more data
+
+---
+
+## 👤 Author
+
+Mr. Rogers  
+Data Analyst | Machine Learning Enthusiast
