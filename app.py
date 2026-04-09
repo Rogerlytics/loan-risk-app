@@ -37,7 +37,6 @@ h1, h2, h3, h4 {
     width: 100%;
     font-weight: bold;
 }
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -106,10 +105,7 @@ st.divider()
 # SIDEBAR
 # ==============================
 st.sidebar.title("Navigation")
-section = st.sidebar.radio(
-    "Go to",
-    ["Loan Analysis", "About"]
-)
+section = st.sidebar.radio("Go to", ["Loan Analysis", "About"])
 
 # ==============================
 # MAIN SECTION
@@ -171,7 +167,7 @@ if section == "Loan Analysis":
             st.markdown('</div>', unsafe_allow_html=True)
 
     # ==============================
-    # RISK ANALYSIS
+    # RISK ANALYSIS (WITH EMOJIS)
     # ==============================
     with btn2:
         if st.button("Analyze Risk"):
@@ -211,7 +207,10 @@ if section == "Loan Analysis":
                 st.metric("Risk Score (%)", f"{risk_score:.2f}")
 
             with colY:
-                st.metric("Decision", "High Risk" if prediction == 1 else "Low Risk")
+                if prediction == 1:
+                    st.error("❌ High Risk of Default")
+                else:
+                    st.success("✅ Low Risk of Default")
 
             st.markdown('</div>', unsafe_allow_html=True)
 
@@ -226,7 +225,7 @@ if section == "Loan Analysis":
             st.pyplot(fig1)
 
             fig2, ax2 = plt.subplots()
-            ax2.barh(['Risk'], [risk_score])
+            ax2.barh(['Risk'], [risk_score])  # horizontal bar (downward style)
             ax2.set_xlim(0, 100)
             st.pyplot(fig2)
 
@@ -260,16 +259,16 @@ if section == "Loan Analysis":
             st.markdown('</div>', unsafe_allow_html=True)
 
 # ==============================
-# ABOUT SECTION
+# ABOUT
 # ==============================
 elif section == "About":
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.subheader("About This Project")
 
     st.write("""
-This application uses machine learning to evaluate loan risk based on borrower and asset data.
+This application uses machine learning to evaluate loan risk based on borrower and financial data.
 
-Features include:
+Features:
 - Risk prediction
 - Financial analysis
 - Repayment calculation
