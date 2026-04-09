@@ -1,7 +1,45 @@
 import streamlit as st
 import pickle
 import pandas as pd
-import matplotlib.pyplot as plt  # ✅ ADDED FOR CHARTS
+import matplotlib.pyplot as plt
+
+# ==============================
+# PAGE CONFIG
+# ==============================
+st.set_page_config(page_title="AI Loan Risk System", layout="wide")
+
+# ==============================
+# PREMIUM UI STYLING
+# ==============================
+st.markdown("""
+<style>
+.main {
+    background-color: #0e1117;
+}
+
+h1, h2, h3, h4 {
+    color: #ffffff;
+}
+
+.card {
+    background-color: #1c1f26;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0px 4px 15px rgba(0,0,0,0.4);
+    margin-bottom: 15px;
+}
+
+.stButton>button {
+    background-color: #00c2ff;
+    color: black;
+    border-radius: 10px;
+    height: 3em;
+    width: 100%;
+    font-weight: bold;
+}
+
+</style>
+""", unsafe_allow_html=True)
 
 # ==============================
 # LOAD MODEL
@@ -9,7 +47,7 @@ import matplotlib.pyplot as plt  # ✅ ADDED FOR CHARTS
 model = pickle.load(open("loan_model.pkl", "rb"))
 
 # ==============================
-#  RISK EXPLANATION FUNCTION
+# FUNCTIONS
 # ==============================
 def explain_risk(data):
     reasons = []
@@ -27,226 +65,215 @@ def explain_risk(data):
         reasons.append("Too many previous loans")
 
     if data['age'].values[0] < 25:
-        reasons.append("Very young borrower (higher risk group)")
+        reasons.append("Young borrower risk profile")
 
     if len(reasons) == 0:
         reasons.append("Strong financial profile")
 
     return reasons
 
-# ==============================
-#  RECOMMENDATION FUNCTION
-# ==============================
+
 def suggest_improvements(data):
     suggestions = []
 
     if data['income_to_loan_ratio'].values[0] < 0.3:
-        suggestions.append("Consider increasing income or reducing loan amount")
+        suggestions.append("Increase income or reduce loan amount")
 
     if data['loan_to_value_ratio'].values[0] > 0.8:
-        suggestions.append("Reduce loan amount or increase collateral value")
+        suggestions.append("Reduce loan or increase collateral value")
 
     if data['previous_defaults'].values[0] > 0:
         suggestions.append("Improve credit history before applying")
 
     if data['previous_loans'].values[0] > 3:
-        suggestions.append("Reduce existing loan obligations")
+        suggestions.append("Reduce number of existing loans")
 
     return suggestions
 
 # ==============================
-# UI HEADER
+# HEADER
 # ==============================
-st.title(" AI Loan Risk Assessment System")
-st.markdown("Built with Machine Learning • Real-time Risk Prediction")
-st.markdown("---")
+st.markdown("""
+<h1 style='text-align: center;'>AI Loan Risk Assessment System</h1>
+<p style='text-align: center; color: gray;'>
+Machine Learning • Risk Scoring • Financial Insights
+</p>
+""", unsafe_allow_html=True)
+
+st.divider()
 
 # ==============================
-# INPUT SECTION
+# SIDEBAR
 # ==============================
-st.subheader("📥 Enter Loan Details")
-
-col1, col2 = st.columns(2)
-
-with col1:
-    age = st.number_input("Borrower Age", min_value=0, value=30)
-    income = st.number_input("Monthly Income (KES)", min_value=0, value=50000)
-    loan_amount = st.number_input("Loan Amount (KES)", min_value=0, value=200000)
-    interest_rate = st.number_input("Interest Rate (%)", min_value=0.0, value=12.5)
-    loan_term = st.selectbox("Loan Term (Months)", [12, 18, 24, 36, 48, 60])
-
-with col2:
-    car_value = st.number_input("Car Value (KES)", min_value=0, value=400000)
-    car_age = st.slider("Car Age (Years)", 0, 50, 5)
-    mileage = st.number_input("Car Mileage (km)", min_value=0, value=80000)
-    previous_loans = st.number_input("Previous Loans", min_value=0, value=1)
-    previous_defaults = st.number_input("Previous Defaults", min_value=0, value=0)
-
-employment_type = st.selectbox(
-    "Employment Type",
-    ["salaried", "self-employed", "informal"]
+st.sidebar.title("Navigation")
+section = st.sidebar.radio(
+    "Go to",
+    ["Loan Analysis", "About"]
 )
 
-st.markdown("---")
-
 # ==============================
-# SUMMARY
+# MAIN SECTION
 # ==============================
-st.subheader(" Input Summary")
+if section == "Loan Analysis":
 
-col3, col4 = st.columns(2)
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.subheader("Enter Loan Details")
 
-with col3:
-    st.write(f" Income: KES {income:,}")
-    st.write(f" Loan: KES {loan_amount:,}")
-    st.write(f" Car Value: KES {car_value:,}")
-    st.write(f" Loan Term: {loan_term} months")
+    col1, col2 = st.columns(2)
 
-with col4:
-    st.write(f" Age: {age}")
-    st.write(f" Car Age: {car_age} years")
-    st.write(f" Mileage: {mileage:,} km")
-    st.write(f" Defaults: {previous_defaults}")
+    with col1:
+        age = st.number_input("Age", min_value=0, value=30)
+        income = st.number_input("Monthly Income", min_value=0, value=50000)
+        loan_amount = st.number_input("Loan Amount", min_value=0, value=200000)
+        interest_rate = st.number_input("Interest Rate (%)", min_value=0.0, value=12.5)
+        loan_term = st.selectbox("Loan Term (Months)", [12, 18, 24, 36, 48, 60])
 
-st.markdown("---")
+    with col2:
+        car_value = st.number_input("Car Value", min_value=0, value=400000)
+        car_age = st.slider("Car Age", 0, 50, 5)
+        mileage = st.number_input("Mileage", min_value=0, value=80000)
+        previous_loans = st.number_input("Previous Loans", min_value=0, value=1)
+        previous_defaults = st.number_input("Previous Defaults", min_value=0, value=0)
 
-# ==============================
-# BUTTONS
-# ==============================
-btn1, btn2 = st.columns(2)
+    employment_type = st.selectbox(
+        "Employment Type",
+        ["salaried", "self-employed", "informal"]
+    )
 
-# ==============================
-#  REPAYMENT CALCULATOR
-# ==============================
-with btn1:
-    if st.button(" Calculate Repayment"):
-        if loan_amount > 0 and interest_rate > 0 and loan_term > 0:
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.divider()
+
+    btn1, btn2 = st.columns(2)
+
+    # ==============================
+    # REPAYMENT
+    # ==============================
+    with btn1:
+        if st.button("Calculate Repayment"):
             monthly_rate = interest_rate / 100 / 12
 
             monthly_payment = (
                 loan_amount * monthly_rate * (1 + monthly_rate) ** loan_term
             ) / ((1 + monthly_rate) ** loan_term - 1)
 
-            total_payment = monthly_payment * loan_term
-
-            # ✅ NEW
             weekly_payment = monthly_payment / 4.33
             daily_payment = monthly_payment / 30
 
-            st.success(" Repayment Results")
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            st.subheader("Repayment Breakdown")
 
-            st.write(f" Monthly Payment: KES {monthly_payment:,.2f}")
-            st.write(f" Weekly Payment: KES {weekly_payment:,.2f}")
-            st.write(f" Daily Payment: KES {daily_payment:,.2f}")
-            st.write(f" Total Repayment: KES {total_payment:,.2f}")
+            colA, colB, colC = st.columns(3)
+            colA.metric("Monthly", f"{monthly_payment:,.2f}")
+            colB.metric("Weekly", f"{weekly_payment:,.2f}")
+            colC.metric("Daily", f"{daily_payment:,.2f}")
 
-        else:
-            st.warning("Please enter valid loan details")
+            st.markdown('</div>', unsafe_allow_html=True)
+
+    # ==============================
+    # RISK ANALYSIS
+    # ==============================
+    with btn2:
+        if st.button("Analyze Risk"):
+
+            emp_type = 0 if employment_type == "salaried" else 1 if employment_type == "self-employed" else 2
+
+            raw_data = pd.DataFrame({
+                'age': [age],
+                'monthly_income': [income],
+                'loan_amount': [loan_amount],
+                'interest_rate': [interest_rate],
+                'loan_term': [loan_term],
+                'car_value': [car_value],
+                'car_age': [car_age],
+                'mileage': [mileage],
+                'previous_loans': [previous_loans],
+                'previous_defaults': [previous_defaults],
+                'employment_type': [emp_type]
+            })
+
+            raw_data['loan_to_value_ratio'] = loan_amount / car_value if car_value > 0 else 0
+            raw_data['income_to_loan_ratio'] = income / loan_amount if loan_amount > 0 else 0
+
+            input_data = raw_data.copy()
+            input_data = input_data[model.feature_names_in_]
+
+            prediction = model.predict(input_data)[0]
+            probability = model.predict_proba(input_data)[0]
+            risk_score = probability[1] * 100
+
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            st.subheader("Risk Analysis")
+
+            colX, colY = st.columns(2)
+
+            with colX:
+                st.metric("Risk Score (%)", f"{risk_score:.2f}")
+
+            with colY:
+                st.metric("Decision", "High Risk" if prediction == 1 else "Low Risk")
+
+            st.markdown('</div>', unsafe_allow_html=True)
+
+            # ==============================
+            # CHARTS
+            # ==============================
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            st.subheader("Data Visualization")
+
+            fig1, ax1 = plt.subplots()
+            ax1.bar(['Income', 'Loan'], [income, loan_amount])
+            st.pyplot(fig1)
+
+            fig2, ax2 = plt.subplots()
+            ax2.barh(['Risk'], [risk_score])
+            ax2.set_xlim(0, 100)
+            st.pyplot(fig2)
+
+            st.markdown('</div>', unsafe_allow_html=True)
+
+            # ==============================
+            # EXPLANATION
+            # ==============================
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            st.subheader("Risk Explanation")
+
+            for r in explain_risk(raw_data):
+                st.write("- " + r)
+
+            st.markdown('</div>', unsafe_allow_html=True)
+
+            # ==============================
+            # RECOMMENDATIONS
+            # ==============================
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            st.subheader("Recommendations")
+
+            suggestions = suggest_improvements(raw_data)
+
+            if suggestions:
+                for s in suggestions:
+                    st.write("- " + s)
+            else:
+                st.write("Profile is financially strong")
+
+            st.markdown('</div>', unsafe_allow_html=True)
 
 # ==============================
-#  LOAN RISK PREDICTION
+# ABOUT SECTION
 # ==============================
-with btn2:
-    if st.button(" Check Loan Risk"):
+elif section == "About":
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.subheader("About This Project")
 
-        # Encode employment
-        if employment_type == "salaried":
-            emp_type = 0
-        elif employment_type == "self-employed":
-            emp_type = 1
-        else:
-            emp_type = 2
+    st.write("""
+This application uses machine learning to evaluate loan risk based on borrower and asset data.
 
-        # RAW DATA
-        raw_data = pd.DataFrame({
-            'age': [age],
-            'monthly_income': [income],
-            'loan_amount': [loan_amount],
-            'interest_rate': [interest_rate],
-            'loan_term': [loan_term],
-            'car_value': [car_value],
-            'car_age': [car_age],
-            'mileage': [mileage],
-            'previous_loans': [previous_loans],
-            'previous_defaults': [previous_defaults],
-            'employment_type': [emp_type]
-        })
+Features include:
+- Risk prediction
+- Financial analysis
+- Repayment calculation
+- Decision support insights
+""")
 
-        # Derived features
-        raw_data['loan_to_value_ratio'] = (
-            raw_data['loan_amount'] / raw_data['car_value']
-            if car_value > 0 else 0
-        )
-
-        raw_data['income_to_loan_ratio'] = (
-            raw_data['monthly_income'] / raw_data['loan_amount']
-            if loan_amount > 0 else 0
-        )
-
-        # MODEL INPUT
-        input_data = raw_data.copy()
-        input_data = input_data[model.feature_names_in_]
-
-        # Prediction
-        prediction = model.predict(input_data)[0]
-        probability = model.predict_proba(input_data)[0]
-        risk_score = probability[1] * 100
-
-        # RESULT
-        st.subheader("🤖 AI Decision")
-
-        if prediction == 1:
-            st.error("❌ High Risk of Default")
-        else:
-            st.success("✅ Low Risk of Default")
-
-        # RISK SCORE
-        st.subheader(" Risk Score")
-        st.progress(int(risk_score))
-        st.write(f"Risk Probability: {risk_score:.2f}%")
-
-        if risk_score > 70:
-            st.error("🔴 Very High Risk")
-        elif risk_score > 40:
-            st.warning("🟠 Moderate Risk")
-        else:
-            st.success("🟢 Low Risk")
-
-        # ==============================
-        #  CHART 1: Loan vs Income
-        # ==============================
-        st.subheader(" Loan vs Income Analysis")
-
-        fig1, ax1 = plt.subplots()
-        ax1.bar(['Income', 'Loan Amount'], [income, loan_amount])
-        ax1.set_title("Income vs Loan Amount")
-
-        st.pyplot(fig1)
-
-        # ==============================
-        #  CHART 2: Risk Score
-        # ==============================
-        st.subheader(" Risk Visualization")
-
-        fig2, ax2 = plt.subplots()
-        ax2.barh(['Risk Level'], [risk_score])
-        ax2.set_xlim(0, 100)
-        ax2.set_title("Risk Score (%)")
-
-        st.pyplot(fig2)
-
-        # EXPLANATION
-        st.subheader(" Risk Explanation")
-        for r in explain_risk(raw_data):
-            st.write(f"• {r}")
-
-        # RECOMMENDATIONS
-        st.subheader(" Recommendations")
-
-        suggestions = suggest_improvements(raw_data)
-
-        if suggestions:
-            for s in suggestions:
-                st.info(f"👉 {s}")
-        else:
-            st.success("✅ Your profile is financially healthy")
+    st.markdown('</div>', unsafe_allow_html=True)
