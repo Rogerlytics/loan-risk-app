@@ -8,7 +8,7 @@ import pandas as pd
 model = pickle.load(open("loan_model.pkl", "rb"))
 
 # ==============================
-# 🔥 RISK EXPLANATION FUNCTION
+#  RISK EXPLANATION FUNCTION
 # ==============================
 def explain_risk(data):
     reasons = []
@@ -33,10 +33,32 @@ def explain_risk(data):
 
     return reasons
 
+
+# ==============================
+#  SMART RECOMMENDATION FUNCTION (NEW)
+# ==============================
+def suggest_improvements(data):
+    suggestions = []
+
+    if data['income_to_loan_ratio'].values[0] < 0.3:
+        suggestions.append("Consider increasing income or reducing loan amount")
+
+    if data['loan_to_value_ratio'].values[0] > 0.8:
+        suggestions.append("Reduce loan amount or increase collateral value")
+
+    if data['previous_defaults'].values[0] > 0:
+        suggestions.append("Improve credit history before applying")
+
+    if data['previous_loans'].values[0] > 3:
+        suggestions.append("Reduce existing loan obligations")
+
+    return suggestions
+
+
 # ==============================
 # UI HEADER
 # ==============================
-st.title("AI Loan Risk Assessment System")
+st.title(" AI Loan Risk Assessment System")
 st.markdown("Built with Machine Learning • Real-time Risk Prediction")
 st.markdown("---")
 
@@ -71,21 +93,21 @@ st.markdown("---")
 # ==============================
 # SUMMARY
 # ==============================
-st.subheader("📊 Input Summary")
+st.subheader(" Input Summary")
 
 col3, col4 = st.columns(2)
 
 with col3:
-    st.write(f"💼 Income: KES {income:,}")
-    st.write(f"💳 Loan: KES {loan_amount:,}")
-    st.write(f"🚗 Car Value: KES {car_value:,}")
-    st.write(f"📆 Loan Term: {loan_term} months")
+    st.write(f" Income: KES {income:,}")
+    st.write(f" Loan: KES {loan_amount:,}")
+    st.write(f" Car Value: KES {car_value:,}")
+    st.write(f" Loan Term: {loan_term} months")
 
 with col4:
-    st.write(f"👤 Age: {age}")
-    st.write(f"🚘 Car Age: {car_age} years")
-    st.write(f"📍 Mileage: {mileage:,} km")
-    st.write(f"📉 Defaults: {previous_defaults}")
+    st.write(f" Age: {age}")
+    st.write(f" Car Age: {car_age} years")
+    st.write(f" Mileage: {mileage:,} km")
+    st.write(f" Defaults: {previous_defaults}")
 
 st.markdown("---")
 
@@ -98,7 +120,7 @@ btn1, btn2 = st.columns(2)
 # REPAYMENT CALCULATOR
 # ==============================
 with btn1:
-    if st.button("💵 Calculate Repayment"):
+    if st.button(" Calculate Repayment"):
         if loan_amount > 0 and interest_rate > 0 and loan_term > 0:
             monthly_rate = interest_rate / 100 / 12
             monthly_payment = (
@@ -107,7 +129,7 @@ with btn1:
 
             total_payment = monthly_payment * loan_term
 
-            st.success("📊 Repayment Results")
+            st.success(" Repayment Results")
             st.write(f"Monthly Payment: KES {monthly_payment:,.2f}")
             st.write(f"Total Repayment: KES {total_payment:,.2f}")
         else:
@@ -117,11 +139,9 @@ with btn1:
 # LOAN RISK PREDICTION
 # ==============================
 with btn2:
-    if st.button("🤖 Check Loan Risk"):
+    if st.button(" Check Loan Risk"):
 
-        # ==============================
         # Encode employment
-        # ==============================
         if employment_type == "salaried":
             emp_type = 0
         elif employment_type == "self-employed":
@@ -130,7 +150,7 @@ with btn2:
             emp_type = 2
 
         # ==============================
-        # CREATE RAW DATA (for explanation)
+        # RAW DATA (for explanation + recommendations)
         # ==============================
         raw_data = pd.DataFrame({
             'age': [age],
@@ -173,7 +193,7 @@ with btn2:
         # ==============================
         # RESULT
         # ==============================
-        st.subheader("🤖 AI Decision")
+        st.subheader(" AI Decision")
 
         if prediction == 1:
             st.error("❌ High Risk of Default")
@@ -181,9 +201,9 @@ with btn2:
             st.success("✅ Low Risk of Default")
 
         # ==============================
-        # 📊 RISK SCORE
+        #  RISK SCORE
         # ==============================
-        st.subheader("📊 Risk Score")
+        st.subheader(" Risk Score")
         st.progress(int(risk_score))
         st.write(f"Risk Probability: {risk_score:.2f}%")
 
@@ -195,10 +215,23 @@ with btn2:
             st.success("🟢 Low Risk")
 
         # ==============================
-        # 🧠 EXPLANATION (uses raw_data)
+        #  EXPLANATION
         # ==============================
-        st.subheader("📊 Risk Explanation")
+        st.subheader(" Risk Explanation")
         reasons = explain_risk(raw_data)
 
         for r in reasons:
             st.write(f"• {r}")
+
+        # ==============================
+        #  RECOMMENDATIONS (NEW)
+        # ==============================
+        st.subheader(" Recommendations")
+
+        suggestions = suggest_improvements(raw_data)
+
+        if suggestions:
+            for s in suggestions:
+                st.info(f"👉 {s}")
+        else:
+            st.success("✅ Your profile is financially healthy")
