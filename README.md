@@ -1,4 +1,3 @@
-# loan-risk-app
 #  AI Loan Risk Assessment System
 
 ##  Project Overview
