@@ -17,7 +17,7 @@ SUPABASE_KEY = "your-anon-key"
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ==============================
-# DARK BLUE UI
+# DARK BLUE PREMIUM UI
 # ==============================
 st.markdown("""
 <style>
@@ -25,14 +25,14 @@ st.markdown("""
 h1, h2, h3 {color: #e6edf3;}
 
 .card {
-    background: #111c36;
+    background: linear-gradient(145deg, #111c36, #0d162b);
     padding: 20px;
     border-radius: 15px;
     margin-bottom: 20px;
 }
 
 .stButton>button {
-    background: #007bff;
+    background: linear-gradient(90deg, #00c2ff, #007bff);
     color: white;
     border-radius: 8px;
     height: 3em;
@@ -82,20 +82,20 @@ def suggest_improvements(data):
     return suggestions
 
 # ==============================
-# SIDEBAR
+# SIDEBAR NAVIGATION
 # ==============================
 st.sidebar.title("Navigation")
 page = st.sidebar.radio("Go to", ["Loan Analysis", "Contact", "Admin Inbox"])
 
 # ==============================
-# SIDEBAR CONTACT
+# SIDEBAR CONTACT FORM
 # ==============================
 st.sidebar.markdown("---")
 st.sidebar.subheader("Quick Contact")
 
-s_name = st.sidebar.text_input("Name")
-s_email = st.sidebar.text_input("Email")
-s_message = st.sidebar.text_area("Message")
+s_name = st.sidebar.text_input("Name", key="s_name")
+s_email = st.sidebar.text_input("Email", key="s_email")
+s_message = st.sidebar.text_area("Message", key="s_message")
 
 if st.sidebar.button("Send"):
     if s_name and s_email and s_message:
@@ -104,7 +104,7 @@ if st.sidebar.button("Send"):
             "email": s_email,
             "message": s_message
         }).execute()
-        st.sidebar.success("Sent!")
+        st.sidebar.success("Message sent")
     else:
         st.sidebar.warning("Fill all fields")
 
@@ -116,7 +116,7 @@ st.markdown("Machine Learning • Financial Intelligence")
 st.divider()
 
 # ==============================
-# LOAN ANALYSIS
+# LOAN ANALYSIS PAGE
 # ==============================
 if page == "Loan Analysis":
 
@@ -143,7 +143,7 @@ if page == "Loan Analysis":
     btn1, btn2 = st.columns(2)
 
     # ==============================
-    # REPAYMENT CALCULATOR (RESTORED)
+    # REPAYMENT CALCULATOR
     # ==============================
     with btn1:
         if st.button("Calculate Repayment"):
@@ -158,18 +158,17 @@ if page == "Loan Analysis":
 
                 total_payment = monthly_payment * loan_term
 
-                # RESTORED CALCULATIONS
                 weekly_payment = monthly_payment / 4.33
                 daily_payment = monthly_payment / 30
 
                 st.subheader("Repayment Results")
-                st.write(f"Monthly Payment: KES {monthly_payment:,.2f}")
-                st.write(f"Weekly Payment: KES {weekly_payment:,.2f}")
-                st.write(f"Daily Payment: KES {daily_payment:,.2f}")
-                st.write(f"Total Payment: KES {total_payment:,.2f}")
+                st.write(f"Monthly: KES {monthly_payment:,.2f}")
+                st.write(f"Weekly: KES {weekly_payment:,.2f}")
+                st.write(f"Daily: KES {daily_payment:,.2f}")
+                st.write(f"Total: KES {total_payment:,.2f}")
 
             else:
-                st.warning("Enter valid loan values")
+                st.warning("Enter valid values")
 
     # ==============================
     # RISK PREDICTION
@@ -204,9 +203,9 @@ if page == "Loan Analysis":
             st.subheader("AI Decision")
 
             if prediction == 1:
-                st.error("High Risk of Default")
+                st.error("❌ High Risk of Default")
             else:
-                st.success("Low Risk of Default")
+                st.success("✅ Low Risk of Default")
 
             st.subheader("Risk Score")
             st.progress(int(probability))
@@ -214,11 +213,11 @@ if page == "Loan Analysis":
 
             st.subheader("Risk Explanation")
             for r in explain_risk(raw_data):
-                st.write(f"- {r}")
+                st.write(f"• {r}")
 
             st.subheader("Recommendations")
             for s in suggest_improvements(raw_data):
-                st.info(s)
+                st.info(f"👉 {s}")
 
 # ==============================
 # CONTACT PAGE
@@ -243,17 +242,20 @@ elif page == "Contact":
             st.warning("Fill all fields")
 
 # ==============================
-# ADMIN INBOX
+# ADMIN INBOX (FIXED)
 # ==============================
 elif page == "Admin Inbox":
 
     st.subheader("Admin Inbox")
 
     try:
-        response = supabase.table("messages").select("*").order("created_at", desc=True).execute()
+        response = supabase.table("messages").select("*").execute()
         messages = response.data
 
         st.metric("Total Messages", len(messages))
+
+        # SAFE SORTING (NO MORE ERRORS)
+        messages = sorted(messages, key=lambda x: x['created_at'], reverse=True)
 
         for msg in messages:
             st.write(f"Name: {msg['name']}")
@@ -262,5 +264,5 @@ elif page == "Admin Inbox":
             st.write(f"Date: {msg['created_at']}")
             st.markdown("---")
 
-    except:
-        st.error("Database error. Check Supabase setup.")
+    except Exception as e:
+        st.error(f"Database error: {e}")
