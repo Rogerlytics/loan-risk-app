@@ -138,9 +138,7 @@ st.divider()
 # ==============================
 if page == "Loan Analysis":
 
-    # ==============================
     # INPUT CARD
-    # ==============================
     st.markdown('<div class="card">', unsafe_allow_html=True)
 
     st.subheader("Enter Loan Details")
@@ -165,9 +163,7 @@ if page == "Loan Analysis":
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # ==============================
     # KPI CARDS
-    # ==============================
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.subheader("Key Metrics")
 
@@ -179,14 +175,10 @@ if page == "Loan Analysis":
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # ==============================
     # BUTTONS
-    # ==============================
     btn1, btn2 = st.columns(2)
 
-    # ==============================
     # REPAYMENT
-    # ==============================
     with btn1:
         if st.button("Calculate Repayment"):
 
@@ -210,9 +202,7 @@ if page == "Loan Analysis":
 
             st.markdown('</div>', unsafe_allow_html=True)
 
-    # ==============================
     # RISK ANALYSIS
-    # ==============================
     with btn2:
         if st.button("Analyze Risk"):
 
@@ -246,9 +236,9 @@ if page == "Loan Analysis":
             st.subheader("Risk Decision")
 
             if pred == 1:
-                st.error("❌ High Risk of Default")
+                st.error("High Risk of Default")
             else:
-                st.success("✅ Low Risk of Default")
+                st.success("Low Risk of Default")
 
             st.metric("Risk Score (%)", f"{prob:.2f}")
             st.progress(int(prob))
@@ -263,9 +253,7 @@ if page == "Loan Analysis":
 
             st.markdown('</div>', unsafe_allow_html=True)
 
-# ==============================
 # ABOUT PAGE
-# ==============================
 elif page == "About":
     st.markdown('<div class="card">', unsafe_allow_html=True)
 
