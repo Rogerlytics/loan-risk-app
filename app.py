@@ -90,6 +90,41 @@ def login(email, password):
     return None
 
 # ==============================
+# ML HELPERS (ADDED FIX)
+# ==============================
+def explain_risk(data):
+    reasons = []
+
+    if data['income_to_loan_ratio'].values[0] < 0.3:
+        reasons.append("📉 Low income compared to loan")
+
+    if data['loan_to_value_ratio'].values[0] > 0.8:
+        reasons.append("🚗 Loan too high vs car value")
+
+    if data['previous_defaults'].values[0] > 0:
+        reasons.append("⚠️ Previous defaults")
+
+    if data['previous_loans'].values[0] > 3:
+        reasons.append("📊 Too many loans")
+
+    if not reasons:
+        reasons.append("✅ Strong financial profile")
+
+    return reasons
+
+
+def suggest_improvements(data):
+    suggestions = []
+
+    if data['income_to_loan_ratio'].values[0] < 0.3:
+        suggestions.append("💡 Increase income or reduce loan")
+
+    if data['loan_to_value_ratio'].values[0] > 0.8:
+        suggestions.append("💡 Reduce loan or increase collateral")
+
+    return suggestions
+
+# ==============================
 # SIDEBAR (NAVIGATION FIRST)
 # ==============================
 st.sidebar.title("Navigation")
@@ -218,15 +253,17 @@ if page == "Loan Analysis":
                 st.success("✅ Low Risk")
 
             st.subheader("📌 Risk Explanation")
-            st.write(explain_risk(df))
+            for r in explain_risk(df):
+                st.write(f"• {r}")
 
             st.subheader("💡 Recommendations")
-            st.write(suggest_improvements(df))
+            for s in suggest_improvements(df):
+                st.info(s)
 
             st.markdown('</div>', unsafe_allow_html=True)
 
 # ==============================
-# CONTACT (FIXED USER LINK)
+# CONTACT
 # ==============================
 elif page == "Contact":
 
@@ -252,7 +289,7 @@ elif page == "Contact":
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ==============================
-# ADMIN DASHBOARD (WITH CHARTS)
+# ADMIN DASHBOARD
 # ==============================
 elif page == "Admin Dashboard":
 
