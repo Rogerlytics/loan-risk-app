@@ -1,7 +1,6 @@
 import streamlit as st
 import pickle
 import pandas as pd
-from supabase import create_client, Client
 
 # ==============================
 # PAGE CONFIG
@@ -9,110 +8,61 @@ from supabase import create_client, Client
 st.set_page_config(page_title="AI Loan Risk System", layout="wide")
 
 # ==============================
-# 🎨 PREMIUM DARK BLUE THEME (YOUR CODE)
+# DARK BLUE PREMIUM THEME
 # ==============================
 st.markdown("""
 <style>
 
-/* ===== BACKGROUND ===== */
-html, body, [class*="css"] {
-    background-color: #0a0f1c;
-    color: #e6edf3;
-    font-family: 'Inter', sans-serif;
+.main {
+    background-color: #0b1426;
 }
 
-/* ===== MAIN CONTAINER ===== */
-.block-container {
-    padding-top: 2rem;
-    padding-bottom: 2rem;
-}
-
-/* ===== HEADINGS ===== */
 h1, h2, h3 {
     color: #e6edf3;
-    font-weight: 600;
 }
 
-/* ===== CARD STYLE ===== */
+/* Cards */
 .card {
-    background: linear-gradient(145deg, #111827, #0b1220);
+    background: linear-gradient(145deg, #111c36, #0d162b);
     padding: 20px;
     border-radius: 16px;
-    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.4);
     margin-bottom: 20px;
-    border: 1px solid rgba(255,255,255,0.05);
+    box-shadow: 0px 6px 20px rgba(0,0,0,0.6);
+    border: 1px solid rgba(0, 194, 255, 0.1);
 }
 
-/* ===== BUTTONS ===== */
+/* KPI Cards */
+.kpi {
+    background: #0f1c35;
+    padding: 15px;
+    border-radius: 12px;
+    text-align: center;
+    border: 1px solid rgba(0, 194, 255, 0.15);
+}
+
+/* Buttons */
 .stButton>button {
-    background: linear-gradient(90deg, #2563eb, #1d4ed8);
+    background: linear-gradient(90deg, #00c2ff, #007bff);
     color: white;
-    border: none;
     border-radius: 10px;
     height: 3em;
-    font-weight: 500;
-    transition: 0.3s;
+    width: 100%;
+    font-weight: 600;
+    border: none;
 }
 
-.stButton>button:hover {
-    background: linear-gradient(90deg, #1d4ed8, #1e40af);
-    transform: scale(1.02);
+/* Progress bar */
+.stProgress > div > div {
+    background-color: #00c2ff;
 }
 
-/* ===== INPUT FIELDS ===== */
-.stTextInput>div>div>input,
-.stNumberInput>div>div>input,
-textarea {
-    background-color: #111827;
-    color: white;
-    border-radius: 8px;
-    border: 1px solid #1f2937;
-}
-
-/* ===== SELECT BOX ===== */
-.stSelectbox>div>div {
-    background-color: #111827;
-    color: white;
-    border-radius: 8px;
-}
-
-/* ===== SIDEBAR ===== */
+/* Sidebar */
 section[data-testid="stSidebar"] {
-    background-color: #0f172a;
-}
-
-/* ===== METRICS ===== */
-[data-testid="metric-container"] {
-    background: linear-gradient(145deg, #111827, #0b1220);
-    border-radius: 12px;
-    padding: 10px;
-}
-
-/* ===== DIVIDER ===== */
-hr {
-    border: 1px solid rgba(255,255,255,0.05);
-}
-
-/* ===== SUCCESS / WARNING / ERROR ===== */
-.stAlert {
-    border-radius: 10px;
-}
-
-/* ===== PROGRESS BAR ===== */
-.stProgress > div > div > div {
-    background-color: #2563eb;
+    background-color: #0a1222;
 }
 
 </style>
 """, unsafe_allow_html=True)
-
-# ==============================
-# SUPABASE CONFIG (REPLACE)
-# ==============================
-SUPABASE_URL = "https://your-project-id.supabase.co"
-SUPABASE_KEY = "your-anon-key"
-
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ==============================
 # LOAD MODEL
@@ -126,18 +76,21 @@ def explain_risk(data):
     reasons = []
 
     if data['income_to_loan_ratio'].values[0] < 0.3:
-        reasons.append("Low income compared to loan")
+        reasons.append("Low income compared to loan amount")
 
     if data['loan_to_value_ratio'].values[0] > 0.8:
-        reasons.append("Loan too high vs car value")
+        reasons.append("Loan amount is high relative to car value")
 
     if data['previous_defaults'].values[0] > 0:
-        reasons.append("Previous defaults")
+        reasons.append("History of previous loan defaults")
 
     if data['previous_loans'].values[0] > 3:
-        reasons.append("Too many loans")
+        reasons.append("Too many previous loans")
 
-    if not reasons:
+    if data['age'].values[0] < 25:
+        reasons.append("Young borrower risk profile")
+
+    if len(reasons) == 0:
         reasons.append("Strong financial profile")
 
     return reasons
@@ -147,63 +100,62 @@ def suggest_improvements(data):
     suggestions = []
 
     if data['income_to_loan_ratio'].values[0] < 0.3:
-        suggestions.append("Increase income or reduce loan")
+        suggestions.append("Increase income or reduce loan amount")
 
     if data['loan_to_value_ratio'].values[0] > 0.8:
         suggestions.append("Reduce loan or increase collateral")
 
+    if data['previous_defaults'].values[0] > 0:
+        suggestions.append("Improve credit history")
+
+    if data['previous_loans'].values[0] > 3:
+        suggestions.append("Reduce existing loans")
+
     return suggestions
 
 # ==============================
-# SIDEBAR NAVIGATION
+# SIDEBAR
 # ==============================
 st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to", ["Loan Analysis", "Contact", "Admin Inbox"])
-
-# ==============================
-# SIDEBAR CONTACT
-# ==============================
-st.sidebar.markdown("---")
-st.sidebar.subheader("Quick Contact")
-
-s_name = st.sidebar.text_input("Name", key="s_name")
-s_email = st.sidebar.text_input("Email", key="s_email")
-s_message = st.sidebar.text_area("Message", key="s_message")
-
-if st.sidebar.button("Send"):
-    if s_name and s_email and s_message:
-        supabase.table("messages").insert({
-            "name": s_name,
-            "email": s_email,
-            "message": s_message
-        }).execute()
-        st.sidebar.success("Message sent")
-    else:
-        st.sidebar.warning("Fill all fields")
+page = st.sidebar.radio("Go to", ["Loan Analysis", "About"])
 
 # ==============================
 # HEADER
 # ==============================
-st.title("AI Loan Risk Assessment System")
-st.caption("Machine Learning powered financial decision engine")
+st.markdown("""
+<h1 style='text-align:center; color:#00c2ff;'>
+AI Loan Risk Assessment System
+</h1>
+<p style='text-align:center; color:#8b9bb4;'>
+Machine Learning • Financial Risk Intelligence
+</p>
+""", unsafe_allow_html=True)
+
 st.divider()
 
 # ==============================
-# LOAN ANALYSIS
+# MAIN PAGE
 # ==============================
 if page == "Loan Analysis":
+
+    # ==============================
+    # INPUT CARD
+    # ==============================
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+
+    st.subheader("Enter Loan Details")
 
     col1, col2 = st.columns(2)
 
     with col1:
         age = st.number_input("Age", 0, 100, 30)
-        income = st.number_input("Monthly Income", 0, 1000000, 50000)
-        loan_amount = st.number_input("Loan Amount", 0, 1000000, 200000)
+        income = st.number_input("Monthly Income (KES)", 0, 1000000, 50000)
+        loan_amount = st.number_input("Loan Amount (KES)", 0, 1000000, 200000)
         interest_rate = st.number_input("Interest Rate (%)", 0.0, 100.0, 12.5)
-        loan_term = st.selectbox("Loan Term (Months)", [12, 24, 36, 48, 60])
+        loan_term = st.selectbox("Loan Term", [12, 24, 36, 48, 60])
 
     with col2:
-        car_value = st.number_input("Car Value", 0, 1000000, 400000)
+        car_value = st.number_input("Car Value (KES)", 0, 1000000, 400000)
         car_age = st.slider("Car Age", 0, 50, 5)
         mileage = st.number_input("Mileage", 0, 500000, 80000)
         previous_loans = st.number_input("Previous Loans", 0, 10, 1)
@@ -211,47 +163,64 @@ if page == "Loan Analysis":
 
     employment_type = st.selectbox("Employment Type", ["salaried", "self-employed", "informal"])
 
-    st.divider()
+    st.markdown('</div>', unsafe_allow_html=True)
 
+    # ==============================
+    # KPI CARDS
+    # ==============================
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.subheader("Key Metrics")
+
+    k1, k2, k3 = st.columns(3)
+
+    k1.markdown(f"<div class='kpi'><h3>Income</h3><p>KES {income:,}</p></div>", unsafe_allow_html=True)
+    k2.markdown(f"<div class='kpi'><h3>Loan</h3><p>KES {loan_amount:,}</p></div>", unsafe_allow_html=True)
+    k3.markdown(f"<div class='kpi'><h3>Interest</h3><p>{interest_rate}%</p></div>", unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # ==============================
+    # BUTTONS
+    # ==============================
     btn1, btn2 = st.columns(2)
 
     # ==============================
-    # REPAYMENT CALCULATOR
+    # REPAYMENT
     # ==============================
     with btn1:
         if st.button("Calculate Repayment"):
 
-            if loan_amount > 0 and interest_rate > 0:
+            st.markdown('<div class="card">', unsafe_allow_html=True)
 
-                monthly_rate = interest_rate / 100 / 12
+            monthly_rate = interest_rate / 100 / 12
 
-                monthly_payment = (
-                    loan_amount * monthly_rate * (1 + monthly_rate) ** loan_term
-                ) / ((1 + monthly_rate) ** loan_term - 1)
+            monthly = (
+                loan_amount * monthly_rate * (1 + monthly_rate) ** loan_term
+            ) / ((1 + monthly_rate) ** loan_term - 1)
 
-                total_payment = monthly_payment * loan_term
+            weekly = monthly / 4.33
+            daily = monthly / 30
 
-                weekly_payment = monthly_payment / 4.33
-                daily_payment = monthly_payment / 30
+            st.subheader("Repayment Breakdown")
 
-                st.subheader("Repayment Results")
-                st.write(f"Monthly: KES {monthly_payment:,.2f}")
-                st.write(f"Weekly: KES {weekly_payment:,.2f}")
-                st.write(f"Daily: KES {daily_payment:,.2f}")
-                st.write(f"Total: KES {total_payment:,.2f}")
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Monthly", f"{monthly:,.2f}")
+            c2.metric("Weekly", f"{weekly:,.2f}")
+            c3.metric("Daily", f"{daily:,.2f}")
 
-            else:
-                st.warning("Enter valid values")
+            st.markdown('</div>', unsafe_allow_html=True)
 
     # ==============================
     # RISK ANALYSIS
     # ==============================
     with btn2:
-        if st.button("Check Loan Risk"):
+        if st.button("Analyze Risk"):
+
+            st.markdown('<div class="card">', unsafe_allow_html=True)
 
             emp = 0 if employment_type == "salaried" else 1 if employment_type == "self-employed" else 2
 
-            raw_data = pd.DataFrame({
+            raw = pd.DataFrame({
                 'age':[age],
                 'monthly_income':[income],
                 'loan_amount':[loan_amount],
@@ -265,76 +234,50 @@ if page == "Loan Analysis":
                 'employment_type':[emp]
             })
 
-            raw_data['loan_to_value_ratio'] = loan_amount / car_value if car_value > 0 else 0
-            raw_data['income_to_loan_ratio'] = income / loan_amount if loan_amount > 0 else 0
+            raw['loan_to_value_ratio'] = loan_amount / car_value if car_value > 0 else 0
+            raw['income_to_loan_ratio'] = income / loan_amount if loan_amount > 0 else 0
 
-            input_data = raw_data[model.feature_names_in_]
+            inp = raw.copy()
+            inp = inp[model.feature_names_in_]
 
-            prediction = model.predict(input_data)[0]
-            probability = model.predict_proba(input_data)[0][1] * 100
+            pred = model.predict(inp)[0]
+            prob = model.predict_proba(inp)[0][1] * 100
 
-            st.subheader("AI Decision")
+            st.subheader("Risk Decision")
 
-            if prediction == 1:
+            if pred == 1:
                 st.error("❌ High Risk of Default")
             else:
                 st.success("✅ Low Risk of Default")
 
-            st.subheader("Risk Score")
-            st.progress(int(probability))
-            st.write(f"Risk Probability: {probability:.2f}%")
+            st.metric("Risk Score (%)", f"{prob:.2f}")
+            st.progress(int(prob))
 
             st.subheader("Risk Explanation")
-            for r in explain_risk(raw_data):
-                st.write(f"• {r}")
+            for r in explain_risk(raw):
+                st.write("- " + r)
 
             st.subheader("Recommendations")
-            for s in suggest_improvements(raw_data):
-                st.info(f"👉 {s}")
+            for s in suggest_improvements(raw):
+                st.write("- " + s)
+
+            st.markdown('</div>', unsafe_allow_html=True)
 
 # ==============================
-# CONTACT PAGE
+# ABOUT PAGE
 # ==============================
-elif page == "Contact":
+elif page == "About":
+    st.markdown('<div class="card">', unsafe_allow_html=True)
 
-    st.subheader("Contact Me")
+    st.subheader("About This Project")
 
-    name = st.text_input("Name")
-    email = st.text_input("Email")
-    message = st.text_area("Message")
+    st.write("""
+AI-powered system for assessing loan risk using borrower financial data.
 
-    if st.button("Send Message"):
-        if name and email and message:
-            supabase.table("messages").insert({
-                "name": name,
-                "email": email,
-                "message": message
-            }).execute()
-            st.success("Message sent successfully")
-        else:
-            st.warning("Fill all fields")
+Built for:
+- Financial institutions
+- Credit analysts
+- Loan officers
+""")
 
-# ==============================
-# ADMIN INBOX (FIXED)
-# ==============================
-elif page == "Admin Inbox":
-
-    st.subheader("Admin Inbox")
-
-    try:
-        response = supabase.table("messages").select("*").execute()
-        messages = response.data
-
-        st.metric("Total Messages", len(messages))
-
-        messages = sorted(messages, key=lambda x: x['created_at'], reverse=True)
-
-        for msg in messages:
-            st.write(f"Name: {msg['name']}")
-            st.write(f"Email: {msg['email']}")
-            st.write(f"Message: {msg['message']}")
-            st.write(f"Date: {msg['created_at']}")
-            st.markdown("---")
-
-    except Exception as e:
-        st.error(f"Database error: {e}")
+    st.markdown('</div>', unsafe_allow_html=True)
