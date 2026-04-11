@@ -124,25 +124,14 @@ if page == "Loan Analysis":
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # ==============================
-    # KPI CARDS WITH BUTTONS
-    # ==============================
+    # KPI CARDS (CLEAN VERSION)
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.subheader("Key Metrics")
 
     k1, k2, k3 = st.columns(3)
-
-    with k1:
-        st.metric("Loan Amount", f"KES {loan_amount:,}")
-        st.button("Adjust Loan")
-
-    with k2:
-        st.metric("Monthly Income", f"KES {income:,}")
-        st.button("Adjust Income")
-
-    with k3:
-        st.metric("Interest Rate", f"{interest_rate}%")
-        st.button("Adjust Rate")
+    k1.metric("Loan Amount", f"KES {loan_amount:,}")
+    k2.metric("Monthly Income", f"KES {income:,}")
+    k3.metric("Interest Rate", f"{interest_rate}%")
 
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -204,7 +193,7 @@ if page == "Loan Analysis":
             st.markdown('<div class="card">', unsafe_allow_html=True)
 
             st.subheader("AI Decision")
-            st.write(f"Risk Score: {prob:.2f}%")  # ✅ ADDED %
+            st.write(f"Risk Score: {prob:.2f}%")
 
             st.progress(int(prob))
 
