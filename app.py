@@ -9,37 +9,110 @@ from supabase import create_client, Client
 st.set_page_config(page_title="AI Loan Risk System", layout="wide")
 
 # ==============================
-# SUPABASE CONFIG (REPLACE)
-# ==============================
-SUPABASE_URL = "https://yerqsfaseucvluljaicx.supabase.co"
-SUPABASE_KEY = "sb_publishable_Mve8q2zXADlFzVlCVYgdZQ_D5cu3vrD"
-
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-# ==============================
-# DARK BLUE PREMIUM UI
+# 🎨 PREMIUM DARK BLUE THEME (YOUR CODE)
 # ==============================
 st.markdown("""
 <style>
-.main {background-color: #0b1426;}
-h1, h2, h3 {color: #e6edf3;}
 
-.card {
-    background: linear-gradient(145deg, #111c36, #0d162b);
-    padding: 20px;
-    border-radius: 15px;
-    margin-bottom: 20px;
+/* ===== BACKGROUND ===== */
+html, body, [class*="css"] {
+    background-color: #0a0f1c;
+    color: #e6edf3;
+    font-family: 'Inter', sans-serif;
 }
 
+/* ===== MAIN CONTAINER ===== */
+.block-container {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+}
+
+/* ===== HEADINGS ===== */
+h1, h2, h3 {
+    color: #e6edf3;
+    font-weight: 600;
+}
+
+/* ===== CARD STYLE ===== */
+.card {
+    background: linear-gradient(145deg, #111827, #0b1220);
+    padding: 20px;
+    border-radius: 16px;
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.4);
+    margin-bottom: 20px;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+/* ===== BUTTONS ===== */
 .stButton>button {
-    background: linear-gradient(90deg, #00c2ff, #007bff);
+    background: linear-gradient(90deg, #2563eb, #1d4ed8);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    height: 3em;
+    font-weight: 500;
+    transition: 0.3s;
+}
+
+.stButton>button:hover {
+    background: linear-gradient(90deg, #1d4ed8, #1e40af);
+    transform: scale(1.02);
+}
+
+/* ===== INPUT FIELDS ===== */
+.stTextInput>div>div>input,
+.stNumberInput>div>div>input,
+textarea {
+    background-color: #111827;
     color: white;
     border-radius: 8px;
-    height: 3em;
-    width: 100%;
+    border: 1px solid #1f2937;
 }
+
+/* ===== SELECT BOX ===== */
+.stSelectbox>div>div {
+    background-color: #111827;
+    color: white;
+    border-radius: 8px;
+}
+
+/* ===== SIDEBAR ===== */
+section[data-testid="stSidebar"] {
+    background-color: #0f172a;
+}
+
+/* ===== METRICS ===== */
+[data-testid="metric-container"] {
+    background: linear-gradient(145deg, #111827, #0b1220);
+    border-radius: 12px;
+    padding: 10px;
+}
+
+/* ===== DIVIDER ===== */
+hr {
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+/* ===== SUCCESS / WARNING / ERROR ===== */
+.stAlert {
+    border-radius: 10px;
+}
+
+/* ===== PROGRESS BAR ===== */
+.stProgress > div > div > div {
+    background-color: #2563eb;
+}
+
 </style>
 """, unsafe_allow_html=True)
+
+# ==============================
+# SUPABASE CONFIG (REPLACE)
+# ==============================
+SUPABASE_URL = "https://your-project-id.supabase.co"
+SUPABASE_KEY = "your-anon-key"
+
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ==============================
 # LOAD MODEL
@@ -88,7 +161,7 @@ st.sidebar.title("Navigation")
 page = st.sidebar.radio("Go to", ["Loan Analysis", "Contact", "Admin Inbox"])
 
 # ==============================
-# SIDEBAR CONTACT FORM
+# SIDEBAR CONTACT
 # ==============================
 st.sidebar.markdown("---")
 st.sidebar.subheader("Quick Contact")
@@ -112,11 +185,11 @@ if st.sidebar.button("Send"):
 # HEADER
 # ==============================
 st.title("AI Loan Risk Assessment System")
-st.markdown("Machine Learning • Financial Intelligence")
+st.caption("Machine Learning powered financial decision engine")
 st.divider()
 
 # ==============================
-# LOAN ANALYSIS PAGE
+# LOAN ANALYSIS
 # ==============================
 if page == "Loan Analysis":
 
@@ -171,7 +244,7 @@ if page == "Loan Analysis":
                 st.warning("Enter valid values")
 
     # ==============================
-    # RISK PREDICTION
+    # RISK ANALYSIS
     # ==============================
     with btn2:
         if st.button("Check Loan Risk"):
@@ -254,7 +327,6 @@ elif page == "Admin Inbox":
 
         st.metric("Total Messages", len(messages))
 
-        # SAFE SORTING (NO MORE ERRORS)
         messages = sorted(messages, key=lambda x: x['created_at'], reverse=True)
 
         for msg in messages:
