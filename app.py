@@ -2,6 +2,7 @@ import streamlit as st
 import pickle
 import pandas as pd
 import bcrypt
+import plotly.express as px
 from datetime import datetime
 from supabase import create_client, Client
 
@@ -156,12 +157,10 @@ if page == "Loan Analysis":
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # ✅ BUTTONS SIDE BY SIDE (FIXED)
+    # BUTTONS SIDE BY SIDE
     btn1, btn2 = st.columns(2)
 
-    # ==============================
     # 💰 REPAYMENT
-    # ==============================
     with btn1:
         if st.button("💰 Calculate Repayment"):
 
@@ -182,9 +181,7 @@ if page == "Loan Analysis":
 
             st.markdown('</div>', unsafe_allow_html=True)
 
-    # ==============================
     # 🤖 RISK CHECK
-    # ==============================
     with btn2:
         if st.button("🤖 Check Loan Risk"):
 
@@ -216,7 +213,6 @@ if page == "Loan Analysis":
 
             st.subheader("🤖 AI Decision")
             st.write(f"Risk Score: {prob:.2f}%")
-
             st.progress(int(prob))
 
             if pred == 1:
@@ -258,7 +254,7 @@ elif page == "Contact":
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ==============================
-# ADMIN DASHBOARD
+# ADMIN DASHBOARD (WITH CHARTS)
 # ==============================
 elif page == "Admin Dashboard":
 
@@ -293,6 +289,35 @@ elif page == "Admin Dashboard":
         st.metric("📩 Total Messages", len(df))
 
         if not df.empty:
-            st.dataframe(df.tail(10))
+
+            df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
+            df = df.dropna(subset=["timestamp"])
+
+            df["date"] = df["timestamp"].dt.date
+            df["hour"] = df["timestamp"].dt.hour
+
+            # 📈 LINE CHART
+            st.markdown("### 📈 Messages Over Time")
+            daily = df.groupby("date").size().reset_index(name="count")
+            fig1 = px.line(daily, x="date", y="count", markers=True)
+            st.plotly_chart(fig1, use_container_width=True)
+
+            # 📊 BAR CHART
+            st.markdown("### 📊 Messages Per Day")
+            fig2 = px.bar(daily, x="date", y="count")
+            st.plotly_chart(fig2, use_container_width=True)
+
+            # 🕒 HOURLY
+            st.markdown("### 🕒 Activity by Hour")
+            hourly = df.groupby("hour").size().reset_index(name="count")
+            fig3 = px.bar(hourly, x="hour", y="count")
+            st.plotly_chart(fig3, use_container_width=True)
+
+            # TABLE
+            st.markdown("### 📋 Recent Messages")
+            st.dataframe(df.sort_values("timestamp", ascending=False).head(10))
+
+        else:
+            st.warning("No data available yet.")
 
     st.markdown('</div>', unsafe_allow_html=True)
