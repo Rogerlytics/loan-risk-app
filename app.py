@@ -9,7 +9,7 @@ from supabase import create_client, Client
 st.set_page_config(page_title="AI Loan Risk System", layout="wide")
 
 # ==============================
-# 🎨 PREMIUM DARK BLUE THEME
+# 🎨 THEME
 # ==============================
 st.markdown("""
 <style>
@@ -25,22 +25,26 @@ html, body, [class*="css"] {
     border-radius: 16px;
     margin-bottom: 20px;
 }
-
-.stButton>button {
-    background: linear-gradient(90deg, #2563eb, #1d4ed8);
-    color: white;
-    border-radius: 10px;
-    height: 3em;
-    font-weight: 500;
-}
 </style>
 """, unsafe_allow_html=True)
 
 # ==============================
+# 🔐 ADMIN CREDENTIALS (CHANGE THIS)
+# ==============================
+ADMIN_USERNAME = "Rogerlytics"
+ADMIN_PASSWORD = "Rokima58"
+
+# ==============================
+# SESSION STATE
+# ==============================
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+# ==============================
 # SUPABASE
 # ==============================
-SUPABASE_URL = "https://your-project-id.supabase.co"
-SUPABASE_KEY = "your-anon-key"
+SUPABASE_URL = "https://yerqsfaseucvluljaicx.supabase.co"
+SUPABASE_KEY = "sb_publishable_Mve8q2zXADlFzVlCVYgdZQ_D5cu3vrD"
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ==============================
@@ -96,13 +100,11 @@ Real-time credit risk evaluation powered by machine learning
 """, unsafe_allow_html=True)
 
 # ==============================
-# MAIN PAGE
+# LOAN ANALYSIS
 # ==============================
 if page == "Loan Analysis":
 
-    # INPUT
     st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.subheader("Loan Input")
 
     col1, col2 = st.columns(2)
 
@@ -124,45 +126,22 @@ if page == "Loan Analysis":
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # KPI CARDS (CLEAN VERSION)
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.subheader("Key Metrics")
-
-    k1, k2, k3 = st.columns(3)
-    k1.metric("Loan Amount", f"KES {loan_amount:,}")
-    k2.metric("Monthly Income", f"KES {income:,}")
-    k3.metric("Interest Rate", f"{interest_rate}%")
-
-    st.markdown('</div>', unsafe_allow_html=True)
-
     btn1, btn2 = st.columns(2)
 
-    # ==============================
     # REPAYMENT
-    # ==============================
     with btn1:
         if st.button("Calculate Repayment"):
 
             monthly_rate = interest_rate / 100 / 12
-            monthly_payment = (
+            monthly = (
                 loan_amount * monthly_rate * (1 + monthly_rate) ** loan_term
             ) / ((1 + monthly_rate) ** loan_term - 1)
 
-            weekly = monthly_payment / 4.33
-            daily = monthly_payment / 30
+            st.write(f"Monthly: {monthly:,.2f}")
+            st.write(f"Weekly: {monthly/4.33:,.2f}")
+            st.write(f"Daily: {monthly/30:,.2f}")
 
-            st.markdown('<div class="card">', unsafe_allow_html=True)
-
-            st.subheader("Repayment Summary")
-            st.write(f"Monthly: KES {monthly_payment:,.2f}")
-            st.write(f"Weekly: KES {weekly:,.2f}")
-            st.write(f"Daily: KES {daily:,.2f}")
-
-            st.markdown('</div>', unsafe_allow_html=True)
-
-    # ==============================
     # RISK
-    # ==============================
     with btn2:
         if st.button("Check Loan Risk"):
 
@@ -190,66 +169,64 @@ if page == "Loan Analysis":
             pred = model.predict(inp)[0]
             prob = model.predict_proba(inp)[0][1] * 100
 
-            st.markdown('<div class="card">', unsafe_allow_html=True)
-
-            st.subheader("AI Decision")
             st.write(f"Risk Score: {prob:.2f}%")
-
             st.progress(int(prob))
-
-            if pred == 1:
-                st.error("❌ High Risk")
-            else:
-                st.success("✅ Low Risk")
-
-            st.subheader("Risk Explanation")
-            for r in explain_risk(raw):
-                st.write(f"• {r}")
-
-            st.subheader("Recommendations")
-            for s in suggest_improvements(raw):
-                st.info(s)
-
-            st.markdown('</div>', unsafe_allow_html=True)
 
 # ==============================
 # CONTACT
 # ==============================
 elif page == "Contact":
 
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-
     name = st.text_input("Name")
     email = st.text_input("Email")
     message = st.text_area("Message")
 
-    if st.button("Send Message"):
+    if st.button("Send"):
         supabase.table("messages").insert({
             "name": name,
             "email": email,
             "message": message
         }).execute()
-        st.success("Message sent")
-
-    st.markdown('</div>', unsafe_allow_html=True)
+        st.success("Sent")
 
 # ==============================
-# ADMIN
+# 🔐 ADMIN INBOX (PROTECTED)
 # ==============================
 elif page == "Admin Inbox":
 
-    st.markdown('<div class="card">', unsafe_allow_html=True)
+    if not st.session_state.logged_in:
 
-    try:
-        res = supabase.table("messages").select("*").execute()
-        msgs = res.data
+        st.subheader("Admin Login")
 
-        st.metric("Total Messages", len(msgs))
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
 
-        for m in msgs:
-            st.write(m)
+        if st.button("Login"):
+            if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+                st.session_state.logged_in = True
+                st.success("Login successful")
+                st.rerun()
+            else:
+                st.error("Invalid credentials")
 
-    except Exception as e:
-        st.error(f"Database error: {e}")
+    else:
+        st.subheader("Admin Inbox")
 
-    st.markdown('</div>', unsafe_allow_html=True)
+        if st.button("Logout"):
+            st.session_state.logged_in = False
+            st.rerun()
+
+        try:
+            res = supabase.table("messages").select("*").execute()
+            msgs = res.data
+
+            st.metric("Total Messages", len(msgs))
+
+            for m in msgs:
+                st.write(f"Name: {m['name']}")
+                st.write(f"Email: {m['email']}")
+                st.write(f"Message: {m['message']}")
+                st.write("---")
+
+        except Exception as e:
+            st.error(f"Database error: {e}")
