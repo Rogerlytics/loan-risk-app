@@ -19,23 +19,11 @@ html, body, [class*="css"] {
     font-family: 'Inter', sans-serif;
 }
 
-.block-container {
-    padding-top: 2rem;
-    padding-bottom: 2rem;
-}
-
-h1, h2, h3 {
-    color: #e6edf3;
-    font-weight: 600;
-}
-
 .card {
     background: linear-gradient(145deg, #111827, #0b1220);
     padding: 20px;
     border-radius: 16px;
-    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.4);
     margin-bottom: 20px;
-    border: 1px solid rgba(255,255,255,0.05);
 }
 
 .stButton>button {
@@ -45,15 +33,11 @@ h1, h2, h3 {
     height: 3em;
     font-weight: 500;
 }
-
-section[data-testid="stSidebar"] {
-    background-color: #0f172a;
-}
 </style>
 """, unsafe_allow_html=True)
 
 # ==============================
-# SUPABASE CONFIG
+# SUPABASE
 # ==============================
 SUPABASE_URL = "https://your-project-id.supabase.co"
 SUPABASE_KEY = "your-anon-key"
@@ -96,33 +80,27 @@ st.sidebar.title("Navigation")
 page = st.sidebar.radio("Go to", ["Loan Analysis", "Contact", "Admin Inbox"])
 
 # ==============================
-# 🔥 PREMIUM CENTERED HEADER
+# HEADER
 # ==============================
 st.markdown("""
 <h1 style='text-align:center;
            font-size:42px;
            background: linear-gradient(90deg, #3b82f6, #60a5fa);
            -webkit-background-clip: text;
-           -webkit-text-fill-color: transparent;
-           font-weight:700;'>
+           -webkit-text-fill-color: transparent;'>
 AI Loan Risk Intelligence Platform
 </h1>
-
-<p style='text-align:center;
-          color:#94a3b8;
-          font-size:16px;'>
+<p style='text-align:center; color:#94a3b8;'>
 Real-time credit risk evaluation powered by machine learning
 </p>
 """, unsafe_allow_html=True)
 
-st.markdown("<br>", unsafe_allow_html=True)
-
 # ==============================
-# LOAN ANALYSIS
+# MAIN PAGE
 # ==============================
 if page == "Loan Analysis":
 
-    # INPUT CARD
+    # INPUT
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.subheader("Loan Input")
 
@@ -133,7 +111,7 @@ if page == "Loan Analysis":
         income = st.number_input("Monthly Income", 0, 1000000, 50000)
         loan_amount = st.number_input("Loan Amount", 0, 1000000, 200000)
         interest_rate = st.number_input("Interest Rate (%)", 0.0, 100.0, 12.5)
-        loan_term = st.selectbox("Loan Term (Months)", [12, 24, 36, 48, 60])
+        loan_term = st.selectbox("Loan Term", [12, 24, 36, 48, 60])
 
     with col2:
         car_value = st.number_input("Car Value", 0, 1000000, 400000)
@@ -143,22 +121,30 @@ if page == "Loan Analysis":
         previous_defaults = st.number_input("Previous Defaults", 0, 10, 0)
 
     employment_type = st.selectbox("Employment Type", ["salaried", "self-employed", "informal"])
+
     st.markdown('</div>', unsafe_allow_html=True)
 
     # ==============================
-    # 🔥 GLOBAL KPI (ALWAYS VISIBLE)
+    # KPI CARDS WITH BUTTONS
     # ==============================
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.subheader("Key Metrics")
 
     k1, k2, k3 = st.columns(3)
-    k1.metric("Loan Amount", f"KES {loan_amount:,}")
-    k2.metric("Monthly Income", f"KES {income:,}")
-    k3.metric("Interest Rate", f"{interest_rate}%")
+
+    with k1:
+        st.metric("Loan Amount", f"KES {loan_amount:,}")
+        st.button("Adjust Loan")
+
+    with k2:
+        st.metric("Monthly Income", f"KES {income:,}")
+        st.button("Adjust Income")
+
+    with k3:
+        st.metric("Interest Rate", f"{interest_rate}%")
+        st.button("Adjust Rate")
 
     st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
 
     btn1, btn2 = st.columns(2)
 
@@ -173,29 +159,27 @@ if page == "Loan Analysis":
                 loan_amount * monthly_rate * (1 + monthly_rate) ** loan_term
             ) / ((1 + monthly_rate) ** loan_term - 1)
 
-            total_payment = monthly_payment * loan_term
-            weekly_payment = monthly_payment / 4.33
-            daily_payment = monthly_payment / 30
+            weekly = monthly_payment / 4.33
+            daily = monthly_payment / 30
 
             st.markdown('<div class="card">', unsafe_allow_html=True)
-            st.subheader("Repayment Summary")
 
+            st.subheader("Repayment Summary")
             st.write(f"Monthly: KES {monthly_payment:,.2f}")
-            st.write(f"Weekly: KES {weekly_payment:,.2f}")
-            st.write(f"Daily: KES {daily_payment:,.2f}")
-            st.write(f"Total: KES {total_payment:,.2f}")
+            st.write(f"Weekly: KES {weekly:,.2f}")
+            st.write(f"Daily: KES {daily:,.2f}")
 
             st.markdown('</div>', unsafe_allow_html=True)
 
     # ==============================
-    # RISK ANALYSIS
+    # RISK
     # ==============================
     with btn2:
         if st.button("Check Loan Risk"):
 
             emp = 0 if employment_type == "salaried" else 1 if employment_type == "self-employed" else 2
 
-            raw_data = pd.DataFrame({
+            raw = pd.DataFrame({
                 'age':[age],
                 'monthly_income':[income],
                 'loan_amount':[loan_amount],
@@ -209,31 +193,32 @@ if page == "Loan Analysis":
                 'employment_type':[emp]
             })
 
-            raw_data['loan_to_value_ratio'] = loan_amount / car_value if car_value > 0 else 0
-            raw_data['income_to_loan_ratio'] = income / loan_amount if loan_amount > 0 else 0
+            raw['loan_to_value_ratio'] = loan_amount / car_value if car_value > 0 else 0
+            raw['income_to_loan_ratio'] = income / loan_amount if loan_amount > 0 else 0
 
-            input_data = raw_data[model.feature_names_in_]
+            inp = raw[model.feature_names_in_]
 
-            prediction = model.predict(input_data)[0]
-            probability = model.predict_proba(input_data)[0][1] * 100
+            pred = model.predict(inp)[0]
+            prob = model.predict_proba(inp)[0][1] * 100
 
             st.markdown('<div class="card">', unsafe_allow_html=True)
 
             st.subheader("AI Decision")
-            if prediction == 1:
+            st.write(f"Risk Score: {prob:.2f}%")  # ✅ ADDED %
+
+            st.progress(int(prob))
+
+            if pred == 1:
                 st.error("❌ High Risk")
             else:
                 st.success("✅ Low Risk")
 
-            st.subheader("Risk Score")
-            st.progress(int(probability))
-
             st.subheader("Risk Explanation")
-            for r in explain_risk(raw_data):
+            for r in explain_risk(raw):
                 st.write(f"• {r}")
 
             st.subheader("Recommendations")
-            for s in suggest_improvements(raw_data):
+            for s in suggest_improvements(raw):
                 st.info(s)
 
             st.markdown('</div>', unsafe_allow_html=True)
@@ -260,26 +245,20 @@ elif page == "Contact":
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ==============================
-# ADMIN INBOX
+# ADMIN
 # ==============================
 elif page == "Admin Inbox":
 
     st.markdown('<div class="card">', unsafe_allow_html=True)
 
     try:
-        response = supabase.table("messages").select("*").execute()
-        messages = response.data
+        res = supabase.table("messages").select("*").execute()
+        msgs = res.data
 
-        st.metric("Total Messages", len(messages))
+        st.metric("Total Messages", len(msgs))
 
-        messages = sorted(messages, key=lambda x: x['created_at'], reverse=True)
-
-        for msg in messages:
-            st.write(f"Name: {msg['name']}")
-            st.write(f"Email: {msg['email']}")
-            st.write(f"Message: {msg['message']}")
-            st.write(f"Date: {msg['created_at']}")
-            st.markdown("---")
+        for m in msgs:
+            st.write(m)
 
     except Exception as e:
         st.error(f"Database error: {e}")
