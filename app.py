@@ -12,7 +12,7 @@ from supabase import create_client, Client
 st.set_page_config(page_title="AI Loan Risk System", layout="wide")
 
 # ==============================
-# THEME
+# 🎨 PREMIUM DARK BLUE THEME
 # ==============================
 st.markdown("""
 <style>
@@ -21,23 +21,26 @@ html, body, [class*="css"] {
     color: #e6edf3;
     font-family: 'Inter', sans-serif;
 }
+
 .card {
     background: linear-gradient(145deg, #111827, #0b1220);
     padding: 20px;
     border-radius: 16px;
     margin-bottom: 20px;
 }
+
 .stButton>button {
     background: linear-gradient(90deg, #2563eb, #1d4ed8);
     color: white;
     border-radius: 10px;
     height: 3em;
+    font-weight: 500;
 }
 </style>
 """, unsafe_allow_html=True)
 
 # ==============================
-# SECRETS
+# 🔐 SECRETS
 # ==============================
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
@@ -87,8 +90,11 @@ def login(email, password):
     return None
 
 # ==============================
-# SIDEBAR AUTH
+# SIDEBAR (NAVIGATION FIRST)
 # ==============================
+st.sidebar.title("Navigation")
+page = st.sidebar.radio("Go to", ["Loan Analysis", "Contact", "Admin Dashboard"])
+
 st.sidebar.title("User Account")
 
 auth_mode = st.sidebar.selectbox("Account", ["Login", "Sign Up"])
@@ -118,20 +124,28 @@ if st.session_state.user:
     st.sidebar.write(f"👤 {st.session_state.user['username']}")
 
 # ==============================
-# NAVIGATION
-# ==============================
-st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to", ["Loan Analysis", "Contact", "Admin Dashboard"])
-
-# ==============================
 # HEADER
 # ==============================
-st.markdown("<h1 style='text-align:center;'>AI Loan Risk Intelligence Platform</h1>", unsafe_allow_html=True)
+st.markdown("""
+<h1 style='text-align:center;
+font-size:42px;
+background: linear-gradient(90deg, #3b82f6, #60a5fa);
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;'>
+AI Loan Risk Intelligence Platform
+</h1>
+<p style='text-align:center; color:#94a3b8;'>
+Real-time credit risk evaluation powered by machine learning
+</p>
+""", unsafe_allow_html=True)
 
 # ==============================
-# LOAN ANALYSIS (UNCHANGED)
+# LOAN ANALYSIS
 # ==============================
 if page == "Loan Analysis":
+
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.subheader("Loan Input")
 
     col1, col2 = st.columns(2)
 
@@ -149,16 +163,30 @@ if page == "Loan Analysis":
         previous_loans = st.number_input("Previous Loans", 0, 10, 1)
         previous_defaults = st.number_input("Previous Defaults", 0, 10, 0)
 
-    employment_type = st.selectbox("Employment Type", ["salaried","self-employed","informal"])
+    employment_type = st.selectbox("Employment Type",
+                                  ["salaried", "self-employed", "informal"])
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
     btn1, btn2 = st.columns(2)
 
+    # 💰 REPAYMENT
     with btn1:
         if st.button("💰 Calculate Repayment"):
-            r = interest_rate/100/12
-            m = loan_amount*r*(1+r)**loan_term / ((1+r)**loan_term - 1)
-            st.write(f"Monthly: {m:,.2f}")
 
+            monthly_rate = interest_rate / 100 / 12
+            monthly_payment = (
+                loan_amount * monthly_rate * (1 + monthly_rate) ** loan_term
+            ) / ((1 + monthly_rate) ** loan_term - 1)
+
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            st.subheader("💳 Repayment Summary")
+            st.write(f"Monthly: KES {monthly_payment:,.2f}")
+            st.write(f"Weekly: KES {monthly_payment/4.33:,.2f}")
+            st.write(f"Daily: KES {monthly_payment/30:,.2f}")
+            st.markdown('</div>', unsafe_allow_html=True)
+
+    # 🤖 RISK CHECK
     with btn2:
         if st.button("🤖 Check Loan Risk"):
 
@@ -179,13 +207,30 @@ if page == "Loan Analysis":
             pred = model.predict(X)[0]
             prob = model.predict_proba(X)[0][1]*100
 
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            st.subheader("🤖 AI Decision")
             st.write(f"Risk Score: {prob:.2f}%")
             st.progress(int(prob))
 
+            if pred == 1:
+                st.error("❌ High Risk")
+            else:
+                st.success("✅ Low Risk")
+
+            st.subheader("📌 Risk Explanation")
+            st.write(explain_risk(df))
+
+            st.subheader("💡 Recommendations")
+            st.write(suggest_improvements(df))
+
+            st.markdown('</div>', unsafe_allow_html=True)
+
 # ==============================
-# CONTACT (USER LINKED)
+# CONTACT (FIXED USER LINK)
 # ==============================
 elif page == "Contact":
+
+    st.markdown('<div class="card">', unsafe_allow_html=True)
 
     message = st.text_area("Message")
 
@@ -204,8 +249,10 @@ elif page == "Contact":
         else:
             st.error("⚠️ Please login first")
 
+    st.markdown('</div>', unsafe_allow_html=True)
+
 # ==============================
-# ADMIN DASHBOARD
+# ADMIN DASHBOARD (WITH CHARTS)
 # ==============================
 elif page == "Admin Dashboard":
 
@@ -219,14 +266,14 @@ elif page == "Admin Dashboard":
                 st.session_state.logged_in = True
                 st.rerun()
             else:
-                st.error("Invalid")
+                st.error("❌ Invalid credentials")
 
     else:
 
         data = supabase.table("messages").select("*").execute().data
         df = pd.DataFrame(data)
 
-        st.metric("Total Messages", len(df))
+        st.metric("📩 Total Messages", len(df))
 
         if not df.empty:
             df["timestamp"] = pd.to_datetime(df["timestamp"])
@@ -234,7 +281,7 @@ elif page == "Admin Dashboard":
 
             daily = df.groupby("date").size().reset_index(name="count")
 
-            fig = px.line(daily, x="date", y="count")
+            fig = px.line(daily, x="date", y="count", markers=True)
             st.plotly_chart(fig)
 
             st.dataframe(df)
