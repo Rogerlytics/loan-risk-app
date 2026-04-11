@@ -109,8 +109,8 @@ hr {
 # ==============================
 # SUPABASE CONFIG (REPLACE)
 # ==============================
-SUPABASE_URL = "https://your-project-id.supabase.co"
-SUPABASE_KEY = "your-anon-key"
+SUPABASE_URL = "https://yerqsfaseucvluljaicx.supabase.co"
+SUPABASE_KEY = "sb_publishable_Mve8q2zXADlFzVlCVYgdZQ_D5cu3vrD"
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
