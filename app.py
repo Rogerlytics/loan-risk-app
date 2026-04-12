@@ -169,7 +169,7 @@ try:
         st.sidebar.write(f"👤 {st.session_state.user['username']}")
 
     # ==============================
-    # HEADER (RESTORED)
+    # HEADER
     # ==============================
     st.markdown('<h1 class="main-title">AI Loan Risk Intelligence Platform</h1>', unsafe_allow_html=True)
     st.markdown('<p class="subtext">Real-time credit risk evaluation powered by machine learning</p>', unsafe_allow_html=True)
@@ -201,9 +201,23 @@ try:
 
         st.markdown('</div>', unsafe_allow_html=True)
 
+        # ==============================
+        # 📊 KEY METRICS (ADDED)
+        # ==============================
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+
+        st.subheader("📊 Key Metrics")
+
+        k1, k2, k3 = st.columns(3)
+
+        k1.metric("💰 Loan Amount", f"KES {loan_amount:,}")
+        k2.metric("💵 Monthly Income", f"KES {income:,}")
+        k3.metric("📈 Interest Rate", f"{interest_rate}%")
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
         btn1, btn2 = st.columns(2)
 
-        # 💰 REPAYMENT
         with btn1:
             if st.button("💰 Calculate Repayment"):
                 r = interest_rate/100/12
@@ -216,7 +230,6 @@ try:
                 st.write(f"Daily: KES {m/30:,.2f}")
                 st.markdown('</div>', unsafe_allow_html=True)
 
-        # 🤖 RISK
         with btn2:
             if st.button("🤖 Check Loan Risk"):
 
