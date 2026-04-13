@@ -239,6 +239,7 @@ try:
                 supabase.table("messages").insert({
                     "user_id": st.session_state.user["id"],
                     "name": st.session_state.user["username"],
+                    "email": st.session_state.user["email"],
                     "message": msg
                 }).execute()
                 st.rerun()
