@@ -177,7 +177,6 @@ try:
 
         b1,b2 = st.columns(2)
 
-        # REPAYMENT
         with b1:
             if st.button("💰 Calculate Repayment"):
                 r = interest_rate/100/12
@@ -188,7 +187,6 @@ try:
                 st.write("Daily:",m/30)
                 st.markdown('</div>', unsafe_allow_html=True)
 
-        # RISK
         with b2:
             if st.button("🤖 Check Loan Risk"):
 
@@ -245,9 +243,15 @@ try:
                 st.rerun()
 
         if st.session_state.user:
+
+            # ✅ NEW SORT OPTION
+            sort_order = st.selectbox("Sort Messages", ["Oldest First", "Newest First"])
+
+            desc = True if sort_order == "Newest First" else False
+
             msgs = supabase.table("messages").select("*").eq(
-                "user_id",st.session_state.user["id"]
-            ).order("timestamp").execute().data
+                "user_id", st.session_state.user["id"]
+            ).order("id", desc=desc).execute().data
 
             for m in msgs:
                 st.markdown(f"<div style='text-align:right;background:#2563eb;padding:10px;border-radius:10px;margin:5px'>{m['message']}</div>",unsafe_allow_html=True)
