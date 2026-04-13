@@ -228,7 +228,7 @@ try:
                 st.markdown('</div>', unsafe_allow_html=True)
 
     # ==============================
-    # CONTACT (WHATSAPP STYLE)
+    # CONTACT
     # ==============================
     elif page == "Contact":
 
@@ -239,16 +239,15 @@ try:
         if st.button("Send"):
             if st.session_state.user:
                 supabase.table("messages").insert({
-                    "user_id":st.session_state.user["id"],
-                    "message":msg,
-                    "timestamp":str(datetime.now())
+                    "user_id": st.session_state.user["id"],
+                    "message": msg
                 }).execute()
                 st.rerun()
 
         if st.session_state.user:
             msgs = supabase.table("messages").select("*").eq(
                 "user_id",st.session_state.user["id"]
-            ).execute().data
+            ).order("timestamp").execute().data
 
             for m in msgs:
                 st.markdown(f"<div style='text-align:right;background:#2563eb;padding:10px;border-radius:10px;margin:5px'>{m['message']}</div>",unsafe_allow_html=True)
