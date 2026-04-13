@@ -238,15 +238,14 @@ try:
             if st.session_state.user:
                 supabase.table("messages").insert({
                     "user_id": st.session_state.user["id"],
+                    "name": st.session_state.user["username"],
                     "message": msg
                 }).execute()
                 st.rerun()
 
         if st.session_state.user:
 
-            # ✅ NEW SORT OPTION
             sort_order = st.selectbox("Sort Messages", ["Oldest First", "Newest First"])
-
             desc = True if sort_order == "Newest First" else False
 
             msgs = supabase.table("messages").select("*").eq(
