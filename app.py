@@ -253,10 +253,48 @@ try:
                 "user_id", st.session_state.user["id"]
             ).order("id", desc=desc).execute().data
 
+            st.markdown("### 💬 Chat Conversation")
+
             for m in msgs:
-                st.markdown(f"<div style='text-align:right;background:#2563eb;padding:10px;border-radius:10px;margin:5px'>{m['message']}</div>",unsafe_allow_html=True)
+
+                user_name = m.get("name", "User")
+                timestamp = m.get("timestamp", "")
+
+                st.markdown(f"""
+                <div style='display:flex; justify-content:flex-end; margin:8px 0'>
+                    <div style='background:#2563eb; color:white; padding:10px 14px;
+                                border-radius:12px; max-width:70%; text-align:right'>
+                        <div style='font-size:12px; opacity:0.8'>{user_name}</div>
+                        <div>{m['message']}</div>
+                        <div style='font-size:10px; opacity:0.6'>{timestamp}</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
                 if m.get("reply"):
-                    st.markdown(f"<div style='text-align:left;background:#1f2937;padding:10px;border-radius:10px;margin:5px'>{m['reply']}</div>",unsafe_allow_html=True)
+                    reply_time = m.get("replied_at", "")
+
+                    st.markdown(f"""
+                    <div style='display:flex; justify-content:flex-start; margin:8px 0'>
+                        <div style='background:#1f2937; color:white; padding:10px 14px;
+                                    border-radius:12px; max-width:70%; text-align:left'>
+                            <div style='font-size:12px; opacity:0.8'>Admin</div>
+                            <div>{m['reply']}</div>
+                            <div style='font-size:10px; opacity:0.6'>{reply_time}</div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+            st.markdown("<div id='bottom'></div>", unsafe_allow_html=True)
+
+            st.markdown("""
+            <script>
+            var element = document.getElementById("bottom");
+            if (element) {
+                element.scrollIntoView({behavior: "smooth"});
+            }
+            </script>
+            """, unsafe_allow_html=True)
 
         st.markdown('</div>', unsafe_allow_html=True)
 
