@@ -63,22 +63,17 @@ try:
 
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-    # SESSION
     if "logged_in" not in st.session_state:
         st.session_state.logged_in = False
     if "user" not in st.session_state:
         st.session_state.user = None
 
-    # MODEL
     @st.cache_resource
     def load_model():
         return pickle.load(open("loan_model.pkl", "rb"))
 
     model = load_model()
 
-    # ==============================
-    # AUTH FUNCTIONS
-    # ==============================
     def check_password(p):
         return bcrypt.checkpw(p.encode(), ADMIN_PASSWORD_HASH.encode())
 
@@ -90,9 +85,6 @@ try:
                 return u
         return None
 
-    # ==============================
-    # ML HELPERS
-    # ==============================
     def explain_risk(df):
         r = []
         if df['income_to_loan_ratio'][0] < 0.3:
@@ -113,9 +105,6 @@ try:
             s.append("Increase collateral")
         return s
 
-    # ==============================
-    # SIDEBAR
-    # ==============================
     st.sidebar.title("Navigation")
     page = st.sidebar.radio("Go to", ["Loan Analysis","Contact","Admin Dashboard"])
 
@@ -134,19 +123,12 @@ try:
     if st.session_state.user:
         st.sidebar.write(f"👤 {st.session_state.user['username']}")
 
-    # ==============================
-    # HEADER
-    # ==============================
     st.markdown('<h1 class="main-title">AI Loan Risk Intelligence Platform</h1>', unsafe_allow_html=True)
     st.markdown('<p class="subtext">Real-time credit risk evaluation powered by ML</p>', unsafe_allow_html=True)
 
-    # ==============================
-    # LOAN ANALYSIS
-    # ==============================
     if page == "Loan Analysis":
 
         st.markdown('<div class="card">', unsafe_allow_html=True)
-
         col1,col2 = st.columns(2)
 
         with col1:
@@ -164,10 +146,8 @@ try:
             previous_defaults = st.number_input("Defaults",0,10,0)
 
         employment_type = st.selectbox("Employment",["salaried","self-employed","informal"])
-
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # KPI
         st.markdown('<div class="card">', unsafe_allow_html=True)
         k1,k2,k3 = st.columns(3)
         k1.metric("Loan",loan_amount)
@@ -189,7 +169,6 @@ try:
 
         with b2:
             if st.button("🤖 Check Loan Risk"):
-
                 emp = {"salaried":0,"self-employed":1,"informal":2}[employment_type]
 
                 df = pd.DataFrame({
@@ -225,13 +204,9 @@ try:
 
                 st.markdown('</div>', unsafe_allow_html=True)
 
-    # ==============================
-    # CONTACT
-    # ==============================
     elif page == "Contact":
 
         st.markdown('<div class="card">', unsafe_allow_html=True)
-
         msg = st.text_area("Message")
 
         if st.button("Send"):
@@ -240,7 +215,8 @@ try:
                     "user_id": st.session_state.user["id"],
                     "name": st.session_state.user["username"],
                     "email": st.session_state.user["email"],
-                    "message": msg
+                    "message": msg,
+                    "status": "sent"
                 }).execute()
                 st.rerun()
 
@@ -260,13 +236,21 @@ try:
                 user_name = m.get("name", "User")
                 timestamp = m.get("timestamp", "")
 
+                status = m.get("status", "sent")
+                if status == "sent":
+                    tick = "✓"
+                elif status == "delivered":
+                    tick = "✓✓"
+                else:
+                    tick = "✓✓ (seen)"
+
                 st.markdown(f"""
                 <div style='display:flex; justify-content:flex-end; margin:8px 0'>
                     <div style='background:#2563eb; color:white; padding:10px 14px;
                                 border-radius:12px; max-width:70%; text-align:right'>
                         <div style='font-size:12px; opacity:0.8'>{user_name}</div>
                         <div>{m['message']}</div>
-                        <div style='font-size:10px; opacity:0.6'>{timestamp}</div>
+                        <div style='font-size:10px; opacity:0.6'>{timestamp} {tick}</div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -286,7 +270,6 @@ try:
                     """, unsafe_allow_html=True)
 
             st.markdown("<div id='bottom'></div>", unsafe_allow_html=True)
-
             st.markdown("""
             <script>
             var element = document.getElementById("bottom");
@@ -298,9 +281,6 @@ try:
 
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # ==============================
-    # ADMIN DASHBOARD
-    # ==============================
     elif page == "Admin Dashboard":
 
         u = st.text_input("Admin Username")
@@ -324,6 +304,12 @@ try:
                 st.plotly_chart(fig)
 
             for m in data:
+
+                if m.get("status") != "seen":
+                    supabase.table("messages").update({
+                        "status": "seen"
+                    }).eq("id", m["id"]).execute()
+
                 st.write(m["message"])
                 reply = st.text_input(f"Reply {m['id']}")
                 if st.button(f"Send {m['id']}"):
