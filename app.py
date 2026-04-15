@@ -12,8 +12,6 @@ from supabase import create_client, Client
 from typing import Optional, Dict, Any, List, Tuple
 import html
 import time
-import threading
-from streamlit.runtime.scriptrunner import add_script_run_ctx
 
 # ==============================
 # 2. CONFIG
@@ -55,11 +53,6 @@ html, body {
     font-size: 12px;
     margin-left: 8px;
 }
-.typing-indicator {
-    color: #8a8d91;
-    font-style: italic;
-    padding: 8px 16px;
-}
 .read-receipt {
     font-size: 11px;
     color: #8a8d91;
@@ -94,12 +87,10 @@ if "seen_notified" not in st.session_state:
     st.session_state.seen_notified = set()
 if "selected_user_id" not in st.session_state:
     st.session_state.selected_user_id = None
-if "realtime_sub" not in st.session_state:
-    st.session_state.realtime_sub = None
-if "new_message_arrived" not in st.session_state:
-    st.session_state.new_message_arrived = False
-if "typing_status" not in st.session_state:
-    st.session_state.typing_status = {}  # user_id -> bool
+if "auto_refresh" not in st.session_state:
+    st.session_state.auto_refresh = False
+if "last_refresh" not in st.session_state:
+    st.session_state.last_refresh = time.time()
 
 # ==============================
 # 6. MODEL
@@ -192,32 +183,6 @@ def mark_messages_as_read(user_id: int):
             .eq("user_id", user_id).eq("read_by_customer", False).execute()
     except:
         pass
-
-def setup_realtime_subscription(user_id: Optional[int] = None, is_admin: bool = False):
-    """Setup Supabase Realtime subscription for messages."""
-    if st.session_state.realtime_sub is not None:
-        try:
-            supabase.remove_subscription(st.session_state.realtime_sub)
-        except:
-            pass
-
-    def handle_payload(payload):
-        # Called when a new message or update occurs
-        st.session_state.new_message_arrived = True
-        # If admin and viewing a conversation, could auto-refresh
-        # We'll just set flag to trigger rerun on next script execution
-
-    filter_str = "*" if is_admin else f"user_id=eq.{user_id}"
-    sub = supabase.channel("messages_channel")\
-        .on_postgres_changes(
-            "*",
-            schema="public",
-            table="messages",
-            filter=filter_str
-        )(handle_payload)\
-        .subscribe()
-
-    st.session_state.realtime_sub = sub
 
 # ==============================
 # 7. SIDEBAR
@@ -340,7 +305,7 @@ if page == "Loan Analysis":
             st.markdown('</div>', unsafe_allow_html=True)
 
 # ------------------------------
-# CONTACT (Customer Support) with Realtime
+# CONTACT (Customer Support) with Auto-Refresh
 # ------------------------------
 elif page == "Contact":
 
@@ -351,17 +316,17 @@ elif page == "Contact":
     else:
         user_id = st.session_state.user["id"]
 
-        # Setup realtime subscription (only once per session)
-        if st.session_state.realtime_sub is None:
-            setup_realtime_subscription(user_id=user_id, is_admin=False)
-
         # Mark messages as read when entering page
         mark_messages_as_read(user_id)
 
-        # Check for realtime updates and rerun if new message arrived
-        if st.session_state.new_message_arrived:
-            st.session_state.new_message_arrived = False
-            st.rerun()
+        # Auto-refresh controls
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            if st.button("🔄 Refresh", use_container_width=True):
+                st.rerun()
+        with col2:
+            auto = st.checkbox("Auto-refresh (3s)", value=st.session_state.auto_refresh)
+            st.session_state.auto_refresh = auto
 
         # Fetch messages
         try:
@@ -472,8 +437,13 @@ elif page == "Contact":
                 except Exception as e:
                     st.error(f"Failed to send: {e}")
 
+        # Auto-refresh logic
+        if st.session_state.auto_refresh:
+            time.sleep(3)
+            st.rerun()
+
 # ------------------------------
-# ADMIN DASHBOARD (with Realtime)
+# ADMIN DASHBOARD (with Auto-Refresh)
 # ------------------------------
 elif page == "Admin Dashboard":
 
@@ -493,13 +463,14 @@ elif page == "Admin Dashboard":
                 st.error("Invalid credentials")
 
     if st.session_state.logged_in:
-        # Setup admin realtime subscription
-        if st.session_state.realtime_sub is None:
-            setup_realtime_subscription(is_admin=True)
-
-        if st.session_state.new_message_arrived:
-            st.session_state.new_message_arrived = False
-            st.rerun()
+        # Auto-refresh controls for admin
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            if st.button("🔄 Refresh", use_container_width=True):
+                st.rerun()
+        with col2:
+            auto = st.checkbox("Auto-refresh (3s)", value=st.session_state.auto_refresh, key="admin_auto")
+            st.session_state.auto_refresh = auto
 
         try:
             data = supabase.table("messages").select("*").order("timestamp", desc=False).execute().data
@@ -523,7 +494,6 @@ elif page == "Admin Dashboard":
             with col_users:
                 st.markdown("**Conversations**")
                 for usr in user_list:
-                    # Show typing indicator if admin is typing to this user (future)
                     if st.button(f"👤 {usr['name']} ({usr['email']})", key=f"user_{usr['user_id']}"):
                         st.session_state.selected_user_id = usr['user_id']
                         st.rerun()
@@ -625,3 +595,8 @@ elif page == "Admin Dashboard":
                 if not daily.empty:
                     fig = px.line(daily, x="timestamp", y="count", title="Messages Over Time")
                     st.plotly_chart(fig, use_container_width=True)
+
+        # Auto-refresh for admin
+        if st.session_state.auto_refresh:
+            time.sleep(3)
+            st.rerun()
