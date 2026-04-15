@@ -7,11 +7,13 @@ import pickle
 import pandas as pd
 import bcrypt
 import plotly.express as px
-from datetime import datetime
+from datetime import datetime, timedelta
 from supabase import create_client, Client
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Tuple
 import html
 import time
+import threading
+from streamlit.runtime.scriptrunner import add_script_run_ctx
 
 # ==============================
 # 2. CONFIG
@@ -19,7 +21,7 @@ import time
 st.set_page_config(page_title="AI Loan Risk System", layout="wide")
 
 # ==============================
-# 3. THEME (Enhanced with Facebook Chat Styles)
+# 3. THEME & STYLES
 # ==============================
 st.markdown("""
 <style>
@@ -45,7 +47,6 @@ html, body {
     color:#94a3b8;
     margin-bottom:20px;
 }
-/* Notification badge */
 .notification-badge {
     background-color: #ef4444;
     color: white;
@@ -53,6 +54,21 @@ html, body {
     padding: 2px 8px;
     font-size: 12px;
     margin-left: 8px;
+}
+.typing-indicator {
+    color: #8a8d91;
+    font-style: italic;
+    padding: 8px 16px;
+}
+.read-receipt {
+    font-size: 11px;
+    color: #8a8d91;
+    margin-left: 8px;
+}
+.source-citation {
+    font-size: 11px;
+    color: #6b7280;
+    margin-left: 4px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -68,18 +84,22 @@ ADMIN_PASSWORD_HASH = st.secrets["ADMIN_PASSWORD_HASH"]
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ==============================
-# 5. SESSION
+# 5. SESSION STATE
 # ==============================
 if "user" not in st.session_state:
     st.session_state.user = None
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "seen_notified" not in st.session_state:
-    st.session_state.seen_notified = set()  # set of message IDs user has seen replies for
+    st.session_state.seen_notified = set()
 if "selected_user_id" not in st.session_state:
     st.session_state.selected_user_id = None
-if "auto_refresh" not in st.session_state:
-    st.session_state.auto_refresh = False
+if "realtime_sub" not in st.session_state:
+    st.session_state.realtime_sub = None
+if "new_message_arrived" not in st.session_state:
+    st.session_state.new_message_arrived = False
+if "typing_status" not in st.session_state:
+    st.session_state.typing_status = {}  # user_id -> bool
 
 # ==============================
 # 6. MODEL
@@ -91,7 +111,7 @@ def load_model():
 model = load_model()
 
 # ==============================
-# FUNCTIONS
+# HELPER FUNCTIONS
 # ==============================
 def check_password(p: str) -> bool:
     return bcrypt.checkpw(p.encode(), ADMIN_PASSWORD_HASH.encode())
@@ -107,55 +127,103 @@ def login(email: str, password: str) -> Optional[Dict[str, Any]]:
         st.error(f"Login error: {e}")
     return None
 
-def explain_risk(df: pd.DataFrame) -> List[str]:
+def explain_risk_with_citations(df: pd.DataFrame) -> Tuple[List[str], List[Dict[str, str]]]:
     reasons = []
+    citations = []
     if df['income_to_loan_ratio'][0] < 0.3:
         reasons.append("📉 Low income vs loan")
+        citations.append({"source": "Lending Policy §2.4", "confidence": "High"})
     if df['loan_to_value_ratio'][0] > 0.8:
         reasons.append("🚗 Loan too high vs car value")
+        citations.append({"source": "Asset Valuation Guide", "confidence": "Medium"})
     if df['previous_defaults'][0] > 0:
         reasons.append("⚠️ Previous defaults")
+        citations.append({"source": "Credit History", "confidence": "High"})
     if not reasons:
         reasons.append("✅ Strong profile")
-    return reasons
+        citations.append({"source": "All checks passed", "confidence": "High"})
+    return reasons, citations
 
 def suggest_improvements(df: pd.DataFrame) -> List[str]:
     suggestions = []
     if df['income_to_loan_ratio'][0] < 0.3:
-        suggestions.append("Increase income or reduce loan")
+        suggestions.append("Increase income or reduce loan amount")
     if df['loan_to_value_ratio'][0] > 0.8:
-        suggestions.append("Increase collateral")
+        suggestions.append("Provide additional collateral or reduce loan amount")
     return suggestions
 
-def format_timestamp(ts: str) -> str:
-    """Convert ISO timestamp to human-readable format."""
+def relative_time(ts: str) -> str:
+    """Convert ISO timestamp to relative time (e.g., '2 min ago') or full date."""
     try:
         dt = datetime.fromisoformat(ts.replace('Z', '+00:00'))
-        return dt.strftime("%b %d, %I:%M %p")
+        now = datetime.now(dt.tzinfo)
+        diff = now - dt
+        if diff < timedelta(minutes=1):
+            return "just now"
+        elif diff < timedelta(hours=1):
+            mins = int(diff.total_seconds() // 60)
+            return f"{mins} min ago"
+        elif diff < timedelta(days=1):
+            hours = int(diff.total_seconds() // 3600)
+            return f"{hours} hour{'s' if hours>1 else ''} ago"
+        elif diff < timedelta(days=7):
+            days = diff.days
+            return f"{days} day{'s' if days>1 else ''} ago"
+        else:
+            return dt.strftime("%b %d, %I:%M %p")
     except:
         return ts
 
 def get_unread_reply_count(user_id: int) -> int:
-    """Count messages with replies that user hasn't seen yet."""
     try:
-        msgs = supabase.table("messages").select("id, reply").eq("user_id", user_id).execute().data
+        msgs = supabase.table("messages").select("id, reply, read_by_customer").eq("user_id", user_id).execute().data
         unseen = 0
         for m in msgs:
-            if m.get("reply") and m["id"] not in st.session_state.seen_notified:
+            if m.get("reply") and not m.get("read_by_customer", False):
                 unseen += 1
         return unseen
     except:
         return 0
 
+def mark_messages_as_read(user_id: int):
+    """Mark all messages with replies as read for the given user."""
+    try:
+        supabase.table("messages").update({"read_by_customer": True})\
+            .eq("user_id", user_id).eq("read_by_customer", False).execute()
+    except:
+        pass
+
+def setup_realtime_subscription(user_id: Optional[int] = None, is_admin: bool = False):
+    """Setup Supabase Realtime subscription for messages."""
+    if st.session_state.realtime_sub is not None:
+        try:
+            supabase.remove_subscription(st.session_state.realtime_sub)
+        except:
+            pass
+
+    def handle_payload(payload):
+        # Called when a new message or update occurs
+        st.session_state.new_message_arrived = True
+        # If admin and viewing a conversation, could auto-refresh
+        # We'll just set flag to trigger rerun on next script execution
+
+    filter_str = "*" if is_admin else f"user_id=eq.{user_id}"
+    sub = supabase.channel("messages_channel")\
+        .on_postgres_changes(
+            "*",
+            schema="public",
+            table="messages",
+            filter=filter_str
+        )(handle_payload)\
+        .subscribe()
+
+    st.session_state.realtime_sub = sub
+
 # ==============================
 # 7. SIDEBAR
 # ==============================
 st.sidebar.title("Navigation")
-
-page = st.sidebar.radio(
-    "Go to",
-    ["Loan Analysis", "Contact", "Admin Dashboard"]
-)
+page = st.sidebar.radio("Go to", ["Loan Analysis", "Contact", "Admin Dashboard"])
 
 # USER LOGIN
 st.sidebar.title("User Login")
@@ -167,6 +235,7 @@ if st.sidebar.button("Login"):
     if user:
         st.session_state.user = user
         st.sidebar.success("Logged in")
+        st.rerun()
     else:
         st.sidebar.error("Invalid login")
 
@@ -196,21 +265,18 @@ if page == "Loan Analysis":
     st.subheader("📊 Loan Input Details")
 
     col1, col2 = st.columns(2)
-
     with col1:
         age = st.number_input("Age", 0, 100, 30)
         income = st.number_input("Monthly Income", 0, 1000000, 50000)
         loan_amount = st.number_input("Loan Amount", 0, 1000000, 200000)
         interest_rate = st.number_input("Interest Rate (%)", 0.0, 100.0, 12.5)
         loan_term = st.selectbox("Loan Term", [12, 24, 36, 48, 60])
-
     with col2:
         car_value = st.number_input("Car Value", 0, 1000000, 400000)
         car_age = st.slider("Car Age", 0, 50, 5)
         mileage = st.number_input("Mileage", 0, 500000, 80000)
         previous_loans = st.number_input("Previous Loans", 0, 10, 1)
         previous_defaults = st.number_input("Previous Defaults", 0, 10, 0)
-
     employment_type = st.selectbox("Employment Type", ["salaried","self-employed","informal"])
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -225,12 +291,10 @@ if page == "Loan Analysis":
 
     b1, b2 = st.columns(2)
 
-    # REPAYMENT
     with b1:
         if st.button("💰 Calculate Repayment"):
             r = interest_rate / 100 / 12
             m = loan_amount * r * (1 + r) ** loan_term / ((1 + r) ** loan_term - 1)
-
             st.markdown('<div class="card">', unsafe_allow_html=True)
             st.subheader("💳 Repayment Breakdown")
             st.write(f"Monthly: KES {m:,.2f}")
@@ -238,12 +302,9 @@ if page == "Loan Analysis":
             st.write(f"Daily: KES {m/30:,.2f}")
             st.markdown('</div>', unsafe_allow_html=True)
 
-    # RISK
     with b2:
         if st.button("🤖 Check Loan Risk"):
-
             emp = {"salaried":0,"self-employed":1,"informal":2}[employment_type]
-
             df = pd.DataFrame({
                 'age':[age],'monthly_income':[income],'loan_amount':[loan_amount],
                 'interest_rate':[interest_rate],'loan_term':[loan_term],
@@ -251,7 +312,6 @@ if page == "Loan Analysis":
                 'previous_loans':[previous_loans],'previous_defaults':[previous_defaults],
                 'employment_type':[emp]
             })
-
             df['loan_to_value_ratio'] = loan_amount / car_value if car_value else 0
             df['income_to_loan_ratio'] = income / loan_amount if loan_amount else 0
 
@@ -263,24 +323,24 @@ if page == "Loan Analysis":
             st.subheader("🧠 AI Risk Decision")
             st.write(f"Risk Score: {prob:.2f}%")
             st.progress(int(prob))
-
             if pred == 1:
                 st.error("❌ High Risk")
             else:
                 st.success("✅ Low Risk")
 
             st.subheader("📌 Risk Factors")
-            for r in explain_risk(df):
-                st.write(f"• {r}")
+            reasons, citations = explain_risk_with_citations(df)
+            for i, r in enumerate(reasons):
+                src = citations[i]
+                st.write(f"• {r}  `[Source: {src['source']}]`  🔵 Confidence: {src['confidence']}")
 
             st.subheader("💡 Recommendations")
             for s in suggest_improvements(df):
                 st.info(s)
-
             st.markdown('</div>', unsafe_allow_html=True)
 
 # ------------------------------
-# CONTACT (Customer Support) - Real-time chat + notifications
+# CONTACT (Customer Support) with Realtime
 # ------------------------------
 elif page == "Contact":
 
@@ -291,134 +351,66 @@ elif page == "Contact":
     else:
         user_id = st.session_state.user["id"]
 
-        # --- Mark all replies as seen when entering this page ---
-        try:
-            msgs = supabase.table("messages").select("id, reply").eq("user_id", user_id).execute().data
-            for m in msgs:
-                if m.get("reply"):
-                    st.session_state.seen_notified.add(m["id"])
-        except:
-            pass
+        # Setup realtime subscription (only once per session)
+        if st.session_state.realtime_sub is None:
+            setup_realtime_subscription(user_id=user_id, is_admin=False)
 
-        # --- Auto-refresh controls ---
-        col1, col2, col3 = st.columns([1, 1, 4])
-        with col1:
-            if st.button("🔄 Refresh", use_container_width=True):
-                st.rerun()
-        with col2:
-            auto = st.checkbox("Auto-refresh (5s)", value=st.session_state.auto_refresh)
-            st.session_state.auto_refresh = auto
+        # Mark messages as read when entering page
+        mark_messages_as_read(user_id)
 
-        # --- Fetch messages ---
+        # Check for realtime updates and rerun if new message arrived
+        if st.session_state.new_message_arrived:
+            st.session_state.new_message_arrived = False
+            st.rerun()
+
+        # Fetch messages
         try:
             msgs = supabase.table("messages").select("*").eq("user_id", user_id).order("id", desc=False).execute().data
         except Exception as e:
             st.error(f"Failed to load messages: {e}")
             msgs = []
 
-        # --- Build chat HTML (Facebook style, same as admin but only user's messages) ---
+        # Build chat HTML (Facebook style)
         if msgs:
             chat_html = '''
-            <html>
-            <head>
-            <style>
-            .chat-container {
-                max-height: 500px;
-                overflow-y: auto;
-                padding: 20px;
-                background: #0b1220;
-                border-radius: 20px;
-                margin-bottom: 20px;
-                display: flex;
-                flex-direction: column;
-                font-family: 'Inter', sans-serif;
-            }
-            .chat-bubble-row {
-                display: flex;
-                margin-bottom: 12px;
-            }
-            .chat-bubble-row.user {
-                justify-content: flex-end;
-            }
-            .chat-bubble-row.admin {
-                justify-content: flex-start;
-            }
-            .chat-bubble {
-                max-width: 70%;
-                padding: 12px 16px;
-                border-radius: 18px;
-                font-size: 14px;
-                line-height: 1.4;
-                word-wrap: break-word;
-                box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-            }
-            .user .chat-bubble {
-                background: #0084ff;
-                color: white;
-                border-bottom-right-radius: 4px;
-            }
-            .admin .chat-bubble {
-                background: #3a3b3c;
-                color: #e4e6eb;
-                border-bottom-left-radius: 4px;
-            }
-            .chat-avatar {
-                width: 32px;
-                height: 32px;
-                border-radius: 50%;
-                background: #1d4ed8;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: white;
-                font-weight: bold;
-                margin: 0 10px;
-                flex-shrink: 0;
-            }
-            .user .chat-avatar {
-                order: 2;
-            }
-            .admin .chat-avatar {
-                order: 1;
-            }
-            .chat-timestamp {
-                font-size: 11px;
-                color: #8a8d91;
-                margin-top: 4px;
-                text-align: right;
-            }
-            .user .chat-timestamp {
-                color: #b0d4ff;
-            }
-            .reply-badge {
-                background: #1d4ed8;
-                color: white;
-                border-radius: 16px;
-                padding: 4px 12px;
-                font-size: 12px;
-                margin-bottom: 8px;
-                display: inline-block;
-            }
-            </style>
-            </head>
+            <html><head><style>
+            .chat-container { max-height:500px; overflow-y:auto; padding:20px; background:#0b1220; border-radius:20px; margin-bottom:20px; display:flex; flex-direction:column; font-family:'Inter',sans-serif; }
+            .chat-bubble-row { display:flex; margin-bottom:12px; }
+            .chat-bubble-row.user { justify-content:flex-end; }
+            .chat-bubble-row.admin { justify-content:flex-start; }
+            .chat-bubble { max-width:70%; padding:12px 16px; border-radius:18px; font-size:14px; line-height:1.4; word-wrap:break-word; box-shadow:0 1px 2px rgba(0,0,0,0.1); }
+            .user .chat-bubble { background:#0084ff; color:white; border-bottom-right-radius:4px; }
+            .admin .chat-bubble { background:#3a3b3c; color:#e4e6eb; border-bottom-left-radius:4px; }
+            .chat-avatar { width:32px; height:32px; border-radius:50%; background:#1d4ed8; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; margin:0 10px; flex-shrink:0; }
+            .user .chat-avatar { order:2; }
+            .admin .chat-avatar { order:1; }
+            .chat-timestamp { font-size:11px; color:#8a8d91; margin-top:4px; text-align:right; }
+            .user .chat-timestamp { color:#b0d4ff; }
+            .reply-badge { background:#1d4ed8; color:white; border-radius:16px; padding:4px 12px; font-size:12px; margin-bottom:8px; display:inline-block; }
+            .read-receipt { font-size:11px; color:#8a8d91; margin-left:8px; }
+            </style></head>
             <body style="margin:0; background:#0a0f1c;">
             <div class="chat-container">
             '''
 
             for msg in msgs:
-                timestamp = format_timestamp(msg.get('timestamp', ''))
+                timestamp = relative_time(msg.get('timestamp', ''))
                 safe_message = html.escape(msg['message'])
+                read_status = "✓✓ Read" if msg.get('read_by_customer') else "✓ Delivered"
                 chat_html += f'''
                 <div class="chat-bubble-row user">
                     <div class="chat-avatar">U</div>
                     <div style="display:flex; flex-direction:column; align-items:flex-end;">
                         <div class="chat-bubble">{safe_message}</div>
-                        <div class="chat-timestamp">{timestamp}</div>
+                        <div style="display:flex; align-items:center;">
+                            <div class="chat-timestamp">{timestamp}</div>
+                            <div class="read-receipt">{read_status}</div>
+                        </div>
                     </div>
                 </div>
                 '''
                 if msg.get('reply'):
-                    reply_time = format_timestamp(msg.get('replied_at', ''))
+                    reply_time = relative_time(msg.get('replied_at', ''))
                     safe_reply = html.escape(msg['reply'])
                     chat_html += f'''
                     <div class="chat-bubble-row admin">
@@ -430,22 +422,36 @@ elif page == "Contact":
                         </div>
                     </div>
                     '''
-
-            chat_html += '''
-            </div>
-            </body>
-            </html>
-            '''
+            chat_html += '</div></body></html>'
             components.html(chat_html, height=550, scrolling=True)
         else:
-            st.info("No messages yet. Start a conversation below.")
+            st.info("💬 No messages yet. Start a conversation below or use quick actions.")
 
-        # --- Message input at the bottom ---
+        # Quick reply buttons
+        st.markdown("### Quick Actions")
+        col_q1, col_q2, col_q3, col_q4 = st.columns(4)
+        with col_q1:
+            if st.button("📊 Loan Status", use_container_width=True):
+                st.session_state.pending_message = "What's my loan application status?"
+        with col_q2:
+            if st.button("💰 Payment Help", use_container_width=True):
+                st.session_state.pending_message = "I need help with my payment"
+        with col_q3:
+            if st.button("📄 Upload Docs", use_container_width=True):
+                st.session_state.pending_message = "I need to upload documents"
+        with col_q4:
+            if st.button("🔄 Reset Password", use_container_width=True):
+                st.session_state.pending_message = "I forgot my password"
+
+        # Message input at bottom
         st.markdown("---")
         with st.form(key="message_form", clear_on_submit=True):
+            default_msg = st.session_state.get("pending_message", "")
+            if default_msg:
+                del st.session_state.pending_message
             col_input, col_button = st.columns([5, 1])
             with col_input:
-                msg = st.text_input("", placeholder="Type your message...", label_visibility="collapsed")
+                msg = st.text_input("", value=default_msg, placeholder="Type your message...", label_visibility="collapsed")
             with col_button:
                 submitted = st.form_submit_button("📤 Send", use_container_width=True)
 
@@ -457,26 +463,22 @@ elif page == "Contact":
                         "email": st.session_state.user["email"],
                         "message": msg,
                         "status": "sent",
-                        "timestamp": datetime.now().isoformat()
+                        "timestamp": datetime.now().isoformat(),
+                        "read_by_customer": False,
+                        "delivered": True
                     }).execute()
                     st.success("Message sent!")
                     st.rerun()
                 except Exception as e:
                     st.error(f"Failed to send: {e}")
 
-        # --- Auto-refresh logic (triggers rerun every 5 seconds if enabled) ---
-        if st.session_state.auto_refresh:
-            time.sleep(5)
-            st.rerun()
-
 # ------------------------------
-# ADMIN DASHBOARD (Facebook Messenger Style)
+# ADMIN DASHBOARD (with Realtime)
 # ------------------------------
 elif page == "Admin Dashboard":
 
     st.subheader("📊 Admin Control Panel")
 
-    # Admin Login Section
     with st.expander("🔐 Admin Authentication", expanded=not st.session_state.logged_in):
         col_auth1, col_auth2 = st.columns(2)
         with col_auth1:
@@ -491,8 +493,14 @@ elif page == "Admin Dashboard":
                 st.error("Invalid credentials")
 
     if st.session_state.logged_in:
+        # Setup admin realtime subscription
+        if st.session_state.realtime_sub is None:
+            setup_realtime_subscription(is_admin=True)
 
-        # Fetch all messages
+        if st.session_state.new_message_arrived:
+            st.session_state.new_message_arrived = False
+            st.rerun()
+
         try:
             data = supabase.table("messages").select("*").order("timestamp", desc=False).execute().data
         except Exception as e:
@@ -503,8 +511,6 @@ elif page == "Admin Dashboard":
             st.info("No messages yet.")
         else:
             st.markdown("### 💬 Customer Conversations")
-
-            # Get unique users who have messaged
             users_df = pd.DataFrame(data)
             if not users_df.empty:
                 unique_users = users_df[['user_id', 'name', 'email']].drop_duplicates(subset=['user_id'])
@@ -512,12 +518,12 @@ elif page == "Admin Dashboard":
             else:
                 user_list = []
 
-            # Left column: Conversation list
             col_users, col_chat = st.columns([1, 2])
 
             with col_users:
                 st.markdown("**Conversations**")
                 for usr in user_list:
+                    # Show typing indicator if admin is typing to this user (future)
                     if st.button(f"👤 {usr['name']} ({usr['email']})", key=f"user_{usr['user_id']}"):
                         st.session_state.selected_user_id = usr['user_id']
                         st.rerun()
@@ -527,114 +533,49 @@ elif page == "Admin Dashboard":
                     st.session_state.selected_user_id = user_list[0]['user_id']
 
                 if st.session_state.selected_user_id:
-                    # Filter messages for selected user
                     user_msgs = [m for m in data if m['user_id'] == st.session_state.selected_user_id]
                     selected_user_name = next((usr['name'] for usr in user_list if usr['user_id'] == st.session_state.selected_user_id), "User")
-
                     st.markdown(f"#### Chat with {selected_user_name}")
 
-                    # Build the chat HTML with proper escaping
                     chat_html = '''
-                    <html>
-                    <head>
-                    <style>
-                    .chat-container {
-                        max-height: 500px;
-                        overflow-y: auto;
-                        padding: 20px;
-                        background: #0b1220;
-                        border-radius: 20px;
-                        margin-bottom: 20px;
-                        display: flex;
-                        flex-direction: column;
-                        font-family: 'Inter', sans-serif;
-                    }
-                    .chat-bubble-row {
-                        display: flex;
-                        margin-bottom: 12px;
-                    }
-                    .chat-bubble-row.user {
-                        justify-content: flex-end;
-                    }
-                    .chat-bubble-row.admin {
-                        justify-content: flex-start;
-                    }
-                    .chat-bubble {
-                        max-width: 70%;
-                        padding: 12px 16px;
-                        border-radius: 18px;
-                        font-size: 14px;
-                        line-height: 1.4;
-                        word-wrap: break-word;
-                        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-                    }
-                    .user .chat-bubble {
-                        background: #0084ff;
-                        color: white;
-                        border-bottom-right-radius: 4px;
-                    }
-                    .admin .chat-bubble {
-                        background: #3a3b3c;
-                        color: #e4e6eb;
-                        border-bottom-left-radius: 4px;
-                    }
-                    .chat-avatar {
-                        width: 32px;
-                        height: 32px;
-                        border-radius: 50%;
-                        background: #1d4ed8;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        color: white;
-                        font-weight: bold;
-                        margin: 0 10px;
-                        flex-shrink: 0;
-                    }
-                    .user .chat-avatar {
-                        order: 2;
-                    }
-                    .admin .chat-avatar {
-                        order: 1;
-                    }
-                    .chat-timestamp {
-                        font-size: 11px;
-                        color: #8a8d91;
-                        margin-top: 4px;
-                        text-align: right;
-                    }
-                    .user .chat-timestamp {
-                        color: #b0d4ff;
-                    }
-                    .reply-badge {
-                        background: #1d4ed8;
-                        color: white;
-                        border-radius: 16px;
-                        padding: 4px 12px;
-                        font-size: 12px;
-                        margin-bottom: 8px;
-                        display: inline-block;
-                    }
-                    </style>
-                    </head>
+                    <html><head><style>
+                    .chat-container { max-height:500px; overflow-y:auto; padding:20px; background:#0b1220; border-radius:20px; margin-bottom:20px; display:flex; flex-direction:column; font-family:'Inter',sans-serif; }
+                    .chat-bubble-row { display:flex; margin-bottom:12px; }
+                    .chat-bubble-row.user { justify-content:flex-end; }
+                    .chat-bubble-row.admin { justify-content:flex-start; }
+                    .chat-bubble { max-width:70%; padding:12px 16px; border-radius:18px; font-size:14px; line-height:1.4; word-wrap:break-word; box-shadow:0 1px 2px rgba(0,0,0,0.1); }
+                    .user .chat-bubble { background:#0084ff; color:white; border-bottom-right-radius:4px; }
+                    .admin .chat-bubble { background:#3a3b3c; color:#e4e6eb; border-bottom-left-radius:4px; }
+                    .chat-avatar { width:32px; height:32px; border-radius:50%; background:#1d4ed8; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; margin:0 10px; flex-shrink:0; }
+                    .user .chat-avatar { order:2; }
+                    .admin .chat-avatar { order:1; }
+                    .chat-timestamp { font-size:11px; color:#8a8d91; margin-top:4px; text-align:right; }
+                    .user .chat-timestamp { color:#b0d4ff; }
+                    .reply-badge { background:#1d4ed8; color:white; border-radius:16px; padding:4px 12px; font-size:12px; margin-bottom:8px; display:inline-block; }
+                    .read-receipt { font-size:11px; color:#8a8d91; margin-left:8px; }
+                    </style></head>
                     <body style="margin:0; background:#0a0f1c;">
                     <div class="chat-container">
                     '''
 
                     for msg in user_msgs:
-                        timestamp = format_timestamp(msg.get('timestamp', ''))
+                        timestamp = relative_time(msg.get('timestamp', ''))
                         safe_message = html.escape(msg['message'])
+                        read_status = "✓✓ Read" if msg.get('read_by_customer') else "✓ Delivered"
                         chat_html += f'''
                         <div class="chat-bubble-row user">
                             <div class="chat-avatar">U</div>
                             <div style="display:flex; flex-direction:column; align-items:flex-end;">
                                 <div class="chat-bubble">{safe_message}</div>
-                                <div class="chat-timestamp">{timestamp}</div>
+                                <div style="display:flex; align-items:center;">
+                                    <div class="chat-timestamp">{timestamp}</div>
+                                    <div class="read-receipt">{read_status}</div>
+                                </div>
                             </div>
                         </div>
                         '''
                         if msg.get('reply'):
-                            reply_time = format_timestamp(msg.get('replied_at', ''))
+                            reply_time = relative_time(msg.get('replied_at', ''))
                             safe_reply = html.escape(msg['reply'])
                             chat_html += f'''
                             <div class="chat-bubble-row admin">
@@ -646,16 +587,10 @@ elif page == "Admin Dashboard":
                                 </div>
                             </div>
                             '''
-
-                    chat_html += '''
-                    </div>
-                    </body>
-                    </html>
-                    '''
-
+                    chat_html += '</div></body></html>'
                     components.html(chat_html, height=550, scrolling=True)
 
-                    # Reply input area
+                    # Reply input
                     with st.form(key=f"reply_form_{st.session_state.selected_user_id}", clear_on_submit=True):
                         col_input, col_button = st.columns([5, 1])
                         with col_input:
@@ -684,7 +619,6 @@ elif page == "Admin Dashboard":
             # Metrics
             st.markdown("---")
             st.metric("Total Messages", len(data))
-
             if not users_df.empty:
                 users_df["timestamp"] = pd.to_datetime(users_df["timestamp"], errors='coerce')
                 daily = users_df.groupby(users_df["timestamp"].dt.date).size().reset_index(name="count")
