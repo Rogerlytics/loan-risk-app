@@ -252,7 +252,7 @@ if page == "Loan Analysis":
             st.markdown('</div>', unsafe_allow_html=True)
 
 # ------------------------------
-# CONTACT (Customer Support)
+# CONTACT (Customer Support) - Input moved to bottom
 # ------------------------------
 elif page == "Contact":
 
@@ -261,10 +261,37 @@ elif page == "Contact":
     if not st.session_state.user:
         st.warning("Login first")
     else:
-        # Message input
+        # Chat history display (moved above input)
+        st.markdown("### Your Conversation")
+
+        # Display existing messages first
+        try:
+            msgs = supabase.table("messages").select("*").eq(
+                "user_id", st.session_state.user["id"]
+            ).order("id", desc=False).execute().data
+
+            if msgs:
+                for m in msgs:
+                    with st.container():
+                        st.markdown(f"**You:** {m['message']}")
+                        if m.get("reply"):
+                            st.markdown(f"**Support:** {m['reply']}")
+                        st.caption(f"_{format_timestamp(m.get('timestamp', ''))}_")
+                        st.divider()
+            else:
+                st.info("No messages yet. Start a conversation below.")
+        except Exception as e:
+            st.error("Could not load messages.")
+
+        # Message input at the BOTTOM
+        st.markdown("---")
         with st.form(key="message_form", clear_on_submit=True):
-            msg = st.text_input("Type your message...")
-            submitted = st.form_submit_button("Send")
+            col1, col2 = st.columns([5, 1])
+            with col1:
+                msg = st.text_input("Type your message...", key="new_message_input", label_visibility="collapsed", placeholder="Type your message...")
+            with col2:
+                submitted = st.form_submit_button("📤 Send", use_container_width=True)
+
             if submitted and msg.strip():
                 try:
                     supabase.table("messages").insert({
@@ -279,23 +306,6 @@ elif page == "Contact":
                     st.rerun()
                 except Exception as e:
                     st.error(f"Failed to send: {e}")
-
-        # Display chat history
-        st.markdown("### Your Conversation")
-        try:
-            msgs = supabase.table("messages").select("*").eq(
-                "user_id", st.session_state.user["id"]
-            ).order("id", desc=False).execute().data
-
-            for m in msgs:
-                with st.container():
-                    st.markdown(f"**You:** {m['message']}")
-                    if m.get("reply"):
-                        st.markdown(f"**Support:** {m['reply']}")
-                    st.caption(f"_{format_timestamp(m.get('timestamp', ''))}_")
-                    st.divider()
-        except Exception as e:
-            st.error("Could not load messages.")
 
 # ------------------------------
 # ADMIN DASHBOARD (Facebook Messenger Style)
