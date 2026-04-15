@@ -11,6 +11,7 @@ from datetime import datetime
 from supabase import create_client, Client
 from typing import Optional, Dict, Any, List
 import html
+import time
 
 # ==============================
 # 2. CONFIG
@@ -44,6 +45,15 @@ html, body {
     color:#94a3b8;
     margin-bottom:20px;
 }
+/* Notification badge */
+.notification-badge {
+    background-color: #ef4444;
+    color: white;
+    border-radius: 50%;
+    padding: 2px 8px;
+    font-size: 12px;
+    margin-left: 8px;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -65,9 +75,11 @@ if "user" not in st.session_state:
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "seen_notified" not in st.session_state:
-    st.session_state.seen_notified = set()
+    st.session_state.seen_notified = set()  # set of message IDs user has seen replies for
 if "selected_user_id" not in st.session_state:
     st.session_state.selected_user_id = None
+if "auto_refresh" not in st.session_state:
+    st.session_state.auto_refresh = False
 
 # ==============================
 # 6. MODEL
@@ -123,6 +135,18 @@ def format_timestamp(ts: str) -> str:
     except:
         return ts
 
+def get_unread_reply_count(user_id: int) -> int:
+    """Count messages with replies that user hasn't seen yet."""
+    try:
+        msgs = supabase.table("messages").select("id, reply").eq("user_id", user_id).execute().data
+        unseen = 0
+        for m in msgs:
+            if m.get("reply") and m["id"] not in st.session_state.seen_notified:
+                unseen += 1
+        return unseen
+    except:
+        return 0
+
 # ==============================
 # 7. SIDEBAR
 # ==============================
@@ -147,7 +171,11 @@ if st.sidebar.button("Login"):
         st.sidebar.error("Invalid login")
 
 if st.session_state.user:
-    st.sidebar.write(f"👤 {st.session_state.user['username']}")
+    unread = get_unread_reply_count(st.session_state.user["id"])
+    if unread > 0:
+        st.sidebar.markdown(f"👤 {st.session_state.user['username']} <span class='notification-badge'>{unread}</span>", unsafe_allow_html=True)
+    else:
+        st.sidebar.write(f"👤 {st.session_state.user['username']}")
 
 # ==============================
 # HEADER
@@ -252,7 +280,7 @@ if page == "Loan Analysis":
             st.markdown('</div>', unsafe_allow_html=True)
 
 # ------------------------------
-# CONTACT (Customer Support) - Input moved to bottom
+# CONTACT (Customer Support) - Real-time chat + notifications
 # ------------------------------
 elif page == "Contact":
 
@@ -261,41 +289,170 @@ elif page == "Contact":
     if not st.session_state.user:
         st.warning("Login first")
     else:
-        # Chat history display (moved above input)
-        st.markdown("### Your Conversation")
+        user_id = st.session_state.user["id"]
 
-        # Display existing messages first
+        # --- Mark all replies as seen when entering this page ---
         try:
-            msgs = supabase.table("messages").select("*").eq(
-                "user_id", st.session_state.user["id"]
-            ).order("id", desc=False).execute().data
+            msgs = supabase.table("messages").select("id, reply").eq("user_id", user_id).execute().data
+            for m in msgs:
+                if m.get("reply"):
+                    st.session_state.seen_notified.add(m["id"])
+        except:
+            pass
 
-            if msgs:
-                for m in msgs:
-                    with st.container():
-                        st.markdown(f"**You:** {m['message']}")
-                        if m.get("reply"):
-                            st.markdown(f"**Support:** {m['reply']}")
-                        st.caption(f"_{format_timestamp(m.get('timestamp', ''))}_")
-                        st.divider()
-            else:
-                st.info("No messages yet. Start a conversation below.")
+        # --- Auto-refresh controls ---
+        col1, col2, col3 = st.columns([1, 1, 4])
+        with col1:
+            if st.button("🔄 Refresh", use_container_width=True):
+                st.rerun()
+        with col2:
+            auto = st.checkbox("Auto-refresh (5s)", value=st.session_state.auto_refresh)
+            st.session_state.auto_refresh = auto
+
+        # --- Fetch messages ---
+        try:
+            msgs = supabase.table("messages").select("*").eq("user_id", user_id).order("id", desc=False).execute().data
         except Exception as e:
-            st.error("Could not load messages.")
+            st.error(f"Failed to load messages: {e}")
+            msgs = []
 
-        # Message input at the BOTTOM
+        # --- Build chat HTML (Facebook style, same as admin but only user's messages) ---
+        if msgs:
+            chat_html = '''
+            <html>
+            <head>
+            <style>
+            .chat-container {
+                max-height: 500px;
+                overflow-y: auto;
+                padding: 20px;
+                background: #0b1220;
+                border-radius: 20px;
+                margin-bottom: 20px;
+                display: flex;
+                flex-direction: column;
+                font-family: 'Inter', sans-serif;
+            }
+            .chat-bubble-row {
+                display: flex;
+                margin-bottom: 12px;
+            }
+            .chat-bubble-row.user {
+                justify-content: flex-end;
+            }
+            .chat-bubble-row.admin {
+                justify-content: flex-start;
+            }
+            .chat-bubble {
+                max-width: 70%;
+                padding: 12px 16px;
+                border-radius: 18px;
+                font-size: 14px;
+                line-height: 1.4;
+                word-wrap: break-word;
+                box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            }
+            .user .chat-bubble {
+                background: #0084ff;
+                color: white;
+                border-bottom-right-radius: 4px;
+            }
+            .admin .chat-bubble {
+                background: #3a3b3c;
+                color: #e4e6eb;
+                border-bottom-left-radius: 4px;
+            }
+            .chat-avatar {
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                background: #1d4ed8;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-weight: bold;
+                margin: 0 10px;
+                flex-shrink: 0;
+            }
+            .user .chat-avatar {
+                order: 2;
+            }
+            .admin .chat-avatar {
+                order: 1;
+            }
+            .chat-timestamp {
+                font-size: 11px;
+                color: #8a8d91;
+                margin-top: 4px;
+                text-align: right;
+            }
+            .user .chat-timestamp {
+                color: #b0d4ff;
+            }
+            .reply-badge {
+                background: #1d4ed8;
+                color: white;
+                border-radius: 16px;
+                padding: 4px 12px;
+                font-size: 12px;
+                margin-bottom: 8px;
+                display: inline-block;
+            }
+            </style>
+            </head>
+            <body style="margin:0; background:#0a0f1c;">
+            <div class="chat-container">
+            '''
+
+            for msg in msgs:
+                timestamp = format_timestamp(msg.get('timestamp', ''))
+                safe_message = html.escape(msg['message'])
+                chat_html += f'''
+                <div class="chat-bubble-row user">
+                    <div class="chat-avatar">U</div>
+                    <div style="display:flex; flex-direction:column; align-items:flex-end;">
+                        <div class="chat-bubble">{safe_message}</div>
+                        <div class="chat-timestamp">{timestamp}</div>
+                    </div>
+                </div>
+                '''
+                if msg.get('reply'):
+                    reply_time = format_timestamp(msg.get('replied_at', ''))
+                    safe_reply = html.escape(msg['reply'])
+                    chat_html += f'''
+                    <div class="chat-bubble-row admin">
+                        <div class="chat-avatar">A</div>
+                        <div style="display:flex; flex-direction:column;">
+                            <div class="reply-badge">Reply</div>
+                            <div class="chat-bubble">{safe_reply}</div>
+                            <div class="chat-timestamp">{reply_time}</div>
+                        </div>
+                    </div>
+                    '''
+
+            chat_html += '''
+            </div>
+            </body>
+            </html>
+            '''
+            components.html(chat_html, height=550, scrolling=True)
+        else:
+            st.info("No messages yet. Start a conversation below.")
+
+        # --- Message input at the bottom ---
         st.markdown("---")
         with st.form(key="message_form", clear_on_submit=True):
-            col1, col2 = st.columns([5, 1])
-            with col1:
-                msg = st.text_input("Type your message...", key="new_message_input", label_visibility="collapsed", placeholder="Type your message...")
-            with col2:
+            col_input, col_button = st.columns([5, 1])
+            with col_input:
+                msg = st.text_input("", placeholder="Type your message...", label_visibility="collapsed")
+            with col_button:
                 submitted = st.form_submit_button("📤 Send", use_container_width=True)
 
             if submitted and msg.strip():
                 try:
                     supabase.table("messages").insert({
-                        "user_id": st.session_state.user["id"],
+                        "user_id": user_id,
                         "name": st.session_state.user["username"],
                         "email": st.session_state.user["email"],
                         "message": msg,
@@ -306,6 +463,11 @@ elif page == "Contact":
                     st.rerun()
                 except Exception as e:
                     st.error(f"Failed to send: {e}")
+
+        # --- Auto-refresh logic (triggers rerun every 5 seconds if enabled) ---
+        if st.session_state.auto_refresh:
+            time.sleep(5)
+            st.rerun()
 
 # ------------------------------
 # ADMIN DASHBOARD (Facebook Messenger Style)
@@ -461,7 +623,6 @@ elif page == "Admin Dashboard":
 
                     for msg in user_msgs:
                         timestamp = format_timestamp(msg.get('timestamp', ''))
-                        # Escape message content to prevent XSS
                         safe_message = html.escape(msg['message'])
                         chat_html += f'''
                         <div class="chat-bubble-row user">
@@ -492,7 +653,6 @@ elif page == "Admin Dashboard":
                     </html>
                     '''
 
-                    # Use components.html for guaranteed rendering
                     components.html(chat_html, height=550, scrolling=True)
 
                     # Reply input area
