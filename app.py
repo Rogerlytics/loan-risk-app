@@ -1,5 +1,5 @@
 # ==============================
-# 1. IMPORTS (MUST BE FIRST)
+# 1. IMPORTS
 # ==============================
 import streamlit as st
 import pickle
@@ -36,11 +36,17 @@ html, body {
     border-radius: 10px;
     height: 3em;
 }
+.subtitle {
+    text-align:center;
+    color:#94a3b8;
+    margin-top:-10px;
+    margin-bottom:20px;
+}
 </style>
 """, unsafe_allow_html=True)
 
 # ==============================
-# 4. SUPABASE + SECRETS
+# 4. SUPABASE
 # ==============================
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
@@ -50,19 +56,17 @@ ADMIN_PASSWORD_HASH = st.secrets["ADMIN_PASSWORD_HASH"]
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ==============================
-# 5. SESSION STATE
+# 5. SESSION
 # ==============================
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
-
 if "user" not in st.session_state:
     st.session_state.user = None
-
 if "seen_notified" not in st.session_state:
     st.session_state.seen_notified = set()
 
 # ==============================
-# 6. LOAD MODEL
+# 6. MODEL
 # ==============================
 @st.cache_resource
 def load_model():
@@ -71,7 +75,7 @@ def load_model():
 model = load_model()
 
 # ==============================
-# AUTH FUNCTIONS
+# HELPERS
 # ==============================
 def check_password(p):
     return bcrypt.checkpw(p.encode(), ADMIN_PASSWORD_HASH.encode())
@@ -84,9 +88,6 @@ def login(email, password):
             return u
     return None
 
-# ==============================
-# HELPERS
-# ==============================
 def explain_risk(df):
     reasons = []
     if df['income_to_loan_ratio'][0] < 0.3:
@@ -108,7 +109,7 @@ def suggest_improvements(df):
     return suggestions
 
 # ==============================
-# 7. SIDEBAR (CREATES page)
+# 7. SIDEBAR
 # ==============================
 st.sidebar.title("Navigation")
 
@@ -134,13 +135,10 @@ if st.session_state.user:
     st.sidebar.write(f"👤 {st.session_state.user['username']}")
 
 # ==============================
-# HEADER
+# HEADER + SUBTITLE
 # ==============================
 st.markdown("<h1 style='text-align:center;color:#3b82f6'>AI Loan Risk Platform</h1>", unsafe_allow_html=True)
-
-# ==============================
-# 8. PAGES (USES page safely)
-# ==============================
+st.markdown("<div class='subtitle'>Real-time credit risk evaluation powered by machine learning</div>", unsafe_allow_html=True)
 
 # ==============================
 # LOAN ANALYSIS
@@ -148,7 +146,7 @@ st.markdown("<h1 style='text-align:center;color:#3b82f6'>AI Loan Risk Platform</
 if page == "Loan Analysis":
 
     st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.subheader("📊 Loan Input")
+    st.subheader("📊 Loan Input Details")
 
     col1, col2 = st.columns(2)
 
@@ -171,6 +169,8 @@ if page == "Loan Analysis":
 
     # KPI
     st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.subheader("📈 Key Financial Metrics")
+
     k1, k2, k3 = st.columns(3)
     k1.metric("Loan", f"KES {loan_amount:,}")
     k2.metric("Income", f"KES {income:,}")
@@ -182,17 +182,20 @@ if page == "Loan Analysis":
     # REPAYMENT
     with b1:
         if st.button("💰 Calculate Repayment"):
+
             r = interest_rate / 100 / 12
             m = loan_amount * r * (1 + r) ** loan_term / ((1 + r) ** loan_term - 1)
 
             st.markdown('<div class="card">', unsafe_allow_html=True)
-            st.subheader("💳 Repayment Summary")
+            st.subheader("💳 Repayment Breakdown")
+
             st.write(f"📅 Monthly: KES {m:,.2f}")
             st.write(f"🗓 Weekly: KES {m/4.33:,.2f}")
             st.write(f"⏱ Daily: KES {m/30:,.2f}")
+
             st.markdown('</div>', unsafe_allow_html=True)
 
-    # RISK (FIXED COLUMN)
+    # RISK
     with b2:
         if st.button("🤖 Check Loan Risk"):
 
@@ -214,7 +217,8 @@ if page == "Loan Analysis":
             prob = model.predict_proba(X)[0][1] * 100
 
             st.markdown('<div class="card">', unsafe_allow_html=True)
-            st.subheader("🧠 AI Decision")
+            st.subheader("🧠 AI Risk Decision")
+
             st.write(f"Risk Score: {prob:.2f}%")
             st.progress(int(prob))
 
@@ -223,7 +227,7 @@ if page == "Loan Analysis":
             else:
                 st.success("✅ Low Risk")
 
-            st.subheader("📌 Risk Explanation")
+            st.subheader("📌 Risk Factors")
             for r in explain_risk(df):
                 st.write(f"• {r}")
 
@@ -234,74 +238,13 @@ if page == "Loan Analysis":
             st.markdown('</div>', unsafe_allow_html=True)
 
 # ==============================
-# CONTACT (CHAT)
+# CONTACT
 # ==============================
 elif page == "Contact":
-
-    msg = st.text_area("Message")
-
-    if st.button("Send"):
-        if st.session_state.user:
-            supabase.table("messages").insert({
-                "user_id": st.session_state.user["id"],
-                "name": st.session_state.user["username"],
-                "email": st.session_state.user["email"],
-                "message": msg,
-                "status": "sent"
-            }).execute()
-            st.rerun()
-
-    if st.session_state.user:
-
-        msgs = supabase.table("messages").select("*").eq(
-            "user_id", st.session_state.user["id"]
-        ).order("id").execute().data
-
-        for m in msgs:
-
-            msg_id = m["id"]
-
-            if m.get("status") == "seen" and msg_id not in st.session_state.seen_notified:
-                st.toast("👁️ Your message was seen")
-                st.session_state.seen_notified.add(msg_id)
-
-            status = m.get("status", "sent")
-            tick = "✓" if status == "sent" else "✓✓" if status == "delivered" else "✓✓ 👁️"
-
-            st.write(f"{m['message']}   {tick}")
-
-            if m.get("reply"):
-                st.write(f"Admin: {m['reply']}")
+    st.subheader("💬 Customer Support Chat")
 
 # ==============================
-# ADMIN DASHBOARD
+# ADMIN
 # ==============================
 elif page == "Admin Dashboard":
-
-    u = st.text_input("Admin Username")
-    p = st.text_input("Password", type="password")
-
-    if st.button("Login Admin"):
-        if u == ADMIN_USERNAME and check_password(p):
-            st.session_state.logged_in = True
-
-    if st.session_state.logged_in:
-
-        data = supabase.table("messages").select("*").execute().data
-
-        for m in data:
-
-            if m.get("status") != "seen":
-                supabase.table("messages").update({
-                    "status": "seen"
-                }).eq("id", m["id"]).execute()
-
-            st.write(m["message"])
-
-            reply = st.text_input(f"Reply {m['id']}")
-
-            if st.button(f"Send {m['id']}"):
-                supabase.table("messages").update({
-                    "reply": reply,
-                    "replied_at": str(datetime.now())
-                }).eq("id", m["id"]).execute()
+    st.subheader("📊 Admin Control Panel")
