@@ -109,11 +109,13 @@ section[data-testid="stSidebar"] .block-container {
 .chat-wrapper {
     display: flex;
     flex-direction: column;
-    height: 70vh;
+    height: 60vh;
+    min-height: 400px;
     background: #0f141c;
     border-radius: 20px;
     border: 1px solid #2a323c;
     overflow: hidden;
+    margin-bottom: 20px;
 }
 
 .chat-messages {
@@ -226,19 +228,6 @@ section[data-testid="stSidebar"] .block-container {
     gap: 10px;
     margin: 16px 0;
 }
-.quick-btn {
-    background: #1a222c;
-    border: 1px solid #2a323c;
-    border-radius: 20px;
-    padding: 8px 16px;
-    font-size: 13px;
-    color: #b0c0d0;
-    transition: all 0.1s;
-}
-.quick-btn:hover {
-    background: #252f3c;
-    border-color: #3b82f6;
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -265,6 +254,8 @@ if "selected_user_id" not in st.session_state:
     st.session_state.selected_user_id = None
 if "auto_refresh" not in st.session_state:
     st.session_state.auto_refresh = False
+if "pending_message" not in st.session_state:
+    st.session_state.pending_message = ""
 
 # ==============================
 # 6. MODEL
@@ -371,7 +362,7 @@ if st.sidebar.button("Sign In", use_container_width=True):
     if user:
         st.session_state.user = user
         st.sidebar.success(f"Welcome, {user['username']}")
-        time.sleep(1)
+        time.sleep(0.5)
         st.rerun()
     else:
         st.sidebar.error("Invalid credentials")
@@ -393,8 +384,10 @@ st.markdown("<p style='color:#8a94a3; margin-top:0'>Real‑time credit evaluatio
 # 8. PAGES
 # ==============================
 
+# ------------------------------
+# LOAN ANALYSIS
+# ------------------------------
 if page == "Loan Analysis":
-    # (Same Loan Analysis code as before, but with updated card styling already applied)
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.subheader("📊 Loan Application Details")
     col1, col2 = st.columns(2)
@@ -465,6 +458,9 @@ if page == "Loan Analysis":
                 st.info(s)
             st.markdown('</div>', unsafe_allow_html=True)
 
+# ------------------------------
+# CONTACT (Customer Support)
+# ------------------------------
 elif page == "Contact":
     st.subheader("💬 Customer Support")
     if not st.session_state.user:
@@ -487,75 +483,73 @@ elif page == "Contact":
             st.error(f"Could not load messages: {e}")
             msgs = []
 
-        # Chat wrapper (DeepSeek style)
-        st.markdown('<div class="chat-wrapper">', unsafe_allow_html=True)
-        chat_html = '<div class="chat-messages">'
-        for msg in msgs:
-            timestamp = relative_time(msg.get('timestamp', ''))
-            safe_msg = html.escape(msg['message'])
-            read_status = "✓✓ Read" if msg.get('read_by_customer') else "✓"
-            chat_html += f'''
-            <div class="chat-row user">
-                <div class="chat-avatar">U</div>
-                <div style="display:flex; flex-direction:column; align-items:flex-end; max-width:70%;">
-                    <div class="chat-bubble">{safe_msg}</div>
-                    <div class="chat-meta">
-                        <span>{timestamp}</span>
-                        <span class="read-receipt">{read_status}</span>
-                    </div>
-                </div>
-            </div>
-            '''
-            if msg.get('reply'):
-                reply_time = relative_time(msg.get('replied_at', ''))
-                safe_reply = html.escape(msg['reply'])
+        # Chat message display (DeepSeek style)
+        if msgs:
+            chat_html = '<div class="chat-wrapper"><div class="chat-messages">'
+            for msg in msgs:
+                timestamp = relative_time(msg.get('timestamp', ''))
+                safe_msg = html.escape(msg['message'])
+                read_status = "✓✓ Read" if msg.get('read_by_customer') else "✓"
                 chat_html += f'''
-                <div class="chat-row admin">
-                    <div class="chat-avatar">A</div>
-                    <div style="display:flex; flex-direction:column; max-width:70%;">
-                        <span class="reply-badge">Support replied</span>
-                        <div class="chat-bubble">{safe_reply}</div>
-                        <div class="chat-meta"><span>{reply_time}</span></div>
+                <div class="chat-row user">
+                    <div class="chat-avatar">U</div>
+                    <div style="display:flex; flex-direction:column; align-items:flex-end; max-width:70%;">
+                        <div class="chat-bubble">{safe_msg}</div>
+                        <div class="chat-meta">
+                            <span>{timestamp}</span>
+                            <span class="read-receipt">{read_status}</span>
+                        </div>
                     </div>
                 </div>
                 '''
-        chat_html += '</div>'
-        # Input area inside the wrapper
-        chat_html += '''
-        <div class="chat-input-container">
-            <div style="display:flex; gap:10px;">
-                <input type="text" placeholder="Type your message..." style="flex:1; background:#1a222c; border:1px solid #2a323c; border-radius:24px; padding:12px 18px; color:white;" id="chatInput">
-                <button style="background:#2563eb; border:none; border-radius:24px; padding:0 24px; color:white; font-weight:500;">Send</button>
-            </div>
-        </div>
-        '''
-        chat_html += '</div>'
-        components.html(chat_html, height=600, scrolling=False)
+                if msg.get('reply'):
+                    reply_time = relative_time(msg.get('replied_at', ''))
+                    safe_reply = html.escape(msg['reply'])
+                    chat_html += f'''
+                    <div class="chat-row admin">
+                        <div class="chat-avatar">A</div>
+                        <div style="display:flex; flex-direction:column; max-width:70%;">
+                            <span class="reply-badge">Support replied</span>
+                            <div class="chat-bubble">{safe_reply}</div>
+                            <div class="chat-meta"><span>{reply_time}</span></div>
+                        </div>
+                    </div>
+                    '''
+            chat_html += '</div></div>'
+            components.html(chat_html, height=500, scrolling=True)
+        else:
+            st.info("💬 No messages yet. Start a conversation below.")
 
-        # Quick actions as Streamlit buttons (more reliable)
+        # Quick reply buttons
         st.markdown("**Quick replies:**")
         cols = st.columns(4)
         with cols[0]:
             if st.button("📊 Loan status", use_container_width=True):
-                st.session_state.pending = "What's my loan status?"
+                st.session_state.pending_message = "What's my loan status?"
+                st.rerun()
         with cols[1]:
             if st.button("💰 Payment help", use_container_width=True):
-                st.session_state.pending = "I need payment assistance"
+                st.session_state.pending_message = "I need payment assistance"
+                st.rerun()
         with cols[2]:
             if st.button("📄 Documents", use_container_width=True):
-                st.session_state.pending = "How do I upload documents?"
+                st.session_state.pending_message = "How do I upload documents?"
+                st.rerun()
         with cols[3]:
             if st.button("🔄 Reset password", use_container_width=True):
-                st.session_state.pending = "I forgot my password"
+                st.session_state.pending_message = "I forgot my password"
+                st.rerun()
 
-        # Actual message form (hidden but functional)
-        with st.form("msg_form", clear_on_submit=True):
-            pending_msg = st.session_state.get("pending", "")
-            if pending_msg:
-                st.session_state.pop("pending")
-            msg = st.text_input("Message", value=pending_msg, label_visibility="collapsed", placeholder="Type your message...")
-            if st.form_submit_button("Send"):
-                if msg.strip():
+        # Message input form (functional)
+        with st.form(key="message_form", clear_on_submit=True):
+            default_msg = st.session_state.get("pending_message", "")
+            col_input, col_button = st.columns([5, 1])
+            with col_input:
+                msg = st.text_input("Message", value=default_msg, placeholder="Type your message...", label_visibility="collapsed")
+            with col_button:
+                submitted = st.form_submit_button("📤 Send", use_container_width=True)
+            if submitted and msg.strip():
+                try:
                     supabase.table("messages").insert({
                         "user_id": user_id,
                         "name": st.session_state.user["username"],
@@ -566,12 +560,20 @@ elif page == "Contact":
                         "read_by_customer": False,
                         "delivered": True
                     }).execute()
+                    st.session_state.pending_message = ""
+                    st.success("Message sent!")
+                    time.sleep(0.5)
                     st.rerun()
+                except Exception as e:
+                    st.error(f"Failed to send: {e}")
 
         if st.session_state.auto_refresh:
             time.sleep(3)
             st.rerun()
 
+# ------------------------------
+# ADMIN DASHBOARD
+# ------------------------------
 elif page == "Admin Dashboard":
     st.subheader("Admin Panel")
     if not st.session_state.logged_in:
@@ -625,55 +627,72 @@ elif page == "Admin Dashboard":
                     user_name = next((u['name'] for u in unique_users if u['user_id'] == st.session_state.selected_user_id), "User")
                     st.markdown(f"#### Chat with {user_name}")
 
-                    chat_html = '<div class="chat-wrapper"><div class="chat-messages">'
-                    for msg in user_msgs:
-                        ts = relative_time(msg.get('timestamp', ''))
-                        safe_msg = html.escape(msg['message'])
-                        read = "✓✓ Read" if msg.get('read_by_customer') else "✓"
-                        chat_html += f'''
-                        <div class="chat-row user">
-                            <div class="chat-avatar">U</div>
-                            <div style="display:flex; flex-direction:column; align-items:flex-end; max-width:70%;">
-                                <div class="chat-bubble">{safe_msg}</div>
-                                <div class="chat-meta"><span>{ts}</span><span class="read-receipt">{read}</span></div>
-                            </div>
-                        </div>
-                        '''
-                        if msg.get('reply'):
-                            rts = relative_time(msg.get('replied_at', ''))
-                            safe_rep = html.escape(msg['reply'])
+                    if user_msgs:
+                        chat_html = '<div class="chat-wrapper"><div class="chat-messages">'
+                        for msg in user_msgs:
+                            ts = relative_time(msg.get('timestamp', ''))
+                            safe_msg = html.escape(msg['message'])
+                            read = "✓✓ Read" if msg.get('read_by_customer') else "✓"
                             chat_html += f'''
-                            <div class="chat-row admin">
-                                <div class="chat-avatar">A</div>
-                                <div style="display:flex; flex-direction:column; max-width:70%;">
-                                    <span class="reply-badge">You replied</span>
-                                    <div class="chat-bubble">{safe_rep}</div>
-                                    <div class="chat-meta"><span>{rts}</span></div>
+                            <div class="chat-row user">
+                                <div class="chat-avatar">U</div>
+                                <div style="display:flex; flex-direction:column; align-items:flex-end; max-width:70%;">
+                                    <div class="chat-bubble">{safe_msg}</div>
+                                    <div class="chat-meta"><span>{ts}</span><span class="read-receipt">{read}</span></div>
                                 </div>
                             </div>
                             '''
-                    chat_html += '</div><div class="chat-input-container">'
-                    chat_html += '<form id="adminReplyForm" style="display:flex; gap:10px;">'
-                    chat_html += '<input type="text" name="reply" placeholder="Write a reply..." style="flex:1; background:#1a222c; border:1px solid #2a323c; border-radius:24px; padding:12px 18px; color:white;">'
-                    chat_html += '<button type="submit" style="background:#2563eb; border:none; border-radius:24px; padding:0 24px; color:white; font-weight:500;">Send</button>'
-                    chat_html += '</form></div></div>'
-                    components.html(chat_html, height=600, scrolling=False)
+                            if msg.get('reply'):
+                                rts = relative_time(msg.get('replied_at', ''))
+                                safe_rep = html.escape(msg['reply'])
+                                chat_html += f'''
+                                <div class="chat-row admin">
+                                    <div class="chat-avatar">A</div>
+                                    <div style="display:flex; flex-direction:column; max-width:70%;">
+                                        <span class="reply-badge">You replied</span>
+                                        <div class="chat-bubble">{safe_rep}</div>
+                                        <div class="chat-meta"><span>{rts}</span></div>
+                                    </div>
+                                </div>
+                                '''
+                        chat_html += '</div></div>'
+                        components.html(chat_html, height=450, scrolling=True)
+                    else:
+                        st.info("No messages yet.")
 
-                    # Actual reply form (hidden)
-                    with st.form(f"reply_form_{st.session_state.selected_user_id}", clear_on_submit=True):
-                        reply_text = st.text_input("Reply", label_visibility="collapsed", placeholder="Write a reply...")
-                        if st.form_submit_button("Send Reply"):
-                            if reply_text.strip():
-                                unreplied = [m for m in user_msgs if not m.get('reply')]
-                                if unreplied:
+                    # Admin reply form
+                    with st.form(key=f"reply_form_{st.session_state.selected_user_id}", clear_on_submit=True):
+                        col_input, col_button = st.columns([5, 1])
+                        with col_input:
+                            reply_text = st.text_input("Reply", placeholder="Write a reply...", label_visibility="collapsed")
+                        with col_button:
+                            submitted = st.form_submit_button("📤 Send")
+                        if submitted and reply_text.strip():
+                            unreplied = [m for m in user_msgs if not m.get('reply')]
+                            if unreplied:
+                                try:
                                     supabase.table("messages").update({
                                         "reply": reply_text,
                                         "replied_at": datetime.now().isoformat(),
                                         "status": "replied"
                                     }).eq("id", unreplied[-1]["id"]).execute()
+                                    st.success("Reply sent!")
+                                    time.sleep(0.5)
                                     st.rerun()
-                                else:
-                                    st.warning("No unreplied messages.")
+                                except Exception as e:
+                                    st.error(f"Failed: {e}")
+                            else:
+                                st.warning("No unreplied messages.")
+
+            # Metrics
+            st.markdown("---")
+            st.metric("Total Messages", len(data))
+            if not users_df.empty:
+                users_df["timestamp"] = pd.to_datetime(users_df["timestamp"], errors='coerce')
+                daily = users_df.groupby(users_df["timestamp"].dt.date).size().reset_index(name="count")
+                if not daily.empty:
+                    fig = px.line(daily, x="timestamp", y="count", title="Messages Over Time")
+                    st.plotly_chart(fig, use_container_width=True)
 
         if st.session_state.auto_refresh:
             time.sleep(3)
