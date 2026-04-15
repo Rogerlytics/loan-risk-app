@@ -2,6 +2,7 @@
 # 1. IMPORTS
 # ==============================
 import streamlit as st
+import streamlit.components.v1 as components
 import pickle
 import pandas as pd
 import bcrypt
@@ -9,6 +10,7 @@ import plotly.express as px
 from datetime import datetime
 from supabase import create_client, Client
 from typing import Optional, Dict, Any, List
+import html
 
 # ==============================
 # 2. CONFIG
@@ -42,92 +44,6 @@ html, body {
     color:#94a3b8;
     margin-bottom:20px;
 }
-
-/* Facebook Messenger Style Chat */
-.chat-container {
-    max-height: 500px;
-    overflow-y: auto;
-    padding: 20px;
-    background: #0b1220;
-    border-radius: 20px;
-    margin-bottom: 20px;
-    display: flex;
-    flex-direction: column;
-}
-.chat-bubble-row {
-    display: flex;
-    margin-bottom: 12px;
-}
-.chat-bubble-row.user {
-    justify-content: flex-end;
-}
-.chat-bubble-row.admin {
-    justify-content: flex-start;
-}
-.chat-bubble {
-    max-width: 70%;
-    padding: 12px 16px;
-    border-radius: 18px;
-    font-size: 14px;
-    line-height: 1.4;
-    word-wrap: break-word;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-}
-.user .chat-bubble {
-    background: #0084ff;
-    color: white;
-    border-bottom-right-radius: 4px;
-}
-.admin .chat-bubble {
-    background: #3a3b3c;
-    color: #e4e6eb;
-    border-bottom-left-radius: 4px;
-}
-.chat-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: #1d4ed8;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: bold;
-    margin: 0 10px;
-    flex-shrink: 0;
-}
-.user .chat-avatar {
-    order: 2;
-}
-.admin .chat-avatar {
-    order: 1;
-}
-.chat-timestamp {
-    font-size: 11px;
-    color: #8a8d91;
-    margin-top: 4px;
-    text-align: right;
-}
-.user .chat-timestamp {
-    color: #b0d4ff;
-}
-.chat-input-area {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-.chat-input-area .stTextInput {
-    flex: 1;
-}
-.reply-badge {
-    background: #1d4ed8;
-    color: white;
-    border-radius: 16px;
-    padding: 4px 12px;
-    font-size: 12px;
-    margin-bottom: 8px;
-    display: inline-block;
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -151,7 +67,7 @@ if "logged_in" not in st.session_state:
 if "seen_notified" not in st.session_state:
     st.session_state.seen_notified = set()
 if "selected_user_id" not in st.session_state:
-    st.session_state.selected_user_id = None  # For admin chat view
+    st.session_state.selected_user_id = None
 
 # ==============================
 # 6. MODEL
@@ -364,7 +280,7 @@ elif page == "Contact":
                 except Exception as e:
                     st.error(f"Failed to send: {e}")
 
-        # Display chat history (simple version, admin will have Facebook style)
+        # Display chat history
         st.markdown("### Your Conversation")
         try:
             msgs = supabase.table("messages").select("*").eq(
@@ -388,7 +304,7 @@ elif page == "Admin Dashboard":
 
     st.subheader("📊 Admin Control Panel")
 
-    # Admin Login Section (unchanged)
+    # Admin Login Section
     with st.expander("🔐 Admin Authentication", expanded=not st.session_state.logged_in):
         col_auth1, col_auth2 = st.columns(2)
         with col_auth1:
@@ -414,7 +330,6 @@ elif page == "Admin Dashboard":
         if not data:
             st.info("No messages yet.")
         else:
-            # ====== NEW: Facebook Messenger Style Chat Interface ======
             st.markdown("### 💬 Customer Conversations")
 
             # Get unique users who have messaged
@@ -425,7 +340,7 @@ elif page == "Admin Dashboard":
             else:
                 user_list = []
 
-            # Left column: Conversation list (like Facebook sidebar)
+            # Left column: Conversation list
             col_users, col_chat = st.columns([1, 2])
 
             with col_users:
@@ -437,7 +352,6 @@ elif page == "Admin Dashboard":
 
             with col_chat:
                 if st.session_state.selected_user_id is None and user_list:
-                    # Default select first user
                     st.session_state.selected_user_id = user_list[0]['user_id']
 
                 if st.session_state.selected_user_id:
@@ -447,39 +361,129 @@ elif page == "Admin Dashboard":
 
                     st.markdown(f"#### Chat with {selected_user_name}")
 
-                    # Chat display container with Facebook style bubbles
-                    chat_html = '<div class="chat-container">'
+                    # Build the chat HTML with proper escaping
+                    chat_html = '''
+                    <html>
+                    <head>
+                    <style>
+                    .chat-container {
+                        max-height: 500px;
+                        overflow-y: auto;
+                        padding: 20px;
+                        background: #0b1220;
+                        border-radius: 20px;
+                        margin-bottom: 20px;
+                        display: flex;
+                        flex-direction: column;
+                        font-family: 'Inter', sans-serif;
+                    }
+                    .chat-bubble-row {
+                        display: flex;
+                        margin-bottom: 12px;
+                    }
+                    .chat-bubble-row.user {
+                        justify-content: flex-end;
+                    }
+                    .chat-bubble-row.admin {
+                        justify-content: flex-start;
+                    }
+                    .chat-bubble {
+                        max-width: 70%;
+                        padding: 12px 16px;
+                        border-radius: 18px;
+                        font-size: 14px;
+                        line-height: 1.4;
+                        word-wrap: break-word;
+                        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+                    }
+                    .user .chat-bubble {
+                        background: #0084ff;
+                        color: white;
+                        border-bottom-right-radius: 4px;
+                    }
+                    .admin .chat-bubble {
+                        background: #3a3b3c;
+                        color: #e4e6eb;
+                        border-bottom-left-radius: 4px;
+                    }
+                    .chat-avatar {
+                        width: 32px;
+                        height: 32px;
+                        border-radius: 50%;
+                        background: #1d4ed8;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: white;
+                        font-weight: bold;
+                        margin: 0 10px;
+                        flex-shrink: 0;
+                    }
+                    .user .chat-avatar {
+                        order: 2;
+                    }
+                    .admin .chat-avatar {
+                        order: 1;
+                    }
+                    .chat-timestamp {
+                        font-size: 11px;
+                        color: #8a8d91;
+                        margin-top: 4px;
+                        text-align: right;
+                    }
+                    .user .chat-timestamp {
+                        color: #b0d4ff;
+                    }
+                    .reply-badge {
+                        background: #1d4ed8;
+                        color: white;
+                        border-radius: 16px;
+                        padding: 4px 12px;
+                        font-size: 12px;
+                        margin-bottom: 8px;
+                        display: inline-block;
+                    }
+                    </style>
+                    </head>
+                    <body style="margin:0; background:#0a0f1c;">
+                    <div class="chat-container">
+                    '''
 
                     for msg in user_msgs:
-                        # User message
                         timestamp = format_timestamp(msg.get('timestamp', ''))
+                        # Escape message content to prevent XSS
+                        safe_message = html.escape(msg['message'])
                         chat_html += f'''
                         <div class="chat-bubble-row user">
                             <div class="chat-avatar">U</div>
                             <div style="display:flex; flex-direction:column; align-items:flex-end;">
-                                <div class="chat-bubble">{msg['message']}</div>
+                                <div class="chat-bubble">{safe_message}</div>
                                 <div class="chat-timestamp">{timestamp}</div>
                             </div>
                         </div>
                         '''
-                        # Admin reply (if exists)
                         if msg.get('reply'):
                             reply_time = format_timestamp(msg.get('replied_at', ''))
+                            safe_reply = html.escape(msg['reply'])
                             chat_html += f'''
                             <div class="chat-bubble-row admin">
                                 <div class="chat-avatar">A</div>
                                 <div style="display:flex; flex-direction:column;">
                                     <div class="reply-badge">Reply</div>
-                                    <div class="chat-bubble">{msg['reply']}</div>
+                                    <div class="chat-bubble">{safe_reply}</div>
                                     <div class="chat-timestamp">{reply_time}</div>
                                 </div>
                             </div>
                             '''
 
-                    chat_html += '</div>'
+                    chat_html += '''
+                    </div>
+                    </body>
+                    </html>
+                    '''
 
-                    # Ensure rendering with unsafe_allow_html
-                    st.markdown(chat_html, unsafe_allow_html=True)
+                    # Use components.html for guaranteed rendering
+                    components.html(chat_html, height=550, scrolling=True)
 
                     # Reply input area
                     with st.form(key=f"reply_form_{st.session_state.selected_user_id}", clear_on_submit=True):
@@ -489,10 +493,9 @@ elif page == "Admin Dashboard":
                         with col_button:
                             submitted = st.form_submit_button("📤 Send")
                         if submitted and reply_text.strip():
-                            # Reply to the most recent unreplied message
                             unreplied = [m for m in user_msgs if not m.get('reply')]
                             if unreplied:
-                                msg_to_reply = unreplied[-1]  # newest unreplied
+                                msg_to_reply = unreplied[-1]
                                 try:
                                     supabase.table("messages").update({
                                         "reply": reply_text,
@@ -508,9 +511,7 @@ elif page == "Admin Dashboard":
                 else:
                     st.info("Select a user from the left to view conversation.")
 
-            # ====== End of Facebook Style Chat ======
-
-            # Additional metrics (unchanged)
+            # Metrics
             st.markdown("---")
             st.metric("Total Messages", len(data))
 
