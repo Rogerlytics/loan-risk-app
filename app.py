@@ -447,28 +447,28 @@ elif page == "Admin Dashboard":
 
                     st.markdown(f"#### Chat with {selected_user_name}")
 
-                    # Chat display container
+                    # Chat display container with Facebook style bubbles
                     chat_html = '<div class="chat-container">'
 
                     for msg in user_msgs:
-                        # User message bubble
+                        # User message
                         timestamp = format_timestamp(msg.get('timestamp', ''))
                         chat_html += f'''
                         <div class="chat-bubble-row user">
                             <div class="chat-avatar">U</div>
-                            <div style="flex-direction:column; align-items:flex-end;">
+                            <div style="display:flex; flex-direction:column; align-items:flex-end;">
                                 <div class="chat-bubble">{msg['message']}</div>
                                 <div class="chat-timestamp">{timestamp}</div>
                             </div>
                         </div>
                         '''
-                        # Admin reply bubble (if exists)
+                        # Admin reply (if exists)
                         if msg.get('reply'):
                             reply_time = format_timestamp(msg.get('replied_at', ''))
                             chat_html += f'''
                             <div class="chat-bubble-row admin">
                                 <div class="chat-avatar">A</div>
-                                <div style="flex-direction:column;">
+                                <div style="display:flex; flex-direction:column;">
                                     <div class="reply-badge">Reply</div>
                                     <div class="chat-bubble">{msg['reply']}</div>
                                     <div class="chat-timestamp">{reply_time}</div>
@@ -477,9 +477,11 @@ elif page == "Admin Dashboard":
                             '''
 
                     chat_html += '</div>'
+
+                    # Ensure rendering with unsafe_allow_html
                     st.markdown(chat_html, unsafe_allow_html=True)
 
-                    # Reply input area (like Facebook's "Write a reply...")
+                    # Reply input area
                     with st.form(key=f"reply_form_{st.session_state.selected_user_id}", clear_on_submit=True):
                         col_input, col_button = st.columns([5, 1])
                         with col_input:
@@ -487,11 +489,9 @@ elif page == "Admin Dashboard":
                         with col_button:
                             submitted = st.form_submit_button("📤 Send")
                         if submitted and reply_text.strip():
-                            # Update the last message from this user (or could reply to a specific message)
-                            # For simplicity, reply to the most recent message without a reply
+                            # Reply to the most recent unreplied message
                             unreplied = [m for m in user_msgs if not m.get('reply')]
                             if unreplied:
-                                # Reply to the oldest unreplied (or could be newest)
                                 msg_to_reply = unreplied[-1]  # newest unreplied
                                 try:
                                     supabase.table("messages").update({
