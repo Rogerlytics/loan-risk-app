@@ -1,163 +1,190 @@
 # ==============================
-# CONTACT (FULL RESTORED)
+# IMPORTS
 # ==============================
+import streamlit as st
+import pickle
+import pandas as pd
+import bcrypt
+import plotly.express as px
+from datetime import datetime
+from supabase import create_client, Client
+
+# ==============================
+# CONFIG
+# ==============================
+st.set_page_config(page_title="AI Loan Risk System", layout="wide")
+
+# ==============================
+# THEME
+# ==============================
+st.markdown("""
+<style>
+body {background:#0a0f1c; color:#e6edf3;}
+.card {
+    background:#111827;
+    padding:20px;
+    border-radius:12px;
+    margin-bottom:15px;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ==============================
+# SUPABASE
+# ==============================
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+ADMIN_USERNAME = st.secrets["ADMIN_USERNAME"]
+ADMIN_PASSWORD_HASH = st.secrets["ADMIN_PASSWORD_HASH"]
+
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# ==============================
+# SESSION
+# ==============================
+if "user" not in st.session_state:
+    st.session_state.user = None
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "seen_notified" not in st.session_state:
+    st.session_state.seen_notified = set()
+
+# ==============================
+# MODEL
+# ==============================
+model = pickle.load(open("loan_model.pkl", "rb"))
+
+# ==============================
+# FUNCTIONS
+# ==============================
+def check_password(p):
+    return bcrypt.checkpw(p.encode(), ADMIN_PASSWORD_HASH.encode())
+
+def login(email, password):
+    res = supabase.table("users").select("*").eq("email", email).execute()
+    if res.data:
+        u = res.data[0]
+        if bcrypt.checkpw(password.encode(), u["password"].encode()):
+            return u
+    return None
+
+def explain_risk(df):
+    reasons = []
+    if df['income_to_loan_ratio'][0] < 0.3:
+        reasons.append("Low income")
+    if df['loan_to_value_ratio'][0] > 0.8:
+        reasons.append("High loan vs car value")
+    return reasons or ["Strong profile"]
+
+# ==============================
+# SIDEBAR (MUST COME BEFORE PAGES)
+# ==============================
+st.sidebar.title("Navigation")
+
+page = st.sidebar.radio(
+    "Go to",
+    ["Loan Analysis", "Contact", "Admin Dashboard"]
+)
+
+# ==============================
+# HEADER
+# ==============================
+st.title("AI Loan Risk Platform")
+st.caption("Real-time credit risk evaluation")
+
+# ==============================
+# PAGES (CORRECT STRUCTURE)
+# ==============================
+
+# ------------------------------
+# LOAN ANALYSIS
+# ------------------------------
+if page == "Loan Analysis":
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        income = st.number_input("Income", 0, 1000000, 50000)
+        loan = st.number_input("Loan", 0, 1000000, 200000)
+
+    with col2:
+        car_value = st.number_input("Car Value", 0, 1000000, 400000)
+
+    b1, b2 = st.columns(2)
+
+    # REPAYMENT
+    with b1:
+        if st.button("💰 Calculate Repayment"):
+            m = loan * 0.02
+            st.success(f"Monthly: {m}")
+
+    # RISK
+    with b2:
+        if st.button("🤖 Check Loan Risk"):
+
+            df = pd.DataFrame({
+                'monthly_income':[income],
+                'loan_amount':[loan],
+                'car_value':[car_value]
+            })
+
+            df['loan_to_value_ratio'] = loan / car_value if car_value else 0
+            df['income_to_loan_ratio'] = income / loan if loan else 0
+
+            st.write("Risk:", explain_risk(df))
+
+# ------------------------------
+# CONTACT
+# ------------------------------
 elif page == "Contact":
 
-    st.subheader("💬 Customer Support Chat")
+    st.subheader("💬 Chat")
 
-    if not st.session_state.user:
-        st.warning("Please login to access chat")
-    else:
-
-        # MESSAGE INPUT
-        msg = st.text_input("Type your message")
+    if st.session_state.user:
+        msg = st.text_input("Message")
 
         if st.button("Send"):
-            if msg.strip() != "":
-                supabase.table("messages").insert({
-                    "user_id": st.session_state.user["id"],
-                    "name": st.session_state.user["username"],
-                    "email": st.session_state.user["email"],
-                    "message": msg,
-                    "status": "sent"
-                }).execute()
-                st.rerun()
+            supabase.table("messages").insert({
+                "user_id": st.session_state.user["id"],
+                "name": st.session_state.user["username"],
+                "email": st.session_state.user["email"],
+                "message": msg,
+                "status": "sent"
+            }).execute()
+            st.rerun()
 
-        # FETCH MESSAGES (NEWEST LAST → CHAT FLOW)
         msgs = supabase.table("messages").select("*").eq(
             "user_id", st.session_state.user["id"]
         ).order("id").execute().data
 
-        st.markdown("### 💬 Chat Conversation")
-
-        # CHAT LOOP
         for m in msgs:
+            st.write(m["message"])
 
-            msg_id = m["id"]
-
-            # 👁️ SEEN NOTIFICATION
-            if m.get("status") == "seen" and msg_id not in st.session_state.seen_notified:
-                st.toast("👁️ Your message was seen")
-                st.session_state.seen_notified.add(msg_id)
-
-            user_name = m.get("name", "User")
-            timestamp = m.get("timestamp", "")
-
-            # STATUS TICKS
-            status = m.get("status", "sent")
-            if status == "sent":
-                tick = "✓"
-            elif status == "delivered":
-                tick = "✓✓"
-            else:
-                tick = "✓✓ 👁️"
-
-            # USER MESSAGE (RIGHT)
-            st.markdown(f"""
-            <div style='display:flex; justify-content:flex-end; margin:8px 0'>
-                <div style='background:#2563eb; color:white; padding:10px 14px;
-                            border-radius:12px; max-width:70%; text-align:right'>
-                    <div style='font-size:12px; opacity:0.8'>{user_name}</div>
-                    <div>{m['message']}</div>
-                    <div style='font-size:10px; opacity:0.6'>{timestamp} {tick}</div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            # ADMIN REPLY (LEFT)
-            if m.get("reply"):
-                reply_time = m.get("replied_at", "")
-
-                st.markdown(f"""
-                <div style='display:flex; justify-content:flex-start; margin:8px 0'>
-                    <div style='background:#1f2937; color:white; padding:10px 14px;
-                                border-radius:12px; max-width:70%; text-align:left'>
-                        <div style='font-size:12px; opacity:0.8'>Admin</div>
-                        <div>{m['reply']}</div>
-                        <div style='font-size:10px; opacity:0.6'>{reply_time}</div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-
-        # AUTO SCROLL
-        st.markdown("<div id='bottom'></div>", unsafe_allow_html=True)
-        st.markdown("""
-        <script>
-        var element = document.getElementById("bottom");
-        if (element) {
-            element.scrollIntoView({behavior: "smooth"});
-        }
-        </script>
-        """, unsafe_allow_html=True)
-
-
-# ==============================
-# ADMIN DASHBOARD (FULL RESTORED)
-# ==============================
+# ------------------------------
+# ADMIN
+# ------------------------------
 elif page == "Admin Dashboard":
 
-    st.subheader("📊 Admin Control Panel")
+    u = st.text_input("Admin Username")
+    p = st.text_input("Password", type="password")
 
-    username = st.text_input("Admin Username")
-    password = st.text_input("Password", type="password")
-
-    if st.button("Login Admin"):
-        if username == ADMIN_USERNAME and check_password(password):
+    if st.button("Login"):
+        if u == ADMIN_USERNAME and check_password(p):
             st.session_state.logged_in = True
-            st.success("Login successful")
-            st.rerun()
-        else:
-            st.error("Invalid credentials")
 
     if st.session_state.logged_in:
 
-        if st.button("Logout"):
-            st.session_state.logged_in = False
-            st.rerun()
+        data = supabase.table("messages").select("*").execute().data
 
-        try:
-            data = supabase.table("messages").select("*").execute().data
-            df = pd.DataFrame(data)
+        st.write("Total Messages:", len(data))
 
-            st.metric("Total Messages", len(df))
+        for m in data:
+            st.write(m["message"])
 
-            # 📊 ANALYTICS
-            if not df.empty:
-                df["timestamp"] = pd.to_datetime(df["timestamp"])
-                daily = df.groupby(df["timestamp"].dt.date).size().reset_index(name="count")
+            reply = st.text_input(f"Reply {m['id']}")
 
-                fig = px.line(daily, x="timestamp", y="count",
-                              title="📈 Messages Over Time")
-                st.plotly_chart(fig)
-
-            st.markdown("### 📬 Inbox")
-
-            for m in data:
-
-                # AUTO MARK AS SEEN
-                if m.get("status") != "seen":
-                    supabase.table("messages").update({
-                        "status": "seen"
-                    }).eq("id", m["id"]).execute()
-
-                st.markdown(f"""
-                <div style='background:#111827; padding:12px; border-radius:10px; margin-bottom:10px'>
-                    <b>{m.get("name","User")}</b><br>
-                    <small>{m.get("email","")}</small><br><br>
-                    {m.get("message","")}
-                </div>
-                """, unsafe_allow_html=True)
-
-                # REPLY BOX
-                reply = st.text_input(f"Reply to message {m['id']}")
-
-                if st.button(f"Send Reply {m['id']}"):
-                    supabase.table("messages").update({
-                        "reply": reply,
-                        "replied_at": str(datetime.now())
-                    }).eq("id", m["id"]).execute()
-                    st.success("Reply sent")
-                    st.rerun()
-
-        except Exception as e:
-            st.error(f"Database error: {e}")
+            if st.button(f"Send {m['id']}"):
+                supabase.table("messages").update({
+                    "reply": reply,
+                    "replied_at": str(datetime.now())
+                }).eq("id", m["id"]).execute()
