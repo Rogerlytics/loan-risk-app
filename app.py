@@ -30,21 +30,24 @@ html, body {
     font-family: 'Inter', sans-serif;
 }
 
-/* Login page card */
+/* --- Login Page --- */
+/* Center the login card vertically and horizontally */
 .login-container {
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 80vh;
+    padding: 20px;
 }
 .login-card {
     background: #0f141c;
     border-radius: 24px;
     border: 1px solid #2a323c;
-    padding: 40px;
+    padding: 40px 32px;
     width: 100%;
     max-width: 420px;
     box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    margin: 0 auto;
 }
 .login-title {
     text-align: center;
@@ -59,12 +62,14 @@ html, body {
     margin-bottom: 32px;
     font-size: 14px;
 }
-.role-selector {
+/* Role selector (radio buttons) */
+div[role="radiogroup"] {
     display: flex;
     gap: 10px;
     margin-bottom: 24px;
+    justify-content: center;
 }
-.role-btn {
+div[role="radiogroup"] label {
     flex: 1;
     padding: 10px;
     background: #1a222c;
@@ -76,11 +81,12 @@ html, body {
     cursor: pointer;
     transition: all 0.2s;
 }
-.role-btn.active {
+div[role="radiogroup"] label[data-selected="true"] {
     background: #1e3a5f;
     border-color: #3b82f6;
     color: white;
 }
+/* Input fields */
 .stTextInput > div > div > input {
     background: #1a222c;
     border: 1px solid #2a3748;
@@ -88,6 +94,7 @@ html, body {
     color: white;
     padding: 12px 16px;
 }
+/* Sign In button */
 .stButton > button {
     background: #2563eb;
     color: white;
@@ -103,8 +110,18 @@ html, body {
     transform: translateY(-1px);
     box-shadow: 0 8px 16px rgba(37, 99, 235, 0.3);
 }
+/* Sign up link */
+.login-footer {
+    text-align: center;
+    margin-top: 16px;
+    color: #8a94a3;
+}
+.login-footer a {
+    color: #3b82f6;
+    text-decoration: none;
+}
 
-/* App styles (same as before) */
+/* --- App styles (unchanged) --- */
 .card {
     background: linear-gradient(145deg, #111827, #0b1220);
     padding: 20px;
@@ -112,9 +129,9 @@ html, body {
     margin-bottom: 20px;
 }
 .subtitle {
-    text-align:center;
-    color:#94a3b8;
-    margin-bottom:20px;
+    text-align: center;
+    color: #94a3b8;
+    margin-bottom: 20px;
 }
 .notification-badge {
     background-color: #ef4444;
@@ -309,7 +326,7 @@ def show_login_page():
                 st.rerun()
             else:
                 st.error("Invalid email or password")
-        st.markdown('<p style="text-align:center; margin-top:16px; color:#8a94a3;">Don\'t have an account? <a href="#" style="color:#3b82f6;">Sign up</a></p>', unsafe_allow_html=True)
+        st.markdown('<p class="login-footer">Don\'t have an account? <a href="#">Sign up</a></p>', unsafe_allow_html=True)
     else:
         username = st.text_input("Admin Username", placeholder="admin")
         password = st.text_input("Admin Password", type="password", placeholder="••••••••")
