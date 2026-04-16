@@ -322,7 +322,7 @@ if page == "Loan Analysis":
             st.markdown('</div>', unsafe_allow_html=True)
 
 # ------------------------------
-# CONTACT (Customer Support) – unified panel + timeline
+# CONTACT (Customer Support) – Avatars removed
 # ------------------------------
 elif page == "Contact":
     st.subheader("💬 Customer Support Chat")
@@ -380,7 +380,7 @@ elif page == "Contact":
                 date_groups[date_key] = {"display": display, "first_index": i}
         timeline_data = [{"date": k, "display": v["display"], "index": v["first_index"]} for k, v in date_groups.items()]
 
-        # Build chat HTML with timeline
+        # Build chat HTML with timeline – NO AVATARS
         chat_html = f'''
         <html><head>
         <meta charset="UTF-8">
@@ -404,9 +404,6 @@ elif page == "Contact":
         .chat-bubble {{ max-width: 70%; padding: 12px 16px; border-radius: 18px; font-size: 14px; line-height: 1.4; word-wrap: break-word; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }}
         .user .chat-bubble {{ background: #0084ff; color: white; border-bottom-right-radius: 4px; }}
         .admin .chat-bubble {{ background: #3a3b3c; color: #e4e6eb; border-bottom-left-radius: 4px; }}
-        .chat-avatar {{ width: 32px; height: 32px; border-radius: 50%; background: #1d4ed8; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin: 0 10px; flex-shrink: 0; }}
-        .user .chat-avatar {{ order: 2; }}
-        .admin .chat-avatar {{ order: 1; }}
         .chat-timestamp {{ font-size: 11px; color: #8a8d91; margin-top: 4px; text-align: right; }}
         .user .chat-timestamp {{ color: #b0d4ff; }}
         .reply-badge {{ background: #1d4ed8; color: white; border-radius: 16px; padding: 4px 12px; font-size: 12px; margin-bottom: 8px; display: inline-block; }}
@@ -423,8 +420,7 @@ elif page == "Contact":
             read_status = "✓✓ Read" if msg.get('read_by_customer') else "✓ Delivered"
             chat_html += f'''
             <div class="chat-bubble-row user" data-message-id="{msg['id']}">
-                <div class="chat-avatar">U</div>
-                <div style="display:flex; flex-direction:column; align-items:flex-end;">
+                <div style="display:flex; flex-direction:column; align-items:flex-end; max-width:70%;">
                     <div class="chat-bubble">{safe_message}</div>
                     <div style="display:flex; align-items:center;">
                         <div class="chat-timestamp">{timestamp}</div>
@@ -438,8 +434,7 @@ elif page == "Contact":
                 safe_reply = html.escape(msg['reply'])
                 chat_html += f'''
                 <div class="chat-bubble-row admin" data-message-id="reply_{msg['id']}">
-                    <div class="chat-avatar">A</div>
-                    <div style="display:flex; flex-direction:column;">
+                    <div style="display:flex; flex-direction:column; max-width:70%;">
                         <div class="reply-badge">Reply</div>
                         <div class="chat-bubble">{safe_reply}</div>
                         <div class="chat-timestamp">{reply_time}</div>
@@ -526,7 +521,7 @@ elif page == "Contact":
             st.rerun()
 
 # ------------------------------
-# ADMIN DASHBOARD
+# ADMIN DASHBOARD – Avatars removed
 # ------------------------------
 elif page == "Admin Dashboard":
     st.subheader("📊 Admin Control Panel")
@@ -598,9 +593,6 @@ elif page == "Admin Dashboard":
                     .chat-bubble { max-width:70%; padding:12px 16px; border-radius:18px; font-size:14px; line-height:1.4; word-wrap:break-word; box-shadow:0 1px 2px rgba(0,0,0,0.1); }
                     .user .chat-bubble { background:#0084ff; color:white; border-bottom-right-radius:4px; }
                     .admin .chat-bubble { background:#3a3b3c; color:#e4e6eb; border-bottom-left-radius:4px; }
-                    .chat-avatar { width:32px; height:32px; border-radius:50%; background:#1d4ed8; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; margin:0 10px; flex-shrink:0; }
-                    .user .chat-avatar { order:2; }
-                    .admin .chat-avatar { order:1; }
                     .chat-timestamp { font-size:11px; color:#8a8d91; margin-top:4px; text-align:right; }
                     .user .chat-timestamp { color:#b0d4ff; }
                     .reply-badge { background:#1d4ed8; color:white; border-radius:16px; padding:4px 12px; font-size:12px; margin-bottom:8px; display:inline-block; }
@@ -613,8 +605,7 @@ elif page == "Admin Dashboard":
                         read_status = "✓✓ Read" if msg.get('read_by_customer') else "✓ Delivered"
                         chat_html += f'''
                         <div class="chat-bubble-row user">
-                            <div class="chat-avatar">U</div>
-                            <div style="display:flex; flex-direction:column; align-items:flex-end;">
+                            <div style="display:flex; flex-direction:column; align-items:flex-end; max-width:70%;">
                                 <div class="chat-bubble">{safe_message}</div>
                                 <div style="display:flex; align-items:center;">
                                     <div class="chat-timestamp">{timestamp}</div>
@@ -628,8 +619,7 @@ elif page == "Admin Dashboard":
                             safe_reply = html.escape(msg['reply'])
                             chat_html += f'''
                             <div class="chat-bubble-row admin">
-                                <div class="chat-avatar">A</div>
-                                <div style="display:flex; flex-direction:column;">
+                                <div style="display:flex; flex-direction:column; max-width:70%;">
                                     <div class="reply-badge">Reply</div>
                                     <div class="chat-bubble">{safe_reply}</div>
                                     <div class="chat-timestamp">{reply_time}</div>
