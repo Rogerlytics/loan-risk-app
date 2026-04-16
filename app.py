@@ -63,19 +63,12 @@ html, body {
     color: #6b7280;
     margin-left: 4px;
 }
-
-/* Unified chat panel */
 .chat-panel {
     background: #0b1220;
     border-radius: 20px;
     overflow: hidden;
     margin-bottom: 20px;
     border: 1px solid #1f2a36;
-}
-.chat-messages-container {
-    height: 450px;
-    overflow-y: auto;
-    padding: 20px;
 }
 .chat-input-container {
     border-top: 1px solid #1f2a36;
@@ -254,7 +247,6 @@ st.markdown("<div class='subtitle'>Real-time credit risk evaluation powered by m
 # LOAN ANALYSIS
 # ------------------------------
 if page == "Loan Analysis":
-    # (unchanged – same as before)
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.subheader("📊 Loan Input Details")
     col1, col2 = st.columns(2)
@@ -326,7 +318,7 @@ if page == "Loan Analysis":
             st.markdown('</div>', unsafe_allow_html=True)
 
 # ------------------------------
-# CONTACT (Customer Support) with proper rendering
+# CONTACT (Customer Support) – fixed rendering
 # ------------------------------
 elif page == "Contact":
     st.subheader("💬 Customer Support Chat")
@@ -350,44 +342,109 @@ elif page == "Contact":
             st.error(f"Failed to load messages: {e}")
             msgs = []
 
+        # Quick actions
         st.markdown("**Quick Actions**")
-        col_q1, col_q2, col_q3, col_q4 = st.columns(4)
-        with col_q1:
+        cols = st.columns(4)
+        with cols[0]:
             if st.button("📊 Loan Status", use_container_width=True):
                 st.session_state.draft_message = "What's my loan application status?"
                 st.rerun()
-        with col_q2:
+        with cols[1]:
             if st.button("💰 Payment Help", use_container_width=True):
                 st.session_state.draft_message = "I need help with my payment"
                 st.rerun()
-        with col_q3:
+        with cols[2]:
             if st.button("📄 Upload Docs", use_container_width=True):
                 st.session_state.draft_message = "I need to upload documents"
                 st.rerun()
-        with col_q4:
+        with cols[3]:
             if st.button("🔄 Reset Password", use_container_width=True):
                 st.session_state.draft_message = "I forgot my password"
                 st.rerun()
 
-        # Build chat HTML
+        # Build chat HTML for components.html
         chat_html = '''
-        <html><head><style>
-        body { margin:0; background:#0b1220; font-family:'Inter',sans-serif; }
-        .chat-messages { display:flex; flex-direction:column; }
-        .chat-bubble-row { display:flex; margin-bottom:12px; }
-        .chat-bubble-row.user { justify-content:flex-end; }
-        .chat-bubble-row.admin { justify-content:flex-start; }
-        .chat-bubble { max-width:70%; padding:12px 16px; border-radius:18px; font-size:14px; line-height:1.4; word-wrap:break-word; box-shadow:0 1px 2px rgba(0,0,0,0.1); }
-        .user .chat-bubble { background:#0084ff; color:white; border-bottom-right-radius:4px; }
-        .admin .chat-bubble { background:#3a3b3c; color:#e4e6eb; border-bottom-left-radius:4px; }
-        .chat-avatar { width:32px; height:32px; border-radius:50%; background:#1d4ed8; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; margin:0 10px; flex-shrink:0; }
-        .user .chat-avatar { order:2; }
-        .admin .chat-avatar { order:1; }
-        .chat-timestamp { font-size:11px; color:#8a8d91; margin-top:4px; text-align:right; }
-        .user .chat-timestamp { color:#b0d4ff; }
-        .reply-badge { background:#1d4ed8; color:white; border-radius:16px; padding:4px 12px; font-size:12px; margin-bottom:8px; display:inline-block; }
-        .read-receipt { font-size:11px; color:#8a8d91; margin-left:8px; }
-        </style></head>
+        <html><head>
+        <meta charset="UTF-8">
+        <style>
+        body {
+            margin: 0;
+            background: #0b1220;
+            font-family: 'Inter', sans-serif;
+            color: #e6edf3;
+        }
+        .chat-messages {
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+        .chat-bubble-row {
+            display: flex;
+            margin-bottom: 12px;
+        }
+        .chat-bubble-row.user {
+            justify-content: flex-end;
+        }
+        .chat-bubble-row.admin {
+            justify-content: flex-start;
+        }
+        .chat-bubble {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.4;
+            word-wrap: break-word;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .user .chat-bubble {
+            background: #0084ff;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        .admin .chat-bubble {
+            background: #3a3b3c;
+            color: #e4e6eb;
+            border-bottom-left-radius: 4px;
+        }
+        .chat-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #1d4ed8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            margin: 0 10px;
+            flex-shrink: 0;
+        }
+        .user .chat-avatar { order: 2; }
+        .admin .chat-avatar { order: 1; }
+        .chat-timestamp {
+            font-size: 11px;
+            color: #8a8d91;
+            margin-top: 4px;
+            text-align: right;
+        }
+        .user .chat-timestamp { color: #b0d4ff; }
+        .reply-badge {
+            background: #1d4ed8;
+            color: white;
+            border-radius: 16px;
+            padding: 4px 12px;
+            font-size: 12px;
+            margin-bottom: 8px;
+            display: inline-block;
+        }
+        .read-receipt {
+            font-size: 11px;
+            color: #8a8d91;
+            margin-left: 8px;
+        }
+        </style>
+        </head>
         <body>
         <div class="chat-messages">
         '''
@@ -422,55 +479,52 @@ elif page == "Contact":
                 '''
         chat_html += '</div></body></html>'
 
-        # Render chat in a scrollable container
-        st.markdown('<div class="chat-panel">', unsafe_allow_html=True)
-        st.markdown(f'<div class="chat-messages-container">{chat_html}</div>', unsafe_allow_html=True)
-        # components.html is more reliable for complex CSS; we'll use it for the chat bubbles
+        # Render chat bubbles via components.html (no raw HTML shown)
         components.html(chat_html, height=450, scrolling=True)
 
-        # Input area inside the panel
-        st.markdown('<div class="chat-input-container">', unsafe_allow_html=True)
-        with st.form(key="message_form", clear_on_submit=True):
-            col_input, col_button = st.columns([5, 1])
-            with col_input:
-                msg = st.text_input(
-                    "Message",
-                    value=st.session_state.draft_message,
-                    placeholder="Type your message...",
-                    label_visibility="collapsed",
-                    key="chat_input"
-                )
-            with col_button:
-                submitted = st.form_submit_button("📤 Send", use_container_width=True)
-            if submitted and msg.strip():
-                try:
-                    supabase.table("messages").insert({
-                        "user_id": user_id,
-                        "name": st.session_state.user["username"],
-                        "email": st.session_state.user["email"],
-                        "message": msg,
-                        "status": "sent",
-                        "timestamp": datetime.now().isoformat(),
-                        "read_by_customer": False,
-                        "delivered": True
-                    }).execute()
-                    st.session_state.draft_message = ""
-                    st.success("Message sent!")
-                    time.sleep(0.5)
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Failed to send: {e}")
-            else:
-                st.session_state.draft_message = msg
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)  # close chat-panel
+        # Input area
+        with st.container():
+            st.markdown('<div class="chat-input-container">', unsafe_allow_html=True)
+            with st.form(key="message_form", clear_on_submit=True):
+                col_input, col_button = st.columns([5, 1])
+                with col_input:
+                    msg = st.text_input(
+                        "Message",
+                        value=st.session_state.draft_message,
+                        placeholder="Type your message...",
+                        label_visibility="collapsed",
+                        key="chat_input"
+                    )
+                with col_button:
+                    submitted = st.form_submit_button("📤 Send", use_container_width=True)
+                if submitted and msg.strip():
+                    try:
+                        supabase.table("messages").insert({
+                            "user_id": user_id,
+                            "name": st.session_state.user["username"],
+                            "email": st.session_state.user["email"],
+                            "message": msg,
+                            "status": "sent",
+                            "timestamp": datetime.now().isoformat(),
+                            "read_by_customer": False,
+                            "delivered": True
+                        }).execute()
+                        st.session_state.draft_message = ""
+                        st.success("Message sent!")
+                        time.sleep(0.5)
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Failed to send: {e}")
+                else:
+                    st.session_state.draft_message = msg
+            st.markdown('</div>', unsafe_allow_html=True)
 
         if st.session_state.auto_refresh:
             time.sleep(3)
             st.rerun()
 
 # ------------------------------
-# ADMIN DASHBOARD (fully restored)
+# ADMIN DASHBOARD (fully functional)
 # ------------------------------
 elif page == "Admin Dashboard":
     st.subheader("📊 Admin Control Panel")
@@ -533,7 +587,7 @@ elif page == "Admin Dashboard":
                     st.markdown(f"#### Chat with {selected_user_name}")
 
                     chat_html = '''
-                    <html><head><style>
+                    <html><head><meta charset="UTF-8"><style>
                     body { margin:0; background:#0b1220; font-family:'Inter',sans-serif; }
                     .chat-messages { display:flex; flex-direction:column; padding:20px; }
                     .chat-bubble-row { display:flex; margin-bottom:12px; }
@@ -549,9 +603,7 @@ elif page == "Admin Dashboard":
                     .user .chat-timestamp { color:#b0d4ff; }
                     .reply-badge { background:#1d4ed8; color:white; border-radius:16px; padding:4px 12px; font-size:12px; margin-bottom:8px; display:inline-block; }
                     .read-receipt { font-size:11px; color:#8a8d91; margin-left:8px; }
-                    </style></head>
-                    <body>
-                    <div class="chat-messages">
+                    </style></head><body><div class="chat-messages">
                     '''
                     for msg in user_msgs:
                         timestamp = relative_time(msg.get('timestamp', ''))
