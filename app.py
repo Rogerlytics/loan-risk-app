@@ -68,13 +68,14 @@ html, body {
 div[role="radiogroup"] {
     display: flex !important;
     flex-direction: row !important;
-    gap: 10px;
+    gap: 12px;
     margin-bottom: 24px;
     justify-content: center;
 }
 div[role="radiogroup"] label {
     flex: 1;
-    padding: 10px;
+    min-width: 120px;  /* Ensures "Administrator" fits */
+    padding: 12px 16px;
     background: #1a222c;
     border: 1px solid #2a3748;
     border-radius: 12px;
@@ -84,6 +85,7 @@ div[role="radiogroup"] label {
     cursor: pointer;
     transition: all 0.2s;
     margin: 0 !important;
+    white-space: nowrap;  /* Prevents text wrapping */
 }
 div[role="radiogroup"] label[data-selected="true"] {
     background: #1e3a5f;
