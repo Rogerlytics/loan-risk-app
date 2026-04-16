@@ -37,14 +37,20 @@ html, body {
 }
 
 /* --- Sidebar Radio Buttons --- */
-/* Make sidebar radio labels fit properly */
+/* Ensure sidebar radio labels fit without wrapping */
+div[data-testid="stSidebar"] div[role="radiogroup"] {
+    gap: 6px !important;
+}
 div[data-testid="stSidebar"] div[role="radiogroup"] label {
     white-space: nowrap !important;
-    padding: 8px 12px !important;
-    width: auto !important;
+    padding: 10px 16px !important;
+    width: 100% !important;
+    box-sizing: border-box;
+    border-radius: 8px;
+    transition: all 0.2s;
 }
-div[data-testid="stSidebar"] div[role="radiogroup"] {
-    gap: 4px !important;
+div[data-testid="stSidebar"] div[role="radiogroup"] label:hover {
+    background: #1e2630 !important;
 }
 
 /* --- Login Page --- */
@@ -385,7 +391,7 @@ def show_main_app():
     # Sidebar
     st.sidebar.title("Navigation")
     if st.session_state.role == "user":
-        # CONTACT BELOW LOAN ANALYSIS
+        # Loan Analysis TOP, Contact BELOW
         page = st.sidebar.radio("Go to", ["Loan Analysis", "Contact"])
     else:
         page = st.sidebar.radio("Go to", ["Admin Dashboard"])
