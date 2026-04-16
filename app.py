@@ -254,10 +254,9 @@ st.markdown("<div class='subtitle'>Real-time credit risk evaluation powered by m
 # LOAN ANALYSIS
 # ------------------------------
 if page == "Loan Analysis":
-
+    # (unchanged – same as before)
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.subheader("📊 Loan Input Details")
-
     col1, col2 = st.columns(2)
     with col1:
         age = st.number_input("Age", 0, 100, 30)
@@ -274,7 +273,6 @@ if page == "Loan Analysis":
     employment_type = st.selectbox("Employment Type", ["salaried","self-employed","informal"])
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # KPI
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.subheader("📈 Key Financial Metrics")
     k1, k2, k3 = st.columns(3)
@@ -284,7 +282,6 @@ if page == "Loan Analysis":
     st.markdown('</div>', unsafe_allow_html=True)
 
     b1, b2 = st.columns(2)
-
     with b1:
         if st.button("💰 Calculate Repayment"):
             r = interest_rate / 100 / 12
@@ -295,7 +292,6 @@ if page == "Loan Analysis":
             st.write(f"Weekly: KES {m/4.33:,.2f}")
             st.write(f"Daily: KES {m/30:,.2f}")
             st.markdown('</div>', unsafe_allow_html=True)
-
     with b2:
         if st.button("🤖 Check Loan Risk"):
             emp = {"salaried":0,"self-employed":1,"informal":2}[employment_type]
@@ -308,11 +304,9 @@ if page == "Loan Analysis":
             })
             df['loan_to_value_ratio'] = loan_amount / car_value if car_value else 0
             df['income_to_loan_ratio'] = income / loan_amount if loan_amount else 0
-
             X = df[model.feature_names_in_]
             pred = model.predict(X)[0]
             prob = model.predict_proba(X)[0][1] * 100
-
             st.markdown('<div class="card">', unsafe_allow_html=True)
             st.subheader("🧠 AI Risk Decision")
             st.write(f"Risk Score: {prob:.2f}%")
@@ -321,34 +315,27 @@ if page == "Loan Analysis":
                 st.error("❌ High Risk")
             else:
                 st.success("✅ Low Risk")
-
             st.subheader("📌 Risk Factors")
             reasons, citations = explain_risk_with_citations(df)
             for i, r in enumerate(reasons):
                 src = citations[i]
                 st.write(f"• {r}  `[Source: {src['source']}]`  🔵 Confidence: {src['confidence']}")
-
             st.subheader("💡 Recommendations")
             for s in suggest_improvements(df):
                 st.info(s)
             st.markdown('</div>', unsafe_allow_html=True)
 
 # ------------------------------
-# CONTACT (Customer Support) with Unified Chat Panel
+# CONTACT (Customer Support) with proper rendering
 # ------------------------------
 elif page == "Contact":
-
     st.subheader("💬 Customer Support Chat")
-
     if not st.session_state.user:
         st.warning("Login first")
     else:
         user_id = st.session_state.user["id"]
-
-        # Mark messages as read when entering page
         mark_messages_as_read(user_id)
 
-        # Auto-refresh controls
         col1, col2 = st.columns([1, 4])
         with col1:
             if st.button("🔄 Refresh", use_container_width=True):
@@ -357,14 +344,12 @@ elif page == "Contact":
             auto = st.checkbox("Auto-refresh (3s)", value=st.session_state.auto_refresh)
             st.session_state.auto_refresh = auto
 
-        # Fetch messages
         try:
             msgs = supabase.table("messages").select("*").eq("user_id", user_id).order("id", desc=False).execute().data
         except Exception as e:
             st.error(f"Failed to load messages: {e}")
             msgs = []
 
-        # Quick reply buttons (above chat)
         st.markdown("**Quick Actions**")
         col_q1, col_q2, col_q3, col_q4 = st.columns(4)
         with col_q1:
@@ -384,12 +369,10 @@ elif page == "Contact":
                 st.session_state.draft_message = "I forgot my password"
                 st.rerun()
 
-        # Unified chat panel
-        st.markdown('<div class="chat-panel">', unsafe_allow_html=True)
-
-        # Chat messages area (scrollable)
+        # Build chat HTML
         chat_html = '''
         <html><head><style>
+        body { margin:0; background:#0b1220; font-family:'Inter',sans-serif; }
         .chat-messages { display:flex; flex-direction:column; }
         .chat-bubble-row { display:flex; margin-bottom:12px; }
         .chat-bubble-row.user { justify-content:flex-end; }
@@ -405,7 +388,7 @@ elif page == "Contact":
         .reply-badge { background:#1d4ed8; color:white; border-radius:16px; padding:4px 12px; font-size:12px; margin-bottom:8px; display:inline-block; }
         .read-receipt { font-size:11px; color:#8a8d91; margin-left:8px; }
         </style></head>
-        <body style="margin:0; background:#0b1220;">
+        <body>
         <div class="chat-messages">
         '''
         for msg in msgs:
@@ -438,10 +421,14 @@ elif page == "Contact":
                 </div>
                 '''
         chat_html += '</div></body></html>'
-        
-        st.markdown(f'<div class="chat-messages-container">{chat_html}</div>', unsafe_allow_html=True)
 
-        # Input area inside the same panel
+        # Render chat in a scrollable container
+        st.markdown('<div class="chat-panel">', unsafe_allow_html=True)
+        st.markdown(f'<div class="chat-messages-container">{chat_html}</div>', unsafe_allow_html=True)
+        # components.html is more reliable for complex CSS; we'll use it for the chat bubbles
+        components.html(chat_html, height=450, scrolling=True)
+
+        # Input area inside the panel
         st.markdown('<div class="chat-input-container">', unsafe_allow_html=True)
         with st.form(key="message_form", clear_on_submit=True):
             col_input, col_button = st.columns([5, 1])
@@ -455,7 +442,6 @@ elif page == "Contact":
                 )
             with col_button:
                 submitted = st.form_submit_button("📤 Send", use_container_width=True)
-
             if submitted and msg.strip():
                 try:
                     supabase.table("messages").insert({
@@ -468,28 +454,171 @@ elif page == "Contact":
                         "read_by_customer": False,
                         "delivered": True
                     }).execute()
-                    st.session_state.draft_message = ""  # Clear draft after send
+                    st.session_state.draft_message = ""
                     st.success("Message sent!")
                     time.sleep(0.5)
                     st.rerun()
                 except Exception as e:
                     st.error(f"Failed to send: {e}")
             else:
-                # Keep the draft text in session state for persistence across auto-refresh
                 st.session_state.draft_message = msg
         st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)  # close chat-panel
 
-        st.markdown('</div>', unsafe_allow_html=True)  # Close chat-panel
-
-        # Auto-refresh logic
         if st.session_state.auto_refresh:
             time.sleep(3)
             st.rerun()
 
 # ------------------------------
-# ADMIN DASHBOARD (unchanged)
+# ADMIN DASHBOARD (fully restored)
 # ------------------------------
 elif page == "Admin Dashboard":
-    # (Same as before – omitted for brevity but present in full code)
     st.subheader("📊 Admin Control Panel")
-    # ... full admin code from previous version ...
+
+    with st.expander("🔐 Admin Authentication", expanded=not st.session_state.logged_in):
+        col_auth1, col_auth2 = st.columns(2)
+        with col_auth1:
+            u = st.text_input("Admin Username", key="admin_user")
+        with col_auth2:
+            p = st.text_input("Password", type="password", key="admin_pass")
+        if st.button("Login Admin"):
+            if u == ADMIN_USERNAME and check_password(p):
+                st.session_state.logged_in = True
+                st.rerun()
+            else:
+                st.error("Invalid credentials")
+
+    if st.session_state.logged_in:
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            if st.button("🔄 Refresh", use_container_width=True):
+                st.rerun()
+        with col2:
+            auto = st.checkbox("Auto-refresh (3s)", value=st.session_state.auto_refresh, key="admin_auto")
+            st.session_state.auto_refresh = auto
+
+        try:
+            data = supabase.table("messages").select("*").order("timestamp", desc=False).execute().data
+        except Exception as e:
+            st.error(f"Failed to fetch messages: {e}")
+            data = []
+
+        if not data:
+            st.info("No messages yet.")
+        else:
+            st.markdown("### 💬 Customer Conversations")
+            users_df = pd.DataFrame(data)
+            if not users_df.empty:
+                unique_users = users_df[['user_id', 'name', 'email']].drop_duplicates(subset=['user_id'])
+                user_list = unique_users.to_dict('records')
+            else:
+                user_list = []
+
+            col_users, col_chat = st.columns([1, 2])
+
+            with col_users:
+                st.markdown("**Conversations**")
+                for usr in user_list:
+                    if st.button(f"👤 {usr['name']} ({usr['email']})", key=f"user_{usr['user_id']}"):
+                        st.session_state.selected_user_id = usr['user_id']
+                        st.rerun()
+
+            with col_chat:
+                if st.session_state.selected_user_id is None and user_list:
+                    st.session_state.selected_user_id = user_list[0]['user_id']
+
+                if st.session_state.selected_user_id:
+                    user_msgs = [m for m in data if m['user_id'] == st.session_state.selected_user_id]
+                    selected_user_name = next((usr['name'] for usr in user_list if usr['user_id'] == st.session_state.selected_user_id), "User")
+                    st.markdown(f"#### Chat with {selected_user_name}")
+
+                    chat_html = '''
+                    <html><head><style>
+                    body { margin:0; background:#0b1220; font-family:'Inter',sans-serif; }
+                    .chat-messages { display:flex; flex-direction:column; padding:20px; }
+                    .chat-bubble-row { display:flex; margin-bottom:12px; }
+                    .chat-bubble-row.user { justify-content:flex-end; }
+                    .chat-bubble-row.admin { justify-content:flex-start; }
+                    .chat-bubble { max-width:70%; padding:12px 16px; border-radius:18px; font-size:14px; line-height:1.4; word-wrap:break-word; box-shadow:0 1px 2px rgba(0,0,0,0.1); }
+                    .user .chat-bubble { background:#0084ff; color:white; border-bottom-right-radius:4px; }
+                    .admin .chat-bubble { background:#3a3b3c; color:#e4e6eb; border-bottom-left-radius:4px; }
+                    .chat-avatar { width:32px; height:32px; border-radius:50%; background:#1d4ed8; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; margin:0 10px; flex-shrink:0; }
+                    .user .chat-avatar { order:2; }
+                    .admin .chat-avatar { order:1; }
+                    .chat-timestamp { font-size:11px; color:#8a8d91; margin-top:4px; text-align:right; }
+                    .user .chat-timestamp { color:#b0d4ff; }
+                    .reply-badge { background:#1d4ed8; color:white; border-radius:16px; padding:4px 12px; font-size:12px; margin-bottom:8px; display:inline-block; }
+                    .read-receipt { font-size:11px; color:#8a8d91; margin-left:8px; }
+                    </style></head>
+                    <body>
+                    <div class="chat-messages">
+                    '''
+                    for msg in user_msgs:
+                        timestamp = relative_time(msg.get('timestamp', ''))
+                        safe_message = html.escape(msg['message'])
+                        read_status = "✓✓ Read" if msg.get('read_by_customer') else "✓ Delivered"
+                        chat_html += f'''
+                        <div class="chat-bubble-row user">
+                            <div class="chat-avatar">U</div>
+                            <div style="display:flex; flex-direction:column; align-items:flex-end;">
+                                <div class="chat-bubble">{safe_message}</div>
+                                <div style="display:flex; align-items:center;">
+                                    <div class="chat-timestamp">{timestamp}</div>
+                                    <div class="read-receipt">{read_status}</div>
+                                </div>
+                            </div>
+                        </div>
+                        '''
+                        if msg.get('reply'):
+                            reply_time = relative_time(msg.get('replied_at', ''))
+                            safe_reply = html.escape(msg['reply'])
+                            chat_html += f'''
+                            <div class="chat-bubble-row admin">
+                                <div class="chat-avatar">A</div>
+                                <div style="display:flex; flex-direction:column;">
+                                    <div class="reply-badge">Reply</div>
+                                    <div class="chat-bubble">{safe_reply}</div>
+                                    <div class="chat-timestamp">{reply_time}</div>
+                                </div>
+                            </div>
+                            '''
+                    chat_html += '</div></body></html>'
+                    components.html(chat_html, height=450, scrolling=True)
+
+                    with st.form(key=f"reply_form_{st.session_state.selected_user_id}", clear_on_submit=True):
+                        col_input, col_button = st.columns([5, 1])
+                        with col_input:
+                            reply_text = st.text_input("", placeholder="Write a reply...", label_visibility="collapsed")
+                        with col_button:
+                            submitted = st.form_submit_button("📤 Send")
+                        if submitted and reply_text.strip():
+                            unreplied = [m for m in user_msgs if not m.get('reply')]
+                            if unreplied:
+                                msg_to_reply = unreplied[-1]
+                                try:
+                                    supabase.table("messages").update({
+                                        "reply": reply_text,
+                                        "replied_at": datetime.now().isoformat(),
+                                        "status": "replied"
+                                    }).eq("id", msg_to_reply["id"]).execute()
+                                    st.success("Reply sent!")
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Failed to send reply: {e}")
+                            else:
+                                st.warning("No unreplied messages for this user.")
+                else:
+                    st.info("Select a user from the left to view conversation.")
+
+            st.markdown("---")
+            st.metric("Total Messages", len(data))
+            if not users_df.empty:
+                users_df["timestamp"] = pd.to_datetime(users_df["timestamp"], errors='coerce')
+                daily = users_df.groupby(users_df["timestamp"].dt.date).size().reset_index(name="count")
+                if not daily.empty:
+                    fig = px.line(daily, x="timestamp", y="count", title="Messages Over Time")
+                    st.plotly_chart(fig, use_container_width=True)
+
+        if st.session_state.auto_refresh:
+            time.sleep(3)
+            st.rerun()
