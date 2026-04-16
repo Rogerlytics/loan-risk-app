@@ -23,6 +23,12 @@ st.set_page_config(page_title="AI Loan Risk System", layout="wide")
 # ==============================
 st.markdown("""
 <style>
+/* Override Streamlit's default top padding */
+.block-container {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+}
+
 /* Global */
 html, body {
     background-color: #0a0f1c;
@@ -31,13 +37,27 @@ html, body {
 }
 
 /* --- Login Page --- */
-/* Center the login card vertically and horizontally */
-.login-container {
+.page-title {
+    text-align: center;
+    font-size: 36px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-top: 20px;
+    margin-bottom: 8px;
+}
+.page-subtitle {
+    text-align: center;
+    color: #8a94a3;
+    margin-bottom: 30px;
+    font-size: 16px;
+}
+
+/* Center the login card */
+.login-wrapper {
     display: flex;
     justify-content: center;
-    align-items: center;
-    min-height: 80vh;
-    padding: 20px;
+    align-items: flex-start;
+    width: 100%;
 }
 .login-card {
     background: #0f141c;
@@ -47,11 +67,10 @@ html, body {
     width: 100%;
     max-width: 420px;
     box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-    margin: 0 auto;
 }
 .login-title {
     text-align: center;
-    font-size: 28px;
+    font-size: 24px;
     font-weight: 600;
     margin-bottom: 8px;
     color: #ffffff;
@@ -306,12 +325,16 @@ def logout():
 # LOGIN PAGE
 # ==============================
 def show_login_page():
-    st.markdown('<div class="login-container">', unsafe_allow_html=True)
+    # Page title and subtitle
+    st.markdown('<div class="page-title">AI Loan Risk Platform</div>', unsafe_allow_html=True)
+    st.markdown('<div class="page-subtitle">Intelligent credit evaluation for smarter lending</div>', unsafe_allow_html=True)
+
+    # Centered card wrapper
+    st.markdown('<div class="login-wrapper">', unsafe_allow_html=True)
     st.markdown('<div class="login-card">', unsafe_allow_html=True)
     st.markdown('<div class="login-title">Welcome back</div>', unsafe_allow_html=True)
     st.markdown('<div class="login-subtitle">Sign in to access your account</div>', unsafe_allow_html=True)
 
-    # Role selector (using radio for simplicity, styled with CSS)
     role = st.radio("", ["User", "Administrator"], horizontal=True, label_visibility="collapsed")
     
     if role == "User":
@@ -374,7 +397,7 @@ def show_main_app():
     # LOAN ANALYSIS (User only)
     # ------------------------------
     if page == "Loan Analysis":
-        # (Full Loan Analysis code from previous version - unchanged)
+        # (Full Loan Analysis code unchanged)
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.subheader("📊 Loan Input Details")
         col1, col2 = st.columns(2)
@@ -449,7 +472,7 @@ def show_main_app():
     # CONTACT (User only)
     # ------------------------------
     elif page == "Contact":
-        # (Full Contact code from previous version - unchanged, with avatars removed)
+        # (Full Contact code unchanged)
         st.subheader("💬 Customer Support Chat")
         user_id = st.session_state.user["id"]
         mark_messages_as_read(user_id)
