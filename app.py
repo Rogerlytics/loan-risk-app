@@ -36,6 +36,17 @@ html, body {
     font-family: 'Inter', sans-serif;
 }
 
+/* --- Sidebar Radio Buttons --- */
+/* Make sidebar radio labels fit properly */
+div[data-testid="stSidebar"] div[role="radiogroup"] label {
+    white-space: nowrap !important;
+    padding: 8px 12px !important;
+    width: auto !important;
+}
+div[data-testid="stSidebar"] div[role="radiogroup"] {
+    gap: 4px !important;
+}
+
 /* --- Login Page --- */
 .title {
     font-size: 42px;
@@ -74,7 +85,7 @@ div[role="radiogroup"] {
 }
 div[role="radiogroup"] label {
     flex: 1;
-    min-width: 120px;  /* Ensures "Administrator" fits */
+    min-width: 120px;
     padding: 12px 16px;
     background: #1a222c;
     border: 1px solid #2a3748;
@@ -85,7 +96,7 @@ div[role="radiogroup"] label {
     cursor: pointer;
     transition: all 0.2s;
     margin: 0 !important;
-    white-space: nowrap;  /* Prevents text wrapping */
+    white-space: nowrap;
 }
 div[role="radiogroup"] label[data-selected="true"] {
     background: #1e3a5f;
@@ -374,6 +385,7 @@ def show_main_app():
     # Sidebar
     st.sidebar.title("Navigation")
     if st.session_state.role == "user":
+        # CONTACT BELOW LOAN ANALYSIS
         page = st.sidebar.radio("Go to", ["Loan Analysis", "Contact"])
     else:
         page = st.sidebar.radio("Go to", ["Admin Dashboard"])
