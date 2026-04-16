@@ -19,26 +19,97 @@ import time
 st.set_page_config(page_title="AI Loan Risk System", layout="wide")
 
 # ==============================
-# 3. THEME & STYLES
+# 3. THEME & STYLES (DeepSeek-inspired login + app)
 # ==============================
 st.markdown("""
 <style>
+/* Global */
 html, body {
     background-color: #0a0f1c;
     color: #e6edf3;
     font-family: 'Inter', sans-serif;
 }
+
+/* Login page card */
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 80vh;
+}
+.login-card {
+    background: #0f141c;
+    border-radius: 24px;
+    border: 1px solid #2a323c;
+    padding: 40px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+}
+.login-title {
+    text-align: center;
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #ffffff;
+}
+.login-subtitle {
+    text-align: center;
+    color: #8a94a3;
+    margin-bottom: 32px;
+    font-size: 14px;
+}
+.role-selector {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 24px;
+}
+.role-btn {
+    flex: 1;
+    padding: 10px;
+    background: #1a222c;
+    border: 1px solid #2a3748;
+    border-radius: 12px;
+    color: #8a94a3;
+    font-weight: 500;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.role-btn.active {
+    background: #1e3a5f;
+    border-color: #3b82f6;
+    color: white;
+}
+.stTextInput > div > div > input {
+    background: #1a222c;
+    border: 1px solid #2a3748;
+    border-radius: 12px;
+    color: white;
+    padding: 12px 16px;
+}
+.stButton > button {
+    background: #2563eb;
+    color: white;
+    border-radius: 12px;
+    border: none;
+    padding: 12px 24px;
+    font-weight: 600;
+    width: 100%;
+    transition: all 0.2s;
+}
+.stButton > button:hover {
+    background: #3b82f6;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 16px rgba(37, 99, 235, 0.3);
+}
+
+/* App styles (same as before) */
 .card {
     background: linear-gradient(145deg, #111827, #0b1220);
     padding: 20px;
     border-radius: 16px;
     margin-bottom: 20px;
-}
-.stButton>button {
-    background: linear-gradient(90deg, #2563eb, #1d4ed8);
-    color: white;
-    border-radius: 10px;
-    height: 3em;
 }
 .subtitle {
     text-align:center;
@@ -52,16 +123,6 @@ html, body {
     padding: 2px 8px;
     font-size: 12px;
     margin-left: 8px;
-}
-.read-receipt {
-    font-size: 11px;
-    color: #8a8d91;
-    margin-left: 8px;
-}
-.source-citation {
-    font-size: 11px;
-    color: #6b7280;
-    margin-left: 4px;
 }
 .unified-chat {
     background: #0b1220;
@@ -107,10 +168,12 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 # ==============================
 # 5. SESSION STATE
 # ==============================
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
 if "user" not in st.session_state:
     st.session_state.user = None
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
+if "role" not in st.session_state:
+    st.session_state.role = None  # "user" or "admin"
 if "seen_notified" not in st.session_state:
     st.session_state.seen_notified = set()
 if "selected_user_id" not in st.session_state:
@@ -135,7 +198,7 @@ model = load_model()
 def check_password(p: str) -> bool:
     return bcrypt.checkpw(p.encode(), ADMIN_PASSWORD_HASH.encode())
 
-def login(email: str, password: str) -> Optional[Dict[str, Any]]:
+def login_user(email: str, password: str) -> Optional[Dict[str, Any]]:
     try:
         res = supabase.table("users").select("*").eq("email", email).execute()
         if res.data:
@@ -145,6 +208,9 @@ def login(email: str, password: str) -> Optional[Dict[str, Any]]:
     except Exception as e:
         st.error(f"Login error: {e}")
     return None
+
+def login_admin(username: str, password: str) -> bool:
+    return username == ADMIN_USERNAME and check_password(password)
 
 def explain_risk_with_citations(df: pd.DataFrame) -> Tuple[List[str], List[Dict[str, str]]]:
     reasons = []
@@ -211,124 +277,163 @@ def mark_messages_as_read(user_id: int):
         pass
 
 # ==============================
-# 7. SIDEBAR
+# LOGOUT FUNCTION
 # ==============================
-st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to", ["Loan Analysis", "Contact", "Admin Dashboard"])
-
-# USER LOGIN
-st.sidebar.title("User Login")
-email = st.sidebar.text_input("Email")
-password = st.sidebar.text_input("Password", type="password")
-
-if st.sidebar.button("Login"):
-    user = login(email, password)
-    if user:
-        st.session_state.user = user
-        st.sidebar.success("Logged in")
-        st.rerun()
-    else:
-        st.sidebar.error("Invalid login")
-
-if st.session_state.user:
-    unread = get_unread_reply_count(st.session_state.user["id"])
-    if unread > 0:
-        st.sidebar.markdown(f"👤 {st.session_state.user['username']} <span class='notification-badge'>{unread}</span>", unsafe_allow_html=True)
-    else:
-        st.sidebar.write(f"👤 {st.session_state.user['username']}")
+def logout():
+    st.session_state.authenticated = False
+    st.session_state.user = None
+    st.session_state.role = None
+    st.rerun()
 
 # ==============================
-# HEADER
+# LOGIN PAGE
 # ==============================
-st.markdown("<h1 style='text-align:center;color:#3b82f6'>AI Loan Risk Platform</h1>", unsafe_allow_html=True)
-st.markdown("<div class='subtitle'>Real-time credit risk evaluation powered by machine learning</div>", unsafe_allow_html=True)
+def show_login_page():
+    st.markdown('<div class="login-container">', unsafe_allow_html=True)
+    st.markdown('<div class="login-card">', unsafe_allow_html=True)
+    st.markdown('<div class="login-title">Welcome back</div>', unsafe_allow_html=True)
+    st.markdown('<div class="login-subtitle">Sign in to access your account</div>', unsafe_allow_html=True)
 
-# ==============================
-# 8. PAGES
-# ==============================
-
-# ------------------------------
-# LOAN ANALYSIS
-# ------------------------------
-if page == "Loan Analysis":
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.subheader("📊 Loan Input Details")
-    col1, col2 = st.columns(2)
-    with col1:
-        age = st.number_input("Age", 0, 100, 30)
-        income = st.number_input("Monthly Income", 0, 1000000, 50000)
-        loan_amount = st.number_input("Loan Amount", 0, 1000000, 200000)
-        interest_rate = st.number_input("Interest Rate (%)", 0.0, 100.0, 12.5)
-        loan_term = st.selectbox("Loan Term", [12, 24, 36, 48, 60])
-    with col2:
-        car_value = st.number_input("Car Value", 0, 1000000, 400000)
-        car_age = st.slider("Car Age", 0, 50, 5)
-        mileage = st.number_input("Mileage", 0, 500000, 80000)
-        previous_loans = st.number_input("Previous Loans", 0, 10, 1)
-        previous_defaults = st.number_input("Previous Defaults", 0, 10, 0)
-    employment_type = st.selectbox("Employment Type", ["salaried","self-employed","informal"])
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.subheader("📈 Key Financial Metrics")
-    k1, k2, k3 = st.columns(3)
-    k1.metric("Loan", f"KES {loan_amount:,}")
-    k2.metric("Income", f"KES {income:,}")
-    k3.metric("Rate", f"{interest_rate}%")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    b1, b2 = st.columns(2)
-    with b1:
-        if st.button("💰 Calculate Repayment"):
-            r = interest_rate / 100 / 12
-            m = loan_amount * r * (1 + r) ** loan_term / ((1 + r) ** loan_term - 1)
-            st.markdown('<div class="card">', unsafe_allow_html=True)
-            st.subheader("💳 Repayment Breakdown")
-            st.write(f"Monthly: KES {m:,.2f}")
-            st.write(f"Weekly: KES {m/4.33:,.2f}")
-            st.write(f"Daily: KES {m/30:,.2f}")
-            st.markdown('</div>', unsafe_allow_html=True)
-    with b2:
-        if st.button("🤖 Check Loan Risk"):
-            emp = {"salaried":0,"self-employed":1,"informal":2}[employment_type]
-            df = pd.DataFrame({
-                'age':[age],'monthly_income':[income],'loan_amount':[loan_amount],
-                'interest_rate':[interest_rate],'loan_term':[loan_term],
-                'car_value':[car_value],'car_age':[car_age],'mileage':[mileage],
-                'previous_loans':[previous_loans],'previous_defaults':[previous_defaults],
-                'employment_type':[emp]
-            })
-            df['loan_to_value_ratio'] = loan_amount / car_value if car_value else 0
-            df['income_to_loan_ratio'] = income / loan_amount if loan_amount else 0
-            X = df[model.feature_names_in_]
-            pred = model.predict(X)[0]
-            prob = model.predict_proba(X)[0][1] * 100
-            st.markdown('<div class="card">', unsafe_allow_html=True)
-            st.subheader("🧠 AI Risk Decision")
-            st.write(f"Risk Score: {prob:.2f}%")
-            st.progress(int(prob))
-            if pred == 1:
-                st.error("❌ High Risk")
+    # Role selector (using radio for simplicity, styled with CSS)
+    role = st.radio("", ["User", "Administrator"], horizontal=True, label_visibility="collapsed")
+    
+    if role == "User":
+        email = st.text_input("Email", placeholder="you@example.com")
+        password = st.text_input("Password", type="password", placeholder="••••••••")
+        if st.button("Sign In", use_container_width=True):
+            user_data = login_user(email, password)
+            if user_data:
+                st.session_state.authenticated = True
+                st.session_state.user = user_data
+                st.session_state.role = "user"
+                st.rerun()
             else:
-                st.success("✅ Low Risk")
-            st.subheader("📌 Risk Factors")
-            reasons, citations = explain_risk_with_citations(df)
-            for i, r in enumerate(reasons):
-                src = citations[i]
-                st.write(f"• {r}  `[Source: {src['source']}]`  🔵 Confidence: {src['confidence']}")
-            st.subheader("💡 Recommendations")
-            for s in suggest_improvements(df):
-                st.info(s)
-            st.markdown('</div>', unsafe_allow_html=True)
-
-# ------------------------------
-# CONTACT (Customer Support) – Avatars removed
-# ------------------------------
-elif page == "Contact":
-    st.subheader("💬 Customer Support Chat")
-    if not st.session_state.user:
-        st.warning("Login first")
+                st.error("Invalid email or password")
+        st.markdown('<p style="text-align:center; margin-top:16px; color:#8a94a3;">Don\'t have an account? <a href="#" style="color:#3b82f6;">Sign up</a></p>', unsafe_allow_html=True)
     else:
+        username = st.text_input("Admin Username", placeholder="admin")
+        password = st.text_input("Admin Password", type="password", placeholder="••••••••")
+        if st.button("Sign In as Admin", use_container_width=True):
+            if login_admin(username, password):
+                st.session_state.authenticated = True
+                st.session_state.user = {"username": username, "role": "admin"}
+                st.session_state.role = "admin"
+                st.rerun()
+            else:
+                st.error("Invalid admin credentials")
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# ==============================
+# MAIN APP (after login)
+# ==============================
+def show_main_app():
+    # Sidebar
+    st.sidebar.title("Navigation")
+    if st.session_state.role == "user":
+        page = st.sidebar.radio("Go to", ["Loan Analysis", "Contact"])
+    else:
+        page = st.sidebar.radio("Go to", ["Admin Dashboard"])
+
+    st.sidebar.markdown("---")
+    if st.session_state.role == "user":
+        unread = get_unread_reply_count(st.session_state.user["id"])
+        if unread > 0:
+            st.sidebar.markdown(f"👤 {st.session_state.user['username']} <span class='notification-badge'>{unread}</span>", unsafe_allow_html=True)
+        else:
+            st.sidebar.write(f"👤 {st.session_state.user['username']}")
+    else:
+        st.sidebar.write(f"👑 Admin: {st.session_state.user['username']}")
+    
+    if st.sidebar.button("Logout", use_container_width=True):
+        logout()
+
+    # Header
+    st.markdown("<h1 style='text-align:center;color:#3b82f6'>AI Loan Risk Platform</h1>", unsafe_allow_html=True)
+    st.markdown("<div class='subtitle'>Real-time credit risk evaluation powered by machine learning</div>", unsafe_allow_html=True)
+
+    # ------------------------------
+    # LOAN ANALYSIS (User only)
+    # ------------------------------
+    if page == "Loan Analysis":
+        # (Full Loan Analysis code from previous version - unchanged)
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.subheader("📊 Loan Input Details")
+        col1, col2 = st.columns(2)
+        with col1:
+            age = st.number_input("Age", 0, 100, 30)
+            income = st.number_input("Monthly Income", 0, 1000000, 50000)
+            loan_amount = st.number_input("Loan Amount", 0, 1000000, 200000)
+            interest_rate = st.number_input("Interest Rate (%)", 0.0, 100.0, 12.5)
+            loan_term = st.selectbox("Loan Term", [12, 24, 36, 48, 60])
+        with col2:
+            car_value = st.number_input("Car Value", 0, 1000000, 400000)
+            car_age = st.slider("Car Age", 0, 50, 5)
+            mileage = st.number_input("Mileage", 0, 500000, 80000)
+            previous_loans = st.number_input("Previous Loans", 0, 10, 1)
+            previous_defaults = st.number_input("Previous Defaults", 0, 10, 0)
+        employment_type = st.selectbox("Employment Type", ["salaried","self-employed","informal"])
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.subheader("📈 Key Financial Metrics")
+        k1, k2, k3 = st.columns(3)
+        k1.metric("Loan", f"KES {loan_amount:,}")
+        k2.metric("Income", f"KES {income:,}")
+        k3.metric("Rate", f"{interest_rate}%")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        b1, b2 = st.columns(2)
+        with b1:
+            if st.button("💰 Calculate Repayment"):
+                r = interest_rate / 100 / 12
+                m = loan_amount * r * (1 + r) ** loan_term / ((1 + r) ** loan_term - 1)
+                st.markdown('<div class="card">', unsafe_allow_html=True)
+                st.subheader("💳 Repayment Breakdown")
+                st.write(f"Monthly: KES {m:,.2f}")
+                st.write(f"Weekly: KES {m/4.33:,.2f}")
+                st.write(f"Daily: KES {m/30:,.2f}")
+                st.markdown('</div>', unsafe_allow_html=True)
+        with b2:
+            if st.button("🤖 Check Loan Risk"):
+                emp = {"salaried":0,"self-employed":1,"informal":2}[employment_type]
+                df = pd.DataFrame({
+                    'age':[age],'monthly_income':[income],'loan_amount':[loan_amount],
+                    'interest_rate':[interest_rate],'loan_term':[loan_term],
+                    'car_value':[car_value],'car_age':[car_age],'mileage':[mileage],
+                    'previous_loans':[previous_loans],'previous_defaults':[previous_defaults],
+                    'employment_type':[emp]
+                })
+                df['loan_to_value_ratio'] = loan_amount / car_value if car_value else 0
+                df['income_to_loan_ratio'] = income / loan_amount if loan_amount else 0
+                X = df[model.feature_names_in_]
+                pred = model.predict(X)[0]
+                prob = model.predict_proba(X)[0][1] * 100
+                st.markdown('<div class="card">', unsafe_allow_html=True)
+                st.subheader("🧠 AI Risk Decision")
+                st.write(f"Risk Score: {prob:.2f}%")
+                st.progress(int(prob))
+                if pred == 1:
+                    st.error("❌ High Risk")
+                else:
+                    st.success("✅ Low Risk")
+                st.subheader("📌 Risk Factors")
+                reasons, citations = explain_risk_with_citations(df)
+                for i, r in enumerate(reasons):
+                    src = citations[i]
+                    st.write(f"• {r}  `[Source: {src['source']}]`  🔵 Confidence: {src['confidence']}")
+                st.subheader("💡 Recommendations")
+                for s in suggest_improvements(df):
+                    st.info(s)
+                st.markdown('</div>', unsafe_allow_html=True)
+
+    # ------------------------------
+    # CONTACT (User only)
+    # ------------------------------
+    elif page == "Contact":
+        # (Full Contact code from previous version - unchanged, with avatars removed)
+        st.subheader("💬 Customer Support Chat")
         user_id = st.session_state.user["id"]
         mark_messages_as_read(user_id)
 
@@ -346,7 +451,6 @@ elif page == "Contact":
             st.error(f"Failed to load messages: {e}")
             msgs = []
 
-        # Quick actions
         st.markdown("**Quick Actions**")
         cols = st.columns(4)
         with cols[0]:
@@ -366,7 +470,6 @@ elif page == "Contact":
                 st.session_state.draft_message = "I forgot my password"
                 st.rerun()
 
-        # Prepare data for timeline
         date_groups = {}
         for i, msg in enumerate(msgs):
             try:
@@ -380,7 +483,6 @@ elif page == "Contact":
                 date_groups[date_key] = {"display": display, "first_index": i}
         timeline_data = [{"date": k, "display": v["display"], "index": v["first_index"]} for k, v in date_groups.items()]
 
-        # Build chat HTML with timeline – NO AVATARS
         chat_html = f'''
         <html><head>
         <meta charset="UTF-8">
@@ -477,7 +579,6 @@ elif page == "Contact":
         </html>
         '''
 
-        # Render unified chat panel
         st.markdown('<div class="unified-chat">', unsafe_allow_html=True)
         components.html(chat_html, height=470, scrolling=False)
         st.markdown('<div class="chat-input-container">', unsafe_allow_html=True)
@@ -520,26 +621,12 @@ elif page == "Contact":
             time.sleep(3)
             st.rerun()
 
-# ------------------------------
-# ADMIN DASHBOARD – Avatars removed
-# ------------------------------
-elif page == "Admin Dashboard":
-    st.subheader("📊 Admin Control Panel")
+    # ------------------------------
+    # ADMIN DASHBOARD
+    # ------------------------------
+    elif page == "Admin Dashboard":
+        st.subheader("📊 Admin Control Panel")
 
-    with st.expander("🔐 Admin Authentication", expanded=not st.session_state.logged_in):
-        col_auth1, col_auth2 = st.columns(2)
-        with col_auth1:
-            u = st.text_input("Admin Username", key="admin_user")
-        with col_auth2:
-            p = st.text_input("Password", type="password", key="admin_pass")
-        if st.button("Login Admin"):
-            if u == ADMIN_USERNAME and check_password(p):
-                st.session_state.logged_in = True
-                st.rerun()
-            else:
-                st.error("Invalid credentials")
-
-    if st.session_state.logged_in:
         col1, col2 = st.columns([1, 4])
         with col1:
             if st.button("🔄 Refresh", use_container_width=True):
@@ -666,3 +753,11 @@ elif page == "Admin Dashboard":
         if st.session_state.auto_refresh:
             time.sleep(3)
             st.rerun()
+
+# ==============================
+# MAIN ENTRY POINT
+# ==============================
+if not st.session_state.authenticated:
+    show_login_page()
+else:
+    show_main_app()
