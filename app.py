@@ -67,23 +67,26 @@ html, body {
     width: 100%;
     max-width: 420px;
     box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-    text-align: center;
 }
 .login-title {
+    text-align: center;
     font-size: 24px;
     font-weight: 600;
     margin-bottom: 8px;
     color: #ffffff;
 }
 .login-subtitle {
+    text-align: center;
     color: #8a94a3;
     margin-bottom: 32px;
     font-size: 14px;
 }
 
 /* Role selector (radio buttons) */
+/* Force horizontal layout and center */
 div[role="radiogroup"] {
-    display: flex;
+    display: flex !important;
+    flex-direction: row !important;
     gap: 10px;
     margin-bottom: 24px;
     justify-content: center;
@@ -99,16 +102,27 @@ div[role="radiogroup"] label {
     text-align: center;
     cursor: pointer;
     transition: all 0.2s;
+    margin: 0 !important;
 }
 div[role="radiogroup"] label[data-selected="true"] {
     background: #1e3a5f;
     border-color: #3b82f6;
     color: white;
 }
+/* Hide default radio circle */
+div[role="radiogroup"] input {
+    display: none !important;
+}
 
-/* Input fields - full width */
+/* Input fields - ensure they stay inside card */
+.stTextInput {
+    width: 100% !important;
+}
 .stTextInput > div {
-    width: 100%;
+    width: 100% !important;
+}
+.stTextInput > div > div {
+    width: 100% !important;
 }
 .stTextInput > div > div > input {
     background: #1a222c;
@@ -116,7 +130,7 @@ div[role="radiogroup"] label[data-selected="true"] {
     border-radius: 12px;
     color: white;
     padding: 12px 16px;
-    width: 100%;
+    width: 100% !important;
     box-sizing: border-box;
 }
 
@@ -351,12 +365,13 @@ def show_login_page():
     st.markdown('<div class="login-title">Welcome back</div>', unsafe_allow_html=True)
     st.markdown('<div class="login-subtitle">Sign in to access your account</div>', unsafe_allow_html=True)
 
+    # Role selector (horizontal radio)
     role = st.radio("", ["User", "Administrator"], horizontal=True, label_visibility="collapsed")
     
     if role == "User":
-        email = st.text_input("Email", placeholder="you@example.com")
-        password = st.text_input("Password", type="password", placeholder="••••••••")
-        if st.button("Sign In", use_container_width=True):
+        email = st.text_input("Email", placeholder="you@example.com", key="login_email")
+        password = st.text_input("Password", type="password", placeholder="••••••••", key="login_password")
+        if st.button("Sign In", use_container_width=True, key="signin_user"):
             user_data = login_user(email, password)
             if user_data:
                 st.session_state.authenticated = True
@@ -367,9 +382,9 @@ def show_login_page():
                 st.error("Invalid email or password")
         st.markdown('<p class="login-footer">Don\'t have an account? <a href="#">Sign up</a></p>', unsafe_allow_html=True)
     else:
-        username = st.text_input("Admin Username", placeholder="admin")
-        password = st.text_input("Admin Password", type="password", placeholder="••••••••")
-        if st.button("Sign In as Admin", use_container_width=True):
+        username = st.text_input("Admin Username", placeholder="admin", key="admin_user")
+        password = st.text_input("Admin Password", type="password", placeholder="••••••••", key="admin_pass")
+        if st.button("Sign In as Admin", use_container_width=True, key="signin_admin"):
             if login_admin(username, password):
                 st.session_state.authenticated = True
                 st.session_state.user = {"username": username, "role": "admin"}
