@@ -9,93 +9,112 @@ st.set_page_config(
 )
 
 # ==============================
-# 🎨 PREMIUM DARK UI
+# 🎨 PREMIUM SAAS UI STYLE
 # ==============================
 st.markdown("""
 <style>
 
-/* Background */
+/* Background gradient */
 body {
-    background-color: #0e1117;
+    background: linear-gradient(135deg, #0e1117, #111827);
 }
 
-/* Main container */
-.block-container {
-    padding-top: 3rem;
+/* Center everything */
+.main-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 80vh;
 }
 
-/* Center column text */
-.center-text {
-    text-align: center;
+/* Card */
+.login-card {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 40px;
+    border-radius: 16px;
+    backdrop-filter: blur(12px);
+    width: 380px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
 }
 
 /* Title */
 .title {
-    font-size: 42px;
+    text-align: center;
+    font-size: 32px;
     font-weight: 700;
     color: white;
-    text-align: center;
 }
 
 /* Subtitle */
 .subtitle {
-    color: #A0AEC0;
-    text-align: center;
-    margin-bottom: 40px;
-}
-
-/* Section header */
-.section {
-    font-size: 22px;
-    font-weight: 600;
-    text-align: center;
-}
-
-/* Small text */
-.small {
     text-align: center;
     color: #A0AEC0;
+    margin-bottom: 30px;
+}
+
+/* Tabs (User/Admin) */
+.role-container {
+    display: flex;
+    background: rgba(255,255,255,0.05);
+    border-radius: 10px;
+    padding: 5px;
     margin-bottom: 20px;
 }
 
-/* Radio buttons horizontal spacing */
-div[role="radiogroup"] {
-    justify-content: center;
+.role-container div {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
 }
 
-/* Button styling */
+/* Input spacing */
+.stTextInput {
+    margin-bottom: 15px;
+}
+
+/* Button */
 .stButton>button {
-    background-color: #1f77ff;
+    background: linear-gradient(90deg, #1f77ff, #4f9cff);
     color: white;
-    border-radius: 8px;
+    border-radius: 10px;
     height: 45px;
     font-weight: 600;
+    border: none;
 }
 
 .stButton>button:hover {
-    background-color: #155edb;
+    background: linear-gradient(90deg, #155edb, #3a7de0);
+}
+
+/* Footer text */
+.footer {
+    text-align: center;
+    color: #6B7280;
+    margin-top: 15px;
+    font-size: 12px;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
 # ==============================
-# HEADER
+# CENTER LAYOUT
 # ==============================
-st.markdown('<div class="title">AI Loan Risk Platform</div>', unsafe_allow_html=True)
-st.markdown('<div class="subtitle">Intelligent credit evaluation for smarter lending</div>', unsafe_allow_html=True)
+col1, col2, col3 = st.columns([1,1,1])
 
-# ==============================
-# CENTERED LOGIN CARD
-# ==============================
-col_left, col_center, col_right = st.columns([1, 2, 1])
-
-with col_center:
-    st.markdown('<div class="section">Welcome back</div>', unsafe_allow_html=True)
-    st.markdown('<div class="small">Sign in to access your account</div>', unsafe_allow_html=True)
+with col2:
+    st.markdown('<div class="login-card">', unsafe_allow_html=True)
 
     # ==============================
-    # ROLE SELECTION (CLEAN TOGGLE)
+    # HEADER
+    # ==============================
+    st.markdown('<div class="title">AI Loan Risk</div>', unsafe_allow_html=True)
+    st.markdown('<div class="subtitle">Smart credit decisions powered by AI</div>', unsafe_allow_html=True)
+
+    # ==============================
+    # ROLE SELECTOR (PILL STYLE)
     # ==============================
     role = st.radio(
         "",
@@ -104,7 +123,7 @@ with col_center:
     )
 
     # ==============================
-    # INPUT FIELDS
+    # INPUTS
     # ==============================
     email = st.text_input("Email", placeholder="you@example.com")
     password = st.text_input("Password", type="password")
@@ -112,8 +131,15 @@ with col_center:
     # ==============================
     # LOGIN BUTTON
     # ==============================
-    if st.button("Login", use_container_width=True):
+    if st.button("Sign In", use_container_width=True):
         if email and password:
-            st.success(f"Logging in as {role}")
+            st.success(f"Welcome back ({role})")
         else:
-            st.error("Please enter email and password")
+            st.error("Enter email and password")
+
+    # ==============================
+    # FOOTER
+    # ==============================
+    st.markdown('<div class="footer">Secure • Fast • Intelligent</div>', unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)
