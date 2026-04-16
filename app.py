@@ -1,145 +1,62 @@
-import streamlit as st
+def show_login_page():
+    # Page title and subtitle
+    st.markdown('<div class="page-title">AI Loan Risk Platform</div>', unsafe_allow_html=True)
+    st.markdown('<div class="page-subtitle">Intelligent credit evaluation for smarter lending</div>', unsafe_allow_html=True)
 
-# ==============================
-# PAGE CONFIG
-# ==============================
-st.set_page_config(
-    page_title="AI Loan Risk Platform",
-    layout="wide"
-)
-
-# ==============================
-# 🎨 PREMIUM SAAS UI STYLE
-# ==============================
-st.markdown("""
-<style>
-
-/* Background gradient */
-body {
-    background: linear-gradient(135deg, #0e1117, #111827);
-}
-
-/* Center everything */
-.main-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 80vh;
-}
-
-/* Card */
-.login-card {
-    background: rgba(255, 255, 255, 0.05);
-    padding: 40px;
-    border-radius: 16px;
-    backdrop-filter: blur(12px);
-    width: 380px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-}
-
-/* Title */
-.title {
-    text-align: center;
-    font-size: 32px;
-    font-weight: 700;
-    color: white;
-}
-
-/* Subtitle */
-.subtitle {
-    text-align: center;
-    color: #A0AEC0;
-    margin-bottom: 30px;
-}
-
-/* Tabs (User/Admin) */
-.role-container {
-    display: flex;
-    background: rgba(255,255,255,0.05);
-    border-radius: 10px;
-    padding: 5px;
-    margin-bottom: 20px;
-}
-
-.role-container div {
-    flex: 1;
-    text-align: center;
-    padding: 10px;
-    border-radius: 8px;
-    cursor: pointer;
-}
-
-/* Input spacing */
-.stTextInput {
-    margin-bottom: 15px;
-}
-
-/* Button */
-.stButton>button {
-    background: linear-gradient(90deg, #1f77ff, #4f9cff);
-    color: white;
-    border-radius: 10px;
-    height: 45px;
-    font-weight: 600;
-    border: none;
-}
-
-.stButton>button:hover {
-    background: linear-gradient(90deg, #155edb, #3a7de0);
-}
-
-/* Footer text */
-.footer {
-    text-align: center;
-    color: #6B7280;
-    margin-top: 15px;
-    font-size: 12px;
-}
-
-</style>
-""", unsafe_allow_html=True)
-
-# ==============================
-# CENTER LAYOUT
-# ==============================
-col1, col2, col3 = st.columns([1,1,1])
-
-with col2:
+    # Center wrapper
+    st.markdown('<div class="login-wrapper">', unsafe_allow_html=True)
     st.markdown('<div class="login-card">', unsafe_allow_html=True)
 
-    # ==============================
-    # HEADER
-    # ==============================
-    st.markdown('<div class="title">AI Loan Risk</div>', unsafe_allow_html=True)
-    st.markdown('<div class="subtitle">Smart credit decisions powered by AI</div>', unsafe_allow_html=True)
+    st.markdown('<div class="login-title">Welcome back</div>', unsafe_allow_html=True)
+    st.markdown('<div class="login-subtitle">Sign in to access your account</div>', unsafe_allow_html=True)
 
     # ==============================
-    # ROLE SELECTOR (PILL STYLE)
+    # PERFECTLY CENTERED ROLE TOGGLE
     # ==============================
     role = st.radio(
         "",
         ["User", "Administrator"],
-        horizontal=True
+        horizontal=True,
+        label_visibility="collapsed"
     )
 
     # ==============================
-    # INPUTS
+    # CENTERED INPUTS (MATCH CARD WIDTH)
     # ==============================
-    email = st.text_input("Email", placeholder="you@example.com")
-    password = st.text_input("Password", type="password")
+    col_left, col_center, col_right = st.columns([1, 3, 1])
 
-    # ==============================
-    # LOGIN BUTTON
-    # ==============================
-    if st.button("Sign In", use_container_width=True):
-        if email and password:
-            st.success(f"Welcome back ({role})")
+    with col_center:
+        if role == "User":
+            email = st.text_input("Email", placeholder="you@example.com", key="login_email")
+            password = st.text_input("Password", type="password", placeholder="••••••••", key="login_password")
+
+            if st.button("Sign In", use_container_width=True, key="signin_user"):
+                user_data = login_user(email, password)
+                if user_data:
+                    st.session_state.authenticated = True
+                    st.session_state.user = user_data
+                    st.session_state.role = "user"
+                    st.rerun()
+                else:
+                    st.error("Invalid email or password")
+
+            st.markdown(
+                '<p class="login-footer">Don\'t have an account? <a href="#">Sign up</a></p>',
+                unsafe_allow_html=True
+            )
+
         else:
-            st.error("Enter email and password")
+            username = st.text_input("Admin Username", placeholder="admin", key="admin_user")
+            password = st.text_input("Admin Password", type="password", placeholder="••••••••", key="admin_pass")
 
-    # ==============================
-    # FOOTER
-    # ==============================
-    st.markdown('<div class="footer">Secure • Fast • Intelligent</div>', unsafe_allow_html=True)
+            if st.button("Sign In as Admin", use_container_width=True, key="signin_admin"):
+                if login_admin(username, password):
+                    st.session_state.authenticated = True
+                    st.session_state.user = {"username": username, "role": "admin"}
+                    st.session_state.role = "admin"
+                    st.rerun()
+                else:
+                    st.error("Invalid admin credentials")
 
+    st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
