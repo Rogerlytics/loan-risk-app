@@ -67,20 +67,20 @@ html, body {
     width: 100%;
     max-width: 420px;
     box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    text-align: center;
 }
 .login-title {
-    text-align: center;
     font-size: 24px;
     font-weight: 600;
     margin-bottom: 8px;
     color: #ffffff;
 }
 .login-subtitle {
-    text-align: center;
     color: #8a94a3;
     margin-bottom: 32px;
     font-size: 14px;
 }
+
 /* Role selector (radio buttons) */
 div[role="radiogroup"] {
     display: flex;
@@ -105,14 +105,21 @@ div[role="radiogroup"] label[data-selected="true"] {
     border-color: #3b82f6;
     color: white;
 }
-/* Input fields */
+
+/* Input fields - full width */
+.stTextInput > div {
+    width: 100%;
+}
 .stTextInput > div > div > input {
     background: #1a222c;
     border: 1px solid #2a3748;
     border-radius: 12px;
     color: white;
     padding: 12px 16px;
+    width: 100%;
+    box-sizing: border-box;
 }
+
 /* Sign In button */
 .stButton > button {
     background: #2563eb;
@@ -129,6 +136,7 @@ div[role="radiogroup"] label[data-selected="true"] {
     transform: translateY(-1px);
     box-shadow: 0 8px 16px rgba(37, 99, 235, 0.3);
 }
+
 /* Sign up link */
 .login-footer {
     text-align: center;
@@ -138,6 +146,14 @@ div[role="radiogroup"] label[data-selected="true"] {
 .login-footer a {
     color: #3b82f6;
     text-decoration: none;
+}
+
+/* Error messages */
+.stAlert {
+    background: transparent;
+    color: #ef4444;
+    border: none;
+    padding: 8px 0;
 }
 
 /* --- App styles (unchanged) --- */
@@ -397,7 +413,6 @@ def show_main_app():
     # LOAN ANALYSIS (User only)
     # ------------------------------
     if page == "Loan Analysis":
-        # (Full Loan Analysis code unchanged)
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.subheader("📊 Loan Input Details")
         col1, col2 = st.columns(2)
@@ -472,7 +487,6 @@ def show_main_app():
     # CONTACT (User only)
     # ------------------------------
     elif page == "Contact":
-        # (Full Contact code unchanged)
         st.subheader("💬 Customer Support Chat")
         user_id = st.session_state.user["id"]
         mark_messages_as_read(user_id)
