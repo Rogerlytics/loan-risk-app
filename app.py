@@ -19,7 +19,7 @@ import time
 st.set_page_config(page_title="AI Loan Risk System", layout="wide")
 
 # ==============================
-# 3. THEME & STYLES (Premium Dark UI + App)
+# 3. THEME & STYLES (Premium Glowing Blue UI)
 # ==============================
 st.markdown("""
 <style>
@@ -27,19 +27,51 @@ st.markdown("""
 .block-container {
     padding-top: 3rem !important;
     padding-bottom: 1rem !important;
+    position: relative;
+    z-index: 1;
 }
 
-/* Global */
+/* Global with glowing gradient background */
 html, body {
-    background-color: #0e1117;
+    background: linear-gradient(135deg, #0f2a66 0%, #1e3a8a 40%, #2563eb 100%);
     color: #e6edf3;
     font-family: 'Inter', sans-serif;
 }
 
+/* Blue glow overlay */
+body::before {
+    content: "";
+    position: fixed;
+    top: -20%;
+    left: -20%;
+    width: 140%;
+    height: 140%;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.08), transparent 40%),
+                radial-gradient(circle at 70% 60%, rgba(255,255,255,0.06), transparent 50%);
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* Soft wave lines */
+body::after {
+    content: "";
+    position: fixed;
+    width: 200%;
+    height: 200%;
+    top: -50%;
+    left: -50%;
+    background: radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
+    background-size: 80px 80px;
+    opacity: 0.2;
+    z-index: 0;
+    pointer-events: none;
+}
+
 /* --- Sidebar styling --- */
 section[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #0b1220, #0e1622);
-    border-right: 1px solid #1f2a36;
+    background: rgba(11, 18, 32, 0.85);
+    backdrop-filter: blur(12px);
+    border-right: 1px solid rgba(255,255,255,0.1);
 }
 
 /* Navigation spacing */
@@ -56,11 +88,13 @@ section[data-testid="stSidebar"] label {
     white-space: nowrap !important;
     width: 100% !important;
     box-sizing: border-box;
+    background: transparent;
+    color: #e6edf3;
 }
 
 /* Hover effect */
 section[data-testid="stSidebar"] label:hover {
-    background: #1a2330;
+    background: rgba(255,255,255,0.1);
 }
 
 /* Selected item */
@@ -76,12 +110,14 @@ section[data-testid="stSidebar"] label[data-selected="true"] {
     color: white;
     text-align: center;
     margin-bottom: 8px;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
 .subtitle {
-    color: #A0AEC0;
+    color: rgba(255,255,255,0.8);
     text-align: center;
     margin-bottom: 40px;
     font-size: 16px;
+    text-shadow: 0 1px 5px rgba(0,0,0,0.2);
 }
 .section {
     font-size: 22px;
@@ -92,9 +128,19 @@ section[data-testid="stSidebar"] label[data-selected="true"] {
 }
 .small {
     text-align: center;
-    color: #A0AEC0;
+    color: rgba(255,255,255,0.7);
     margin-bottom: 24px;
     font-size: 14px;
+}
+
+/* Glass-morphism login card */
+.login-card {
+    background: rgba(15, 20, 28, 0.75);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 24px;
+    padding: 40px 32px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
 }
 
 /* Only affect login page radios, NOT sidebar */
@@ -109,19 +155,20 @@ section[data-testid="stSidebar"] label[data-selected="true"] {
     flex: 1;
     min-width: 120px;
     padding: 12px 16px;
-    background: #1a222c;
-    border: 1px solid #2a3748;
+    background: rgba(26, 34, 44, 0.6);
+    border: 1px solid rgba(255,255,255,0.1);
     border-radius: 12px;
-    color: #8a94a3;
+    color: rgba(255,255,255,0.8);
     font-weight: 500;
     text-align: center;
     cursor: pointer;
     transition: all 0.2s;
     margin: 0 !important;
     white-space: nowrap;
+    backdrop-filter: blur(5px);
 }
 .login-card div[role="radiogroup"] label[data-selected="true"] {
-    background: #1e3a5f;
+    background: #2563eb;
     border-color: #3b82f6;
     color: white;
 }
@@ -131,18 +178,22 @@ section[data-testid="stSidebar"] label[data-selected="true"] {
 
 /* Input fields */
 .stTextInput > div > div > input {
-    background: #1a222c;
-    border: 1px solid #2a3748;
+    background: rgba(26, 34, 44, 0.6);
+    border: 1px solid rgba(255,255,255,0.1);
     border-radius: 12px;
     color: white;
     padding: 12px 16px;
     width: 100% !important;
     box-sizing: border-box;
+    backdrop-filter: blur(5px);
+}
+.stTextInput > div > div > input::placeholder {
+    color: rgba(255,255,255,0.4);
 }
 
 /* Sign In button */
 .stButton > button {
-    background: #1f77ff;
+    background: #2563eb;
     color: white;
     border-radius: 8px;
     border: none;
@@ -151,42 +202,45 @@ section[data-testid="stSidebar"] label[data-selected="true"] {
     width: 100%;
     transition: all 0.2s;
     height: 45px;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 .stButton > button:hover {
-    background: #155edb;
+    background: #3b82f6;
     transform: translateY(-1px);
-    box-shadow: 0 8px 16px rgba(31, 119, 255, 0.3);
+    box-shadow: 0 8px 16px rgba(37, 99, 235, 0.4);
 }
 
 /* Sign up link */
 .login-footer {
     text-align: center;
     margin-top: 16px;
-    color: #8a94a3;
+    color: rgba(255,255,255,0.6);
 }
 .login-footer a {
-    color: #3b82f6;
+    color: #60a5fa;
     text-decoration: none;
 }
 
 /* Error messages */
 .stAlert {
     background: transparent;
-    color: #ef4444;
+    color: #f87171;
     border: none;
     padding: 8px 0;
 }
 
-/* --- App styles (unchanged) --- */
+/* --- App cards (glass-morphism) --- */
 .card {
-    background: linear-gradient(145deg, #111827, #0b1220);
+    background: rgba(11, 18, 32, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
     padding: 20px;
     border-radius: 16px;
     margin-bottom: 20px;
 }
 .app-subtitle {
     text-align: center;
-    color: #94a3b8;
+    color: rgba(255,255,255,0.8);
     margin-bottom: 20px;
 }
 .notification-badge {
@@ -197,22 +251,26 @@ section[data-testid="stSidebar"] label[data-selected="true"] {
     font-size: 12px;
     margin-left: 8px;
 }
+
+/* Chat panel */
 .unified-chat {
-    background: #0b1220;
+    background: rgba(11, 18, 32, 0.7);
+    backdrop-filter: blur(12px);
     border-radius: 20px;
-    border: 1px solid #1f2a36;
+    border: 1px solid rgba(255,255,255,0.1);
     overflow: hidden;
     margin-bottom: 20px;
 }
 .chat-input-container {
     padding: 16px 20px;
-    background: #0e1622;
-    border-top: 1px solid #1f2a36;
+    background: rgba(14, 22, 34, 0.6);
+    backdrop-filter: blur(8px);
+    border-top: 1px solid rgba(255,255,255,0.1);
     margin-top: 0;
 }
 .chat-input-container .stTextInput > div > div > input {
-    background: #1a2330;
-    border: 1px solid #2a3748;
+    background: rgba(26, 35, 48, 0.7);
+    border: 1px solid rgba(255,255,255,0.1);
     border-radius: 24px;
     color: white;
     padding: 12px 18px;
@@ -359,7 +417,7 @@ def logout():
     st.rerun()
 
 # ==============================
-# LOGIN PAGE (Premium Centered UI)
+# LOGIN PAGE (Premium Glowing UI)
 # ==============================
 def show_login_page():
     # Page title and subtitle
@@ -423,7 +481,7 @@ def show_main_app():
 
     st.sidebar.markdown("---")
 
-    # User info section (improved)
+    # User info section
     if st.session_state.role == "user":
         unread = get_unread_reply_count(st.session_state.user["id"])
         name = st.session_state.user["username"]
@@ -436,12 +494,11 @@ def show_main_app():
 
     st.sidebar.markdown("---")
 
-    # Logout button (upgraded)
     if st.sidebar.button("🚪 Logout", use_container_width=True):
         logout()
 
     # Header
-    st.markdown("<h1 style='text-align:center;color:#3b82f6'>AI Loan Risk Platform</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align:center;color:#ffffff; text-shadow:0 2px 10px rgba(0,0,0,0.3);'>AI Loan Risk Platform</h1>", unsafe_allow_html=True)
     st.markdown("<div class='app-subtitle'>Real-time credit risk evaluation powered by machine learning</div>", unsafe_allow_html=True)
 
     # ------------------------------
@@ -577,17 +634,17 @@ def show_main_app():
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
-        body {{ margin: 0; background: #0b1220; font-family: 'Inter', sans-serif; color: #e6edf3; display: flex; height: 100%; }}
+        body {{ margin: 0; background: transparent; font-family: 'Inter', sans-serif; color: #e6edf3; display: flex; height: 100%; }}
         .chat-wrapper {{ display: flex; width: 100%; height: 450px; position: relative; }}
         .chat-messages {{ flex: 1; overflow-y: auto; padding: 20px 10px 20px 20px; scrollbar-width: none; -ms-overflow-style: none; }}
         .chat-messages::-webkit-scrollbar {{ display: none; }}
         .chat-messages:hover::-webkit-scrollbar {{ display: block; width: 6px; }}
         .chat-messages:hover::-webkit-scrollbar-thumb {{ background: #3a4450; border-radius: 10px; }}
-        .timeline {{ width: 40px; background: transparent; display: flex; flex-direction: column; align-items: center; padding: 20px 5px; position: relative; border-left: 1px dashed #2a3748; }}
+        .timeline {{ width: 40px; background: transparent; display: flex; flex-direction: column; align-items: center; padding: 20px 5px; position: relative; border-left: 1px dashed rgba(255,255,255,0.2); }}
         .timeline-dot {{ width: 8px; height: 8px; background: #4b5a6a; border-radius: 50%; margin: 8px 0; cursor: pointer; transition: all 0.2s; position: relative; }}
         .timeline-dot:hover {{ background: #3b82f6; transform: scale(1.5); }}
         .timeline-dot.active {{ background: #3b82f6; box-shadow: 0 0 8px #3b82f6; }}
-        .timeline-dot::after {{ content: attr(data-date); position: absolute; right: 20px; top: -4px; background: #1e2630; color: #e4e8f0; padding: 2px 8px; border-radius: 12px; font-size: 10px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s; border: 1px solid #2a3748; }}
+        .timeline-dot::after {{ content: attr(data-date); position: absolute; right: 20px; top: -4px; background: rgba(30,38,48,0.9); color: #e4e8f0; padding: 2px 8px; border-radius: 12px; font-size: 10px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s; border: 1px solid rgba(255,255,255,0.1); }}
         .timeline-dot:hover::after {{ opacity: 1; }}
         .chat-bubble-row {{ display: flex; margin-bottom: 12px; }}
         .chat-bubble-row.user {{ justify-content: flex-end; }}
@@ -761,7 +818,7 @@ def show_main_app():
 
                     chat_html = '''
                     <html><head><meta charset="UTF-8"><style>
-                    body { margin:0; background:#0b1220; font-family:'Inter',sans-serif; }
+                    body { margin:0; background:transparent; font-family:'Inter',sans-serif; }
                     .chat-messages { display:flex; flex-direction:column; padding:20px; }
                     .chat-bubble-row { display:flex; margin-bottom:12px; }
                     .chat-bubble-row.user { justify-content:flex-end; }
