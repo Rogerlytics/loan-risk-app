@@ -36,21 +36,13 @@ html, body {
     font-family: 'Inter', sans-serif;
 }
 
-/* --- Sidebar Radio Buttons --- */
-/* Ensure sidebar radio labels fit without wrapping */
-div[data-testid="stSidebar"] div[role="radiogroup"] {
-    gap: 6px !important;
-}
+/* --- Sidebar Radio Buttons (default vertical, no forced horizontal) --- */
 div[data-testid="stSidebar"] div[role="radiogroup"] label {
     white-space: nowrap !important;
     padding: 10px 16px !important;
     width: 100% !important;
     box-sizing: border-box;
     border-radius: 8px;
-    transition: all 0.2s;
-}
-div[data-testid="stSidebar"] div[role="radiogroup"] label:hover {
-    background: #1e2630 !important;
 }
 
 /* --- Login Page --- */
@@ -81,15 +73,15 @@ div[data-testid="stSidebar"] div[role="radiogroup"] label:hover {
     font-size: 14px;
 }
 
-/* Radio buttons horizontal & centered */
-div[role="radiogroup"] {
+/* Only affect login page radios, NOT sidebar */
+.login-card div[role="radiogroup"] {
     display: flex !important;
     flex-direction: row !important;
     gap: 12px;
     margin-bottom: 24px;
     justify-content: center;
 }
-div[role="radiogroup"] label {
+.login-card div[role="radiogroup"] label {
     flex: 1;
     min-width: 120px;
     padding: 12px 16px;
@@ -104,12 +96,12 @@ div[role="radiogroup"] label {
     margin: 0 !important;
     white-space: nowrap;
 }
-div[role="radiogroup"] label[data-selected="true"] {
+.login-card div[role="radiogroup"] label[data-selected="true"] {
     background: #1e3a5f;
     border-color: #3b82f6;
     color: white;
 }
-div[role="radiogroup"] input {
+.login-card div[role="radiogroup"] input {
     display: none !important;
 }
 
@@ -353,6 +345,7 @@ def show_login_page():
     # Centered card using columns
     col_left, col_center, col_right = st.columns([1, 2, 1])
     with col_center:
+        st.markdown('<div class="login-card">', unsafe_allow_html=True)
         st.markdown('<div class="section">Welcome back</div>', unsafe_allow_html=True)
         st.markdown('<div class="small">Sign in to access your account</div>', unsafe_allow_html=True)
 
@@ -383,6 +376,7 @@ def show_login_page():
                     st.rerun()
                 else:
                     st.error("Invalid admin credentials")
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # ==============================
 # MAIN APP (after login)
@@ -391,7 +385,6 @@ def show_main_app():
     # Sidebar
     st.sidebar.title("Navigation")
     if st.session_state.role == "user":
-        # Loan Analysis TOP, Contact BELOW
         page = st.sidebar.radio("Go to", ["Loan Analysis", "Contact"])
     else:
         page = st.sidebar.radio("Go to", ["Admin Dashboard"])
