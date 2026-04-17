@@ -19,7 +19,7 @@ import time
 st.set_page_config(page_title="AI Loan Risk System", layout="wide")
 
 # ==============================
-# 3. THEME & STYLES (Futuristic Blue & Shiny Silver)
+# 3. THEME & STYLES (Calm & Sophisticated - Ocean Depths)
 # ==============================
 st.markdown("""
 <style>
@@ -31,14 +31,14 @@ st.markdown("""
     z-index: 1;
 }
 
-/* Global with deep blue background */
+/* Global with ocean depths gradient */
 html, body {
-    background: #1E3A8A;
+    background: linear-gradient(135deg, #0A192F 0%, #172A45 100%);
     color: #e6edf3;
     font-family: 'Inter', sans-serif;
 }
 
-/* Blue glow overlay for depth */
+/* Subtle glow overlay */
 body::before {
     content: "";
     position: fixed;
@@ -46,13 +46,13 @@ body::before {
     left: -20%;
     width: 140%;
     height: 140%;
-    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.06), transparent 50%),
-                radial-gradient(circle at 70% 60%, rgba(209,213,219,0.04), transparent 50%);
+    background: radial-gradient(circle at 30% 30%, rgba(56, 189, 248, 0.04), transparent 50%),
+                radial-gradient(circle at 70% 60%, rgba(14, 165, 233, 0.03), transparent 50%);
     z-index: 0;
     pointer-events: none;
 }
 
-/* Subtle wave pattern */
+/* Soft wave pattern */
 body::after {
     content: "";
     position: fixed;
@@ -60,7 +60,7 @@ body::after {
     height: 200%;
     top: -50%;
     left: -50%;
-    background: radial-gradient(circle, rgba(209,213,219,0.03) 1px, transparent 1px);
+    background: radial-gradient(circle, rgba(56, 189, 248, 0.02) 1px, transparent 1px);
     background-size: 80px 80px;
     opacity: 0.15;
     z-index: 0;
@@ -69,9 +69,9 @@ body::after {
 
 /* --- Sidebar styling --- */
 section[data-testid="stSidebar"] {
-    background: rgba(21, 50, 120, 0.9);
+    background: rgba(10, 25, 47, 0.85);
     backdrop-filter: blur(12px);
-    border-right: 1px solid #D1D5DB;
+    border-right: 1px solid rgba(56, 189, 248, 0.3);
 }
 
 /* Navigation spacing */
@@ -89,18 +89,18 @@ section[data-testid="stSidebar"] label {
     width: 100% !important;
     box-sizing: border-box;
     background: transparent;
-    color: #F3F4F6;
+    color: #E2E8F0;
 }
 
 /* Hover effect */
 section[data-testid="stSidebar"] label:hover {
-    background: rgba(209, 213, 219, 0.15);
+    background: rgba(56, 189, 248, 0.1);
 }
 
 /* Selected item */
 section[data-testid="stSidebar"] label[data-selected="true"] {
-    background: #D1D5DB;
-    color: #1E3A8A;
+    background: #0EA5E9;
+    color: #0A192F;
     font-weight: 600;
 }
 
@@ -111,14 +111,14 @@ section[data-testid="stSidebar"] label[data-selected="true"] {
     color: white;
     text-align: center;
     margin-bottom: 8px;
-    text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    text-shadow: 0 2px 10px rgba(0,0,0,0.4);
 }
 .subtitle {
-    color: #D1D5DB;
+    color: #94A3B8;
     text-align: center;
     margin-bottom: 40px;
     font-size: 16px;
-    text-shadow: 0 1px 5px rgba(0,0,0,0.2);
+    text-shadow: 0 1px 5px rgba(0,0,0,0.3);
 }
 .section {
     font-size: 22px;
@@ -129,19 +129,19 @@ section[data-testid="stSidebar"] label[data-selected="true"] {
 }
 .small {
     text-align: center;
-    color: #D1D5DB;
+    color: #94A3B8;
     margin-bottom: 24px;
     font-size: 14px;
 }
 
 /* Glass-morphism login card */
 .login-card {
-    background: rgba(21, 50, 120, 0.7);
+    background: rgba(23, 42, 69, 0.6);
     backdrop-filter: blur(12px);
-    border: 1px solid #D1D5DB;
+    border: 1px solid rgba(14, 165, 233, 0.4);
     border-radius: 24px;
     padding: 40px 32px;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
 }
 
 /* Only affect login page radios, NOT sidebar */
@@ -156,10 +156,10 @@ section[data-testid="stSidebar"] label[data-selected="true"] {
     flex: 1;
     min-width: 120px;
     padding: 12px 16px;
-    background: rgba(30, 58, 138, 0.6);
-    border: 1px solid #D1D5DB;
+    background: rgba(10, 25, 47, 0.5);
+    border: 1px solid rgba(14, 165, 233, 0.4);
     border-radius: 12px;
-    color: #F3F4F6;
+    color: #E2E8F0;
     font-weight: 500;
     text-align: center;
     cursor: pointer;
@@ -169,9 +169,9 @@ section[data-testid="stSidebar"] label[data-selected="true"] {
     backdrop-filter: blur(5px);
 }
 .login-card div[role="radiogroup"] label[data-selected="true"] {
-    background: #D1D5DB;
-    border-color: #FFFFFF;
-    color: #1E3A8A;
+    background: #0EA5E9;
+    border-color: #38BDF8;
+    color: #0A192F;
     font-weight: 600;
 }
 .login-card div[role="radiogroup"] input {
@@ -180,8 +180,8 @@ section[data-testid="stSidebar"] label[data-selected="true"] {
 
 /* Input fields */
 .stTextInput > div > div > input {
-    background: rgba(30, 58, 138, 0.5);
-    border: 1px solid #D1D5DB;
+    background: rgba(10, 25, 47, 0.5);
+    border: 1px solid rgba(14, 165, 233, 0.4);
     border-radius: 12px;
     color: white;
     padding: 12px 16px;
@@ -190,13 +190,13 @@ section[data-testid="stSidebar"] label[data-selected="true"] {
     backdrop-filter: blur(5px);
 }
 .stTextInput > div > div > input::placeholder {
-    color: rgba(209, 213, 219, 0.7);
+    color: rgba(148, 163, 184, 0.7);
 }
 
 /* Sign In button */
 .stButton > button {
-    background: #D1D5DB;
-    color: #1E3A8A;
+    background: #0EA5E9;
+    color: #0A192F;
     border-radius: 8px;
     border: none;
     padding: 12px 24px;
@@ -204,23 +204,23 @@ section[data-testid="stSidebar"] label[data-selected="true"] {
     width: 100%;
     transition: all 0.2s;
     height: 45px;
-    box-shadow: 0 4px 12px rgba(209, 213, 219, 0.3);
+    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
 }
 .stButton > button:hover {
-    background: #FFFFFF;
+    background: #38BDF8;
     transform: translateY(-1px);
-    box-shadow: 0 8px 16px rgba(209, 213, 219, 0.4);
-    color: #1E3A8A;
+    box-shadow: 0 8px 16px rgba(56, 189, 248, 0.4);
+    color: #0A192F;
 }
 
 /* Sign up link */
 .login-footer {
     text-align: center;
     margin-top: 16px;
-    color: #D1D5DB;
+    color: #94A3B8;
 }
 .login-footer a {
-    color: #FFFFFF;
+    color: #38BDF8;
     text-decoration: underline;
     font-weight: 500;
 }
@@ -235,16 +235,16 @@ section[data-testid="stSidebar"] label[data-selected="true"] {
 
 /* --- App cards (glass-morphism) --- */
 .card {
-    background: rgba(21, 50, 120, 0.6);
+    background: rgba(23, 42, 69, 0.5);
     backdrop-filter: blur(12px);
-    border: 1px solid #D1D5DB;
+    border: 1px solid rgba(14, 165, 233, 0.3);
     padding: 20px;
     border-radius: 16px;
     margin-bottom: 20px;
 }
 .app-subtitle {
     text-align: center;
-    color: #D1D5DB;
+    color: #94A3B8;
     margin-bottom: 20px;
 }
 .notification-badge {
@@ -258,23 +258,23 @@ section[data-testid="stSidebar"] label[data-selected="true"] {
 
 /* Chat panel */
 .unified-chat {
-    background: rgba(21, 50, 120, 0.6);
+    background: rgba(23, 42, 69, 0.5);
     backdrop-filter: blur(12px);
     border-radius: 20px;
-    border: 1px solid #D1D5DB;
+    border: 1px solid rgba(14, 165, 233, 0.3);
     overflow: hidden;
     margin-bottom: 20px;
 }
 .chat-input-container {
     padding: 16px 20px;
-    background: rgba(30, 58, 138, 0.5);
+    background: rgba(10, 25, 47, 0.5);
     backdrop-filter: blur(8px);
-    border-top: 1px solid #D1D5DB;
+    border-top: 1px solid rgba(14, 165, 233, 0.3);
     margin-top: 0;
 }
 .chat-input-container .stTextInput > div > div > input {
-    background: rgba(30, 58, 138, 0.7);
-    border: 1px solid #D1D5DB;
+    background: rgba(10, 25, 47, 0.7);
+    border: 1px solid rgba(14, 165, 233, 0.4);
     border-radius: 24px;
     color: white;
     padding: 12px 18px;
@@ -308,7 +308,7 @@ if "authenticated" not in st.session_state:
 if "user" not in st.session_state:
     st.session_state.user = None
 if "role" not in st.session_state:
-    st.session_state.role = None  # "user" or "admin"
+    st.session_state.role = None
 if "seen_notified" not in st.session_state:
     st.session_state.seen_notified = set()
 if "selected_user_id" not in st.session_state:
@@ -421,7 +421,7 @@ def logout():
     st.rerun()
 
 # ==============================
-# LOGIN PAGE (Futuristic Blue & Silver)
+# LOGIN PAGE (Calm & Sophisticated)
 # ==============================
 def show_login_page():
     st.markdown('<div class="title">AI Loan Risk Platform</div>', unsafe_allow_html=True)
@@ -496,7 +496,7 @@ def show_main_app():
     if st.sidebar.button("🚪 Logout", use_container_width=True):
         logout()
 
-    st.markdown("<h1 style='text-align:center;color:#FFFFFF; text-shadow:0 2px 10px rgba(0,0,0,0.3);'>AI Loan Risk Platform</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align:center;color:#FFFFFF; text-shadow:0 2px 10px rgba(0,0,0,0.4);'>AI Loan Risk Platform</h1>", unsafe_allow_html=True)
     st.markdown("<div class='app-subtitle'>Real-time credit risk evaluation powered by machine learning</div>", unsafe_allow_html=True)
 
     # ------------------------------
@@ -637,23 +637,23 @@ def show_main_app():
         .chat-messages {{ flex: 1; overflow-y: auto; padding: 20px 10px 20px 20px; scrollbar-width: none; -ms-overflow-style: none; }}
         .chat-messages::-webkit-scrollbar {{ display: none; }}
         .chat-messages:hover::-webkit-scrollbar {{ display: block; width: 6px; }}
-        .chat-messages:hover::-webkit-scrollbar-thumb {{ background: #D1D5DB; border-radius: 10px; }}
-        .timeline {{ width: 40px; background: transparent; display: flex; flex-direction: column; align-items: center; padding: 20px 5px; position: relative; border-left: 1px dashed #D1D5DB; }}
-        .timeline-dot {{ width: 8px; height: 8px; background: #9CA3AF; border-radius: 50%; margin: 8px 0; cursor: pointer; transition: all 0.2s; position: relative; }}
-        .timeline-dot:hover {{ background: #D1D5DB; transform: scale(1.5); }}
-        .timeline-dot.active {{ background: #FFFFFF; box-shadow: 0 0 8px #D1D5DB; }}
-        .timeline-dot::after {{ content: attr(data-date); position: absolute; right: 20px; top: -4px; background: rgba(21,50,120,0.9); color: #F3F4F6; padding: 2px 8px; border-radius: 12px; font-size: 10px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s; border: 1px solid #D1D5DB; }}
+        .chat-messages:hover::-webkit-scrollbar-thumb {{ background: #0EA5E9; border-radius: 10px; }}
+        .timeline {{ width: 40px; background: transparent; display: flex; flex-direction: column; align-items: center; padding: 20px 5px; position: relative; border-left: 1px dashed rgba(14, 165, 233, 0.5); }}
+        .timeline-dot {{ width: 8px; height: 8px; background: #64748B; border-radius: 50%; margin: 8px 0; cursor: pointer; transition: all 0.2s; position: relative; }}
+        .timeline-dot:hover {{ background: #0EA5E9; transform: scale(1.5); }}
+        .timeline-dot.active {{ background: #38BDF8; box-shadow: 0 0 8px #0EA5E9; }}
+        .timeline-dot::after {{ content: attr(data-date); position: absolute; right: 20px; top: -4px; background: rgba(23,42,69,0.9); color: #E2E8F0; padding: 2px 8px; border-radius: 12px; font-size: 10px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s; border: 1px solid #0EA5E9; }}
         .timeline-dot:hover::after {{ opacity: 1; }}
         .chat-bubble-row {{ display: flex; margin-bottom: 12px; }}
         .chat-bubble-row.user {{ justify-content: flex-end; }}
         .chat-bubble-row.admin {{ justify-content: flex-start; }}
         .chat-bubble {{ max-width: 70%; padding: 12px 16px; border-radius: 18px; font-size: 14px; line-height: 1.4; word-wrap: break-word; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }}
-        .user .chat-bubble {{ background: #D1D5DB; color: #1E3A8A; border-bottom-right-radius: 4px; }}
-        .admin .chat-bubble {{ background: #374151; color: #F3F4F6; border-bottom-left-radius: 4px; }}
-        .chat-timestamp {{ font-size: 11px; color: #9CA3AF; margin-top: 4px; text-align: right; }}
-        .user .chat-timestamp {{ color: #1E3A8A; }}
-        .reply-badge {{ background: #1E3A8A; color: #D1D5DB; border-radius: 16px; padding: 4px 12px; font-size: 12px; margin-bottom: 8px; display: inline-block; border: 1px solid #D1D5DB; }}
-        .read-receipt {{ font-size: 11px; color: #9CA3AF; margin-left: 8px; }}
+        .user .chat-bubble {{ background: #0EA5E9; color: #0A192F; border-bottom-right-radius: 4px; }}
+        .admin .chat-bubble {{ background: #334155; color: #F1F5F9; border-bottom-left-radius: 4px; }}
+        .chat-timestamp {{ font-size: 11px; color: #94A3B8; margin-top: 4px; text-align: right; }}
+        .user .chat-timestamp {{ color: #0A192F; }}
+        .reply-badge {{ background: #0A192F; color: #0EA5E9; border-radius: 16px; padding: 4px 12px; font-size: 12px; margin-bottom: 8px; display: inline-block; border: 1px solid #0EA5E9; }}
+        .read-receipt {{ font-size: 11px; color: #94A3B8; margin-left: 8px; }}
         </style>
         </head>
         <body>
@@ -822,12 +822,12 @@ def show_main_app():
                     .chat-bubble-row.user { justify-content:flex-end; }
                     .chat-bubble-row.admin { justify-content:flex-start; }
                     .chat-bubble { max-width:70%; padding:12px 16px; border-radius:18px; font-size:14px; line-height:1.4; word-wrap:break-word; box-shadow:0 1px 2px rgba(0,0,0,0.1); }
-                    .user .chat-bubble { background:#D1D5DB; color:#1E3A8A; border-bottom-right-radius:4px; }
-                    .admin .chat-bubble { background:#374151; color:#F3F4F6; border-bottom-left-radius:4px; }
-                    .chat-timestamp { font-size:11px; color:#9CA3AF; margin-top:4px; text-align:right; }
-                    .user .chat-timestamp { color:#1E3A8A; }
-                    .reply-badge { background:#1E3A8A; color:#D1D5DB; border-radius:16px; padding:4px 12px; font-size:12px; margin-bottom:8px; display:inline-block; border:1px solid #D1D5DB; }
-                    .read-receipt { font-size:11px; color:#9CA3AF; margin-left:8px; }
+                    .user .chat-bubble { background:#0EA5E9; color:#0A192F; border-bottom-right-radius:4px; }
+                    .admin .chat-bubble { background:#334155; color:#F1F5F9; border-bottom-left-radius:4px; }
+                    .chat-timestamp { font-size:11px; color:#94A3B8; margin-top:4px; text-align:right; }
+                    .user .chat-timestamp { color:#0A192F; }
+                    .reply-badge { background:#0A192F; color:#0EA5E9; border-radius:16px; padding:4px 12px; font-size:12px; margin-bottom:8px; display:inline-block; border:1px solid #0EA5E9; }
+                    .read-receipt { font-size:11px; color:#94A3B8; margin-left:8px; }
                     </style></head><body><div class="chat-messages">
                     '''
                     for msg in user_msgs:
