@@ -36,13 +36,37 @@ html, body {
     font-family: 'Inter', sans-serif;
 }
 
-/* --- Sidebar Radio Buttons (default vertical, no forced horizontal) --- */
-div[data-testid="stSidebar"] div[role="radiogroup"] label {
+/* --- Sidebar styling --- */
+section[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #0b1220, #0e1622);
+    border-right: 1px solid #1f2a36;
+}
+
+/* Navigation spacing */
+section[data-testid="stSidebar"] .stRadio > div {
+    gap: 10px;
+}
+
+/* Navigation items */
+section[data-testid="stSidebar"] label {
+    padding: 10px 14px;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+    cursor: pointer;
     white-space: nowrap !important;
-    padding: 10px 16px !important;
     width: 100% !important;
     box-sizing: border-box;
-    border-radius: 8px;
+}
+
+/* Hover effect */
+section[data-testid="stSidebar"] label:hover {
+    background: #1a2330;
+}
+
+/* Selected item */
+section[data-testid="stSidebar"] label[data-selected="true"] {
+    background: #2563eb;
+    color: white;
 }
 
 /* --- Login Page --- */
@@ -383,23 +407,37 @@ def show_login_page():
 # ==============================
 def show_main_app():
     # Sidebar
-    st.sidebar.title("Navigation")
+    st.sidebar.markdown("## 🧭 Navigation")
+    
     if st.session_state.role == "user":
-        page = st.sidebar.radio("Go to", ["Loan Analysis", "Contact"])
+        menu = [
+            "📊 Loan Analysis",
+            "💬 Contact"
+        ]
     else:
-        page = st.sidebar.radio("Go to", ["Admin Dashboard"])
+        menu = [
+            "⚙️ Admin Dashboard"
+        ]
+    
+    page = st.sidebar.radio("", menu)
 
     st.sidebar.markdown("---")
+
+    # User info section (improved)
     if st.session_state.role == "user":
         unread = get_unread_reply_count(st.session_state.user["id"])
+        name = st.session_state.user["username"]
         if unread > 0:
-            st.sidebar.markdown(f"👤 {st.session_state.user['username']} <span class='notification-badge'>{unread}</span>", unsafe_allow_html=True)
+            st.sidebar.markdown(f"👤 **{name}** 🔴 {unread}")
         else:
-            st.sidebar.write(f"👤 {st.session_state.user['username']}")
+            st.sidebar.markdown(f"👤 **{name}**")
     else:
-        st.sidebar.write(f"👑 Admin: {st.session_state.user['username']}")
-    
-    if st.sidebar.button("Logout", use_container_width=True):
+        st.sidebar.markdown(f"👑 **Admin: {st.session_state.user['username']}**")
+
+    st.sidebar.markdown("---")
+
+    # Logout button (upgraded)
+    if st.sidebar.button("🚪 Logout", use_container_width=True):
         logout()
 
     # Header
@@ -409,7 +447,7 @@ def show_main_app():
     # ------------------------------
     # LOAN ANALYSIS (User only)
     # ------------------------------
-    if page == "Loan Analysis":
+    if "Loan Analysis" in page:
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.subheader("📊 Loan Input Details")
         col1, col2 = st.columns(2)
@@ -483,7 +521,7 @@ def show_main_app():
     # ------------------------------
     # CONTACT (User only)
     # ------------------------------
-    elif page == "Contact":
+    elif "Contact" in page:
         st.subheader("💬 Customer Support Chat")
         user_id = st.session_state.user["id"]
         mark_messages_as_read(user_id)
@@ -675,7 +713,7 @@ def show_main_app():
     # ------------------------------
     # ADMIN DASHBOARD
     # ------------------------------
-    elif page == "Admin Dashboard":
+    elif "Admin Dashboard" in page:
         st.subheader("📊 Admin Control Panel")
 
         col1, col2 = st.columns([1, 4])
