@@ -177,7 +177,7 @@ section[data-testid="stSidebar"] label[data-selected="true"] {
     padding: 8px 0;
 }
 
-/* --- App styles (unchanged) --- */
+/* --- App styles --- */
 .card {
     background: linear-gradient(145deg, #111827, #0b1220);
     padding: 20px;
@@ -362,18 +362,15 @@ def logout():
 # LOGIN PAGE (Premium Centered UI)
 # ==============================
 def show_login_page():
-    # Page title and subtitle
     st.markdown('<div class="title">AI Loan Risk Platform</div>', unsafe_allow_html=True)
     st.markdown('<div class="subtitle">Intelligent credit evaluation for smarter lending</div>', unsafe_allow_html=True)
 
-    # Centered card using columns
     col_left, col_center, col_right = st.columns([1, 2, 1])
     with col_center:
         st.markdown('<div class="login-card">', unsafe_allow_html=True)
         st.markdown('<div class="section">Welcome back</div>', unsafe_allow_html=True)
         st.markdown('<div class="small">Sign in to access your account</div>', unsafe_allow_html=True)
 
-        # Role selector (horizontal radio)
         role = st.radio("", ["User", "Administrator"], horizontal=True, label_visibility="collapsed")
         
         if role == "User":
@@ -406,24 +403,17 @@ def show_login_page():
 # MAIN APP (after login)
 # ==============================
 def show_main_app():
-    # Sidebar
     st.sidebar.markdown("## 🧭 Navigation")
     
     if st.session_state.role == "user":
-        menu = [
-            "📊 Loan Analysis",
-            "💬 Contact"
-        ]
+        menu = ["📊 Loan Analysis", "💬 Contact"]
     else:
-        menu = [
-            "⚙️ Admin Dashboard"
-        ]
+        menu = ["⚙️ Admin Dashboard"]
     
     page = st.sidebar.radio("", menu)
 
     st.sidebar.markdown("---")
 
-    # User info section (improved)
     if st.session_state.role == "user":
         unread = get_unread_reply_count(st.session_state.user["id"])
         name = st.session_state.user["username"]
@@ -436,11 +426,9 @@ def show_main_app():
 
     st.sidebar.markdown("---")
 
-    # Logout button (upgraded)
     if st.sidebar.button("🚪 Logout", use_container_width=True):
         logout()
 
-    # Header
     st.markdown("<h1 style='text-align:center;color:#3b82f6'>AI Loan Risk Platform</h1>", unsafe_allow_html=True)
     st.markdown("<div class='app-subtitle'>Real-time credit risk evaluation powered by machine learning</div>", unsafe_allow_html=True)
 
@@ -711,7 +699,7 @@ def show_main_app():
             st.rerun()
 
     # ------------------------------
-    # ADMIN DASHBOARD
+    # ADMIN DASHBOARD (FULLY RESTORED)
     # ------------------------------
     elif "Admin Dashboard" in page:
         st.subheader("📊 Admin Control Panel")
