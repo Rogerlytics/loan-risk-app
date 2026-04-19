@@ -246,7 +246,7 @@ if "authenticated" not in st.session_state:
 if "user" not in st.session_state:
     st.session_state.user = None
 if "role" not in st.session_state:
-    st.session_state.role = None  # "user" or "admin"
+    st.session_state.role = None
 if "seen_notified" not in st.session_state:
     st.session_state.seen_notified = set()
 if "selected_user_id" not in st.session_state:
@@ -359,7 +359,7 @@ def logout():
     st.rerun()
 
 # ==============================
-# LOGIN PAGE (Premium Centered UI)
+# LOGIN PAGE (with Enter submission)
 # ==============================
 def show_login_page():
     st.markdown('<div class="title">AI Loan Risk Platform</div>', unsafe_allow_html=True)
@@ -374,29 +374,33 @@ def show_login_page():
         role = st.radio("", ["User", "Administrator"], horizontal=True, label_visibility="collapsed")
         
         if role == "User":
-            email = st.text_input("Email", placeholder="you@example.com", key="login_email")
-            password = st.text_input("Password", type="password", placeholder="••••••••", key="login_password")
-            if st.button("Sign In", use_container_width=True, key="signin_user"):
-                user_data = login_user(email, password)
-                if user_data:
-                    st.session_state.authenticated = True
-                    st.session_state.user = user_data
-                    st.session_state.role = "user"
-                    st.rerun()
-                else:
-                    st.error("Invalid email or password")
+            with st.form("login_form_user", clear_on_submit=False):
+                email = st.text_input("Email", placeholder="you@example.com", key="login_email")
+                password = st.text_input("Password", type="password", placeholder="••••••••", key="login_password")
+                submitted = st.form_submit_button("Sign In", use_container_width=True)
+                if submitted:
+                    user_data = login_user(email, password)
+                    if user_data:
+                        st.session_state.authenticated = True
+                        st.session_state.user = user_data
+                        st.session_state.role = "user"
+                        st.rerun()
+                    else:
+                        st.error("Invalid email or password")
             st.markdown('<p class="login-footer">Don\'t have an account? <a href="#">Sign up</a></p>', unsafe_allow_html=True)
         else:
-            username = st.text_input("Admin Username", placeholder="admin", key="admin_user")
-            password = st.text_input("Admin Password", type="password", placeholder="••••••••", key="admin_pass")
-            if st.button("Sign In as Admin", use_container_width=True, key="signin_admin"):
-                if login_admin(username, password):
-                    st.session_state.authenticated = True
-                    st.session_state.user = {"username": username, "role": "admin"}
-                    st.session_state.role = "admin"
-                    st.rerun()
-                else:
-                    st.error("Invalid admin credentials")
+            with st.form("login_form_admin", clear_on_submit=False):
+                username = st.text_input("Admin Username", placeholder="admin", key="admin_user")
+                password = st.text_input("Admin Password", type="password", placeholder="••••••••", key="admin_pass")
+                submitted = st.form_submit_button("Sign In as Admin", use_container_width=True)
+                if submitted:
+                    if login_admin(username, password):
+                        st.session_state.authenticated = True
+                        st.session_state.user = {"username": username, "role": "admin"}
+                        st.session_state.role = "admin"
+                        st.rerun()
+                    else:
+                        st.error("Invalid admin credentials")
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ==============================
@@ -405,7 +409,6 @@ def show_login_page():
 def show_main_app():
     st.sidebar.markdown("## 🧭 Navigation")
     
-    # Admins see all three pages; users see Loan Analysis and Contact
     if st.session_state.role == "user":
         menu = ["📊 Loan Analysis", "💬 Contact"]
     else:
@@ -434,25 +437,25 @@ def show_main_app():
     st.markdown("<div class='app-subtitle'>Real-time credit risk evaluation powered by machine learning</div>", unsafe_allow_html=True)
 
     # ------------------------------
-    # LOAN ANALYSIS (Both user and admin)
+    # LOAN ANALYSIS (Real‑time risk update)
     # ------------------------------
     if "Loan Analysis" in page:
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.subheader("📊 Loan Input Details")
         col1, col2 = st.columns(2)
         with col1:
-            age = st.number_input("Age", 0, 100, 30)
-            income = st.number_input("Monthly Income", 0, 1000000, 50000)
-            loan_amount = st.number_input("Loan Amount", 0, 1000000, 200000)
-            interest_rate = st.number_input("Interest Rate (%)", 0.0, 100.0, 12.5)
-            loan_term = st.selectbox("Loan Term", [12, 24, 36, 48, 60])
+            age = st.number_input("Age", 0, 100, 30, key="age")
+            income = st.number_input("Monthly Income", 0, 1000000, 50000, key="income")
+            loan_amount = st.number_input("Loan Amount", 0, 1000000, 200000, key="loan_amount")
+            interest_rate = st.number_input("Interest Rate (%)", 0.0, 100.0, 12.5, key="interest_rate")
+            loan_term = st.selectbox("Loan Term", [12, 24, 36, 48, 60], key="loan_term")
         with col2:
-            car_value = st.number_input("Car Value", 0, 1000000, 400000)
-            car_age = st.slider("Car Age", 0, 50, 5)
-            mileage = st.number_input("Mileage", 0, 500000, 80000)
-            previous_loans = st.number_input("Previous Loans", 0, 10, 1)
-            previous_defaults = st.number_input("Previous Defaults", 0, 10, 0)
-        employment_type = st.selectbox("Employment Type", ["salaried","self-employed","informal"])
+            car_value = st.number_input("Car Value", 0, 1000000, 400000, key="car_value")
+            car_age = st.slider("Car Age", 0, 50, 5, key="car_age")
+            mileage = st.number_input("Mileage", 0, 500000, 80000, key="mileage")
+            previous_loans = st.number_input("Previous Loans", 0, 10, 1, key="previous_loans")
+            previous_defaults = st.number_input("Previous Defaults", 0, 10, 0, key="previous_defaults")
+        employment_type = st.selectbox("Employment Type", ["salaried","self-employed","informal"], key="employment_type")
         st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown('<div class="card">', unsafe_allow_html=True)
@@ -463,57 +466,62 @@ def show_main_app():
         k3.metric("Rate", f"{interest_rate}%")
         st.markdown('</div>', unsafe_allow_html=True)
 
-        b1, b2 = st.columns(2)
-        with b1:
-            if st.button("💰 Calculate Repayment"):
-                r = interest_rate / 100 / 12
-                m = loan_amount * r * (1 + r) ** loan_term / ((1 + r) ** loan_term - 1)
-                st.markdown('<div class="card">', unsafe_allow_html=True)
-                st.subheader("💳 Repayment Breakdown")
-                st.write(f"Monthly: KES {m:,.2f}")
-                st.write(f"Weekly: KES {m/4.33:,.2f}")
-                st.write(f"Daily: KES {m/30:,.2f}")
-                st.markdown('</div>', unsafe_allow_html=True)
-        with b2:
-            if st.button("🤖 Check Loan Risk"):
-                emp = {"salaried":0,"self-employed":1,"informal":2}[employment_type]
-                df = pd.DataFrame({
-                    'age':[age],'monthly_income':[income],'loan_amount':[loan_amount],
-                    'interest_rate':[interest_rate],'loan_term':[loan_term],
-                    'car_value':[car_value],'car_age':[car_age],'mileage':[mileage],
-                    'previous_loans':[previous_loans],'previous_defaults':[previous_defaults],
-                    'employment_type':[emp]
-                })
-                df['loan_to_value_ratio'] = loan_amount / car_value if car_value else 0
-                df['income_to_loan_ratio'] = income / loan_amount if loan_amount else 0
-                X = df[model.feature_names_in_]
-                pred = model.predict(X)[0]
-                prob = model.predict_proba(X)[0][1] * 100
-                st.markdown('<div class="card">', unsafe_allow_html=True)
-                st.subheader("🧠 AI Risk Decision")
-                st.write(f"Risk Score: {prob:.2f}%")
-                st.progress(int(prob))
-                if pred == 1:
-                    st.error("❌ High Risk")
-                else:
-                    st.success("✅ Low Risk")
-                st.subheader("📌 Risk Factors")
-                reasons, citations = explain_risk_with_citations(df)
-                for i, r in enumerate(reasons):
-                    src = citations[i]
-                    st.write(f"• {r}  `[Source: {src['source']}]`  🔵 Confidence: {src['confidence']}")
-                st.subheader("💡 Recommendations")
-                for s in suggest_improvements(df):
-                    st.info(s)
-                st.markdown('</div>', unsafe_allow_html=True)
+        # Repayment calculation (button triggered)
+        if st.button("💰 Calculate Repayment"):
+            r = interest_rate / 100 / 12
+            m = loan_amount * r * (1 + r) ** loan_term / ((1 + r) ** loan_term - 1)
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            st.subheader("💳 Repayment Breakdown")
+            st.write(f"Monthly: KES {m:,.2f}")
+            st.write(f"Weekly: KES {m/4.33:,.2f}")
+            st.write(f"Daily: KES {m/30:,.2f}")
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        # Real‑time risk assessment (updates on every rerun)
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.subheader("🧠 AI Risk Decision (Live)")
+
+        emp = {"salaried":0,"self-employed":1,"informal":2}[employment_type]
+        df = pd.DataFrame({
+            'age':[age],'monthly_income':[income],'loan_amount':[loan_amount],
+            'interest_rate':[interest_rate],'loan_term':[loan_term],
+            'car_value':[car_value],'car_age':[car_age],'mileage':[mileage],
+            'previous_loans':[previous_loans],'previous_defaults':[previous_defaults],
+            'employment_type':[emp]
+        })
+        df['loan_to_value_ratio'] = loan_amount / car_value if car_value else 0
+        df['income_to_loan_ratio'] = income / loan_amount if loan_amount else 0
+
+        try:
+            X = df[model.feature_names_in_]
+            pred = model.predict(X)[0]
+            prob = model.predict_proba(X)[0][1] * 100
+
+            st.write(f"Risk Score: {prob:.2f}%")
+            st.progress(int(prob))
+            if pred == 1:
+                st.error("❌ High Risk")
+            else:
+                st.success("✅ Low Risk")
+
+            st.subheader("📌 Risk Factors")
+            reasons, citations = explain_risk_with_citations(df)
+            for i, r in enumerate(reasons):
+                src = citations[i]
+                st.write(f"• {r}  `[Source: {src['source']}]`  🔵 Confidence: {src['confidence']}")
+
+            st.subheader("💡 Recommendations")
+            for s in suggest_improvements(df):
+                st.info(s)
+        except Exception as e:
+            st.warning("Model features mismatch or error. Please check inputs.")
+        st.markdown('</div>', unsafe_allow_html=True)
 
     # ------------------------------
     # CONTACT (Both user and admin)
     # ------------------------------
     elif "Contact" in page:
         st.subheader("💬 Customer Support Chat")
-        # For admin viewing Contact, we need to handle differently or show a message?
-        # Since admin doesn't have a user_id in the same way, we'll show a placeholder.
         if st.session_state.role == "admin":
             st.info("👑 Admin view: You can see all conversations in the Admin Dashboard. This page is for user chat simulation.")
         else:
