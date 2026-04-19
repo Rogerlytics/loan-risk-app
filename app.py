@@ -255,6 +255,8 @@ if "auto_refresh" not in st.session_state:
     st.session_state.auto_refresh = False
 if "draft_message" not in st.session_state:
     st.session_state.draft_message = ""
+if "risk_result" not in st.session_state:
+    st.session_state.risk_result = None  # store risk analysis result
 
 # ==============================
 # 6. MODEL
@@ -437,7 +439,7 @@ def show_main_app():
     st.markdown("<div class='app-subtitle'>Real-time credit risk evaluation powered by machine learning</div>", unsafe_allow_html=True)
 
     # ------------------------------
-    # LOAN ANALYSIS (Real‑time risk, button for repayment)
+    # LOAN ANALYSIS (Two columns for buttons)
     # ------------------------------
     if "Loan Analysis" in page:
         st.markdown('<div class="card">', unsafe_allow_html=True)
@@ -466,59 +468,73 @@ def show_main_app():
         k3.metric("Rate", f"{interest_rate}%")
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # Repayment calculation (button)
-        if st.button("💰 Calculate Repayment", use_container_width=True):
-            if interest_rate > 0 and loan_term > 0 and loan_amount > 0:
-                r = interest_rate / 100 / 12
-                m = loan_amount * r * (1 + r) ** loan_term / ((1 + r) ** loan_term - 1)
-                st.markdown('<div class="card">', unsafe_allow_html=True)
-                st.subheader("💳 Repayment Breakdown")
-                st.write(f"Monthly: KES {m:,.2f}")
-                st.write(f"Weekly: KES {m/4.33:,.2f}")
-                st.write(f"Daily: KES {m/30:,.2f}")
-                st.markdown('</div>', unsafe_allow_html=True)
-            else:
-                st.warning("Please ensure loan amount, interest rate, and loan term are valid.")
+        # Two buttons side by side
+        col_btn1, col_btn2 = st.columns(2)
+        with col_btn1:
+            if st.button("💰 Calculate Repayment", use_container_width=True):
+                if interest_rate > 0 and loan_term > 0 and loan_amount > 0:
+                    r = interest_rate / 100 / 12
+                    m = loan_amount * r * (1 + r) ** loan_term / ((1 + r) ** loan_term - 1)
+                    st.markdown('<div class="card">', unsafe_allow_html=True)
+                    st.subheader("💳 Repayment Breakdown")
+                    st.write(f"Monthly: KES {m:,.2f}")
+                    st.write(f"Weekly: KES {m/4.33:,.2f}")
+                    st.write(f"Daily: KES {m/30:,.2f}")
+                    st.markdown('</div>', unsafe_allow_html=True)
+                else:
+                    st.warning("Please ensure loan amount, interest rate, and loan term are valid.")
 
-        # Real‑time risk assessment (updates automatically)
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.subheader("🧠 AI Risk Decision (Live)")
+        with col_btn2:
+            if st.button("🤖 Check Loan Risk", use_container_width=True):
+                emp = {"salaried":0,"self-employed":1,"informal":2}[employment_type]
+                df = pd.DataFrame({
+                    'age':[age],'monthly_income':[income],'loan_amount':[loan_amount],
+                    'interest_rate':[interest_rate],'loan_term':[loan_term],
+                    'car_value':[car_value],'car_age':[car_age],'mileage':[mileage],
+                    'previous_loans':[previous_loans],'previous_defaults':[previous_defaults],
+                    'employment_type':[emp]
+                })
+                df['loan_to_value_ratio'] = loan_amount / car_value if car_value else 0
+                df['income_to_loan_ratio'] = income / loan_amount if loan_amount else 0
 
-        emp = {"salaried":0,"self-employed":1,"informal":2}[employment_type]
-        df = pd.DataFrame({
-            'age':[age],'monthly_income':[income],'loan_amount':[loan_amount],
-            'interest_rate':[interest_rate],'loan_term':[loan_term],
-            'car_value':[car_value],'car_age':[car_age],'mileage':[mileage],
-            'previous_loans':[previous_loans],'previous_defaults':[previous_defaults],
-            'employment_type':[emp]
-        })
-        df['loan_to_value_ratio'] = loan_amount / car_value if car_value else 0
-        df['income_to_loan_ratio'] = income / loan_amount if loan_amount else 0
+                try:
+                    X = df[model.feature_names_in_]
+                    pred = model.predict(X)[0]
+                    prob = model.predict_proba(X)[0][1] * 100
+                    reasons, citations = explain_risk_with_citations(df)
+                    suggestions = suggest_improvements(df)
+                    st.session_state.risk_result = {
+                        "prob": prob,
+                        "pred": pred,
+                        "reasons": reasons,
+                        "citations": citations,
+                        "suggestions": suggestions
+                    }
+                except Exception as e:
+                    st.error("Model features mismatch. Please check inputs.")
+                    st.session_state.risk_result = None
 
-        try:
-            X = df[model.feature_names_in_]
-            pred = model.predict(X)[0]
-            prob = model.predict_proba(X)[0][1] * 100
-
-            st.write(f"Risk Score: {prob:.2f}%")
-            st.progress(int(prob))
-            if pred == 1:
+        # Display risk result if available
+        if st.session_state.risk_result:
+            res = st.session_state.risk_result
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            st.subheader("🧠 AI Risk Decision")
+            st.write(f"Risk Score: {res['prob']:.2f}%")
+            st.progress(int(res['prob']))
+            if res['pred'] == 1:
                 st.error("❌ High Risk")
             else:
                 st.success("✅ Low Risk")
 
             st.subheader("📌 Risk Factors")
-            reasons, citations = explain_risk_with_citations(df)
-            for i, r in enumerate(reasons):
-                src = citations[i]
+            for i, r in enumerate(res['reasons']):
+                src = res['citations'][i]
                 st.write(f"• {r}  `[Source: {src['source']}]`  🔵 Confidence: {src['confidence']}")
 
             st.subheader("💡 Recommendations")
-            for s in suggest_improvements(df):
+            for s in res['suggestions']:
                 st.info(s)
-        except Exception as e:
-            st.warning("Model features mismatch or error. Please check inputs.")
-        st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
     # ------------------------------
     # CONTACT (User chat)
