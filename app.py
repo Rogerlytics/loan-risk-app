@@ -256,7 +256,7 @@ if "auto_refresh" not in st.session_state:
 if "draft_message" not in st.session_state:
     st.session_state.draft_message = ""
 if "risk_result" not in st.session_state:
-    st.session_state.risk_result = None  # store risk analysis result
+    st.session_state.risk_result = None
 
 # ==============================
 # 6. MODEL
@@ -439,7 +439,7 @@ def show_main_app():
     st.markdown("<div class='app-subtitle'>Real-time credit risk evaluation powered by machine learning</div>", unsafe_allow_html=True)
 
     # ------------------------------
-    # LOAN ANALYSIS (Two columns for buttons)
+    # LOAN ANALYSIS (Aligned risk result)
     # ------------------------------
     if "Loan Analysis" in page:
         st.markdown('<div class="card">', unsafe_allow_html=True)
@@ -514,27 +514,29 @@ def show_main_app():
                     st.error("Model features mismatch. Please check inputs.")
                     st.session_state.risk_result = None
 
-        # Display risk result if available
-        if st.session_state.risk_result:
-            res = st.session_state.risk_result
-            st.markdown('<div class="card">', unsafe_allow_html=True)
-            st.subheader("🧠 AI Risk Decision")
-            st.write(f"Risk Score: {res['prob']:.2f}%")
-            st.progress(int(res['prob']))
-            if res['pred'] == 1:
-                st.error("❌ High Risk")
-            else:
-                st.success("✅ Low Risk")
+        # Risk result aligned under the right button
+        col_left_spacer, col_right_result = st.columns(2)
+        with col_right_result:
+            if st.session_state.risk_result:
+                res = st.session_state.risk_result
+                st.markdown('<div class="card">', unsafe_allow_html=True)
+                st.subheader("🧠 AI Risk Decision")
+                st.write(f"Risk Score: {res['prob']:.2f}%")
+                st.progress(int(res['prob']))
+                if res['pred'] == 1:
+                    st.error("❌ High Risk")
+                else:
+                    st.success("✅ Low Risk")
 
-            st.subheader("📌 Risk Factors")
-            for i, r in enumerate(res['reasons']):
-                src = res['citations'][i]
-                st.write(f"• {r}  `[Source: {src['source']}]`  🔵 Confidence: {src['confidence']}")
+                st.subheader("📌 Risk Factors")
+                for i, r in enumerate(res['reasons']):
+                    src = res['citations'][i]
+                    st.write(f"• {r}  `[Source: {src['source']}]`  🔵 Confidence: {src['confidence']}")
 
-            st.subheader("💡 Recommendations")
-            for s in res['suggestions']:
-                st.info(s)
-            st.markdown('</div>', unsafe_allow_html=True)
+                st.subheader("💡 Recommendations")
+                for s in res['suggestions']:
+                    st.info(s)
+                st.markdown('</div>', unsafe_allow_html=True)
 
     # ------------------------------
     # CONTACT (User chat)
