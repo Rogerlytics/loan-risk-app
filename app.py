@@ -12,6 +12,7 @@ from supabase import create_client, Client
 from typing import Optional, Dict, Any, List, Tuple
 import html
 import time
+import base64
 
 # ==============================
 # 2. CONFIG
@@ -78,16 +79,16 @@ section[data-testid="stSidebar"] label {
     width: 100% !important;
     box-sizing: border-box;
     color: #F0F4F8 !important;
-    background: #1A2E44;                     /* Visible background */
+    background: #1A2E44;
     border: 1px solid #2563eb;
     font-weight: 500;
 }
 section[data-testid="stSidebar"] label:hover {
-    background: #2563eb;                     /* Brighter on hover */
+    background: #2563eb;
     color: white !important;
 }
 section[data-testid="stSidebar"] label[data-selected="true"] {
-    background: #2563eb;                     /* Selected state */
+    background: #2563eb;
     color: white !important;
     border-color: #3b82f6;
     box-shadow: 0 0 8px rgba(37, 99, 235, 0.5);
@@ -95,12 +96,12 @@ section[data-testid="stSidebar"] label[data-selected="true"] {
 
 /* Sidebar user info and logout */
 section[data-testid="stSidebar"] .stButton button {
-    background: #2563eb;
-    border: none;
-    color: white;
+    background: #2563eb !important;
+    border: none !important;
+    color: white !important;
 }
 section[data-testid="stSidebar"] .stButton button:hover {
-    background: #3b82f6;
+    background: #3b82f6 !important;
 }
 
 /* ---------- LOGIN PAGE ---------- */
@@ -186,22 +187,27 @@ section[data-testid="stSidebar"] .stButton button:hover {
     color: #94A3B8;
 }
 
-/* Buttons */
+/* ALL BUTTONS – Bright Blue */
 .stButton > button {
-    background: #2563eb;
-    color: white;
-    border-radius: 8px;
-    border: none;
-    padding: 12px 24px;
-    font-weight: 600;
-    width: 100%;
-    transition: all 0.2s;
-    height: 45px;
+    background: #2563eb !important;
+    color: white !important;
+    border-radius: 8px !important;
+    border: none !important;
+    padding: 12px 24px !important;
+    font-weight: 600 !important;
+    width: 100% !important;
+    transition: all 0.2s !important;
+    height: 45px !important;
 }
 .stButton > button:hover {
-    background: #3b82f6;
-    transform: translateY(-1px);
-    box-shadow: 0 8px 16px rgba(37, 99, 235, 0.3);
+    background: #3b82f6 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 8px 16px rgba(37, 99, 235, 0.3) !important;
+}
+
+/* Checkbox */
+.stCheckbox label {
+    color: #A0AEC0 !important;
 }
 
 /* Sign up link */
@@ -268,9 +274,9 @@ section[data-testid="stSidebar"] .stButton button:hover {
     padding: 12px 18px;
 }
 .chat-input-container .stButton > button {
-    border-radius: 24px;
-    height: auto;
-    padding: 10px 20px;
+    border-radius: 24px !important;
+    height: auto !important;
+    padding: 10px 20px !important;
 }
 
 /* Scrollbars */
@@ -414,16 +420,71 @@ def mark_messages_as_read(user_id: int):
         pass
 
 # ==============================
+# REMEMBER ME TOKEN
+# ==============================
+def generate_token(email: str, role: str) -> str:
+    """Generate a simple token for remember me (demo purpose)."""
+    data = f"{email}|{role}|{datetime.now().strftime('%Y%m%d')}"
+    return base64.b64encode(data.encode()).decode()
+
+def decode_token(token: str) -> Optional[Tuple[str, str]]:
+    """Decode token to get email and role."""
+    try:
+        decoded = base64.b64decode(token.encode()).decode()
+        parts = decoded.split('|')
+        if len(parts) >= 2:
+            return parts[0], parts[1]
+    except:
+        pass
+    return None
+
+# ==============================
 # LOGOUT FUNCTION
 # ==============================
 def logout():
     st.session_state.authenticated = False
     st.session_state.user = None
     st.session_state.role = None
+    # Clear local storage via JS
+    components.html("""
+    <script>
+    localStorage.removeItem('loanapp_remember');
+    </script>
+    """, height=0)
     st.rerun()
 
 # ==============================
-# LOGIN PAGE
+# AUTO-LOGIN CHECK
+# ==============================
+def check_auto_login():
+    """If there's a valid token in localStorage, attempt auto-login."""
+    query_params = st.query_params
+    if "auto_token" in query_params:
+        token = query_params["auto_token"]
+        result = decode_token(token)
+        if result:
+            email, role = result
+            if role == "user":
+                try:
+                    res = supabase.table("users").select("*").eq("email", email).execute()
+                    if res.data:
+                        st.session_state.authenticated = True
+                        st.session_state.user = res.data[0]
+                        st.session_state.role = "user"
+                        st.query_params.clear()
+                        st.rerun()
+                except:
+                    pass
+            elif role == "admin":
+                st.session_state.authenticated = True
+                st.session_state.user = {"username": ADMIN_USERNAME, "role": "admin"}
+                st.session_state.role = "admin"
+                st.query_params.clear()
+                st.rerun()
+        st.query_params.clear()
+
+# ==============================
+# LOGIN PAGE (with Remember Me)
 # ==============================
 def show_login_page():
     st.markdown('<div class="title">AI Loan Risk Platform</div>', unsafe_allow_html=True)
@@ -436,7 +497,8 @@ def show_login_page():
         st.markdown('<div class="small">Sign in to access your account</div>', unsafe_allow_html=True)
 
         role = st.radio("", ["User", "Administrator"], horizontal=True, label_visibility="collapsed")
-        
+        remember_me = st.checkbox("Remember me")
+
         if role == "User":
             with st.form("login_form_user", clear_on_submit=False):
                 email = st.text_input("Email", placeholder="you@example.com", key="login_email")
@@ -448,6 +510,13 @@ def show_login_page():
                         st.session_state.authenticated = True
                         st.session_state.user = user_data
                         st.session_state.role = "user"
+                        if remember_me:
+                            token = generate_token(email, "user")
+                            components.html(f"""
+                            <script>
+                            localStorage.setItem('loanapp_remember', '{token}');
+                            </script>
+                            """, height=0)
                         st.rerun()
                     else:
                         st.error("Invalid email or password")
@@ -462,10 +531,31 @@ def show_login_page():
                         st.session_state.authenticated = True
                         st.session_state.user = {"username": username, "role": "admin"}
                         st.session_state.role = "admin"
+                        if remember_me:
+                            token = generate_token(username, "admin")
+                            components.html(f"""
+                            <script>
+                            localStorage.setItem('loanapp_remember', '{token}');
+                            </script>
+                            """, height=0)
                         st.rerun()
                     else:
                         st.error("Invalid admin credentials")
         st.markdown('</div>', unsafe_allow_html=True)
+
+    # JavaScript to check localStorage and redirect with token on page load
+    components.html("""
+    <script>
+    (function() {
+        const token = localStorage.getItem('loanapp_remember');
+        if (token && !window.location.search.includes('auto_token')) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('auto_token', token);
+            window.location.href = url.toString();
+        }
+    })();
+    </script>
+    """, height=0)
 
 # ==============================
 # MAIN APP
@@ -940,6 +1030,8 @@ def show_main_app():
 # MAIN ENTRY POINT
 # ==============================
 if not st.session_state.authenticated:
-    show_login_page()
+    check_auto_login()
+    if not st.session_state.authenticated:
+        show_login_page()
 else:
     show_main_app()
