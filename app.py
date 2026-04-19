@@ -140,7 +140,7 @@ section[data-testid="stSidebar"] label[data-selected="true"] {
     box-sizing: border-box;
 }
 
-/* Sign In button */
+/* Sign In button & all primary buttons */
 .stButton > button {
     background: #1f77ff;
     color: white;
@@ -359,7 +359,7 @@ def logout():
     st.rerun()
 
 # ==============================
-# LOGIN PAGE (with Enter submission)
+# LOGIN PAGE (Enter to submit)
 # ==============================
 def show_login_page():
     st.markdown('<div class="title">AI Loan Risk Platform</div>', unsafe_allow_html=True)
@@ -437,7 +437,7 @@ def show_main_app():
     st.markdown("<div class='app-subtitle'>Real-time credit risk evaluation powered by machine learning</div>", unsafe_allow_html=True)
 
     # ------------------------------
-    # LOAN ANALYSIS (Real‑time risk update)
+    # LOAN ANALYSIS (Real‑time risk, button for repayment)
     # ------------------------------
     if "Loan Analysis" in page:
         st.markdown('<div class="card">', unsafe_allow_html=True)
@@ -466,18 +466,21 @@ def show_main_app():
         k3.metric("Rate", f"{interest_rate}%")
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # Repayment calculation (button triggered)
-        if st.button("💰 Calculate Repayment"):
-            r = interest_rate / 100 / 12
-            m = loan_amount * r * (1 + r) ** loan_term / ((1 + r) ** loan_term - 1)
-            st.markdown('<div class="card">', unsafe_allow_html=True)
-            st.subheader("💳 Repayment Breakdown")
-            st.write(f"Monthly: KES {m:,.2f}")
-            st.write(f"Weekly: KES {m/4.33:,.2f}")
-            st.write(f"Daily: KES {m/30:,.2f}")
-            st.markdown('</div>', unsafe_allow_html=True)
+        # Repayment calculation (button)
+        if st.button("💰 Calculate Repayment", use_container_width=True):
+            if interest_rate > 0 and loan_term > 0 and loan_amount > 0:
+                r = interest_rate / 100 / 12
+                m = loan_amount * r * (1 + r) ** loan_term / ((1 + r) ** loan_term - 1)
+                st.markdown('<div class="card">', unsafe_allow_html=True)
+                st.subheader("💳 Repayment Breakdown")
+                st.write(f"Monthly: KES {m:,.2f}")
+                st.write(f"Weekly: KES {m/4.33:,.2f}")
+                st.write(f"Daily: KES {m/30:,.2f}")
+                st.markdown('</div>', unsafe_allow_html=True)
+            else:
+                st.warning("Please ensure loan amount, interest rate, and loan term are valid.")
 
-        # Real‑time risk assessment (updates on every rerun)
+        # Real‑time risk assessment (updates automatically)
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.subheader("🧠 AI Risk Decision (Live)")
 
@@ -518,7 +521,7 @@ def show_main_app():
         st.markdown('</div>', unsafe_allow_html=True)
 
     # ------------------------------
-    # CONTACT (Both user and admin)
+    # CONTACT (User chat)
     # ------------------------------
     elif "Contact" in page:
         st.subheader("💬 Customer Support Chat")
