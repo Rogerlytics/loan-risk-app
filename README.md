@@ -36,7 +36,7 @@ With a premium dark interface, role‑based access (user / administrator), integ
 
 | Login Page | Loan Analysis | Customer Chat | Admin Dashboard |
 |------------|---------------|---------------|-----------------|
-| ![Login](screenshots/login.png) | ![Loan](screenshots/loan.png) | ![Chat](screenshots/chat.png) | ![Admin](screenshots/admin.png) |
+| ![Login]([screenshots/login.png](https://github.com/Rogerlytics/loan-risk-app/blob/0b2cc8ee45fe6e3ed4343674f8c1349803084afd/screenshots/Log_In.PNG)) | ![Loan](screenshots/loan.png) | ![Chat](screenshots/chat.png) | ![Admin](screenshots/admin.png) |
 
 ---
 
