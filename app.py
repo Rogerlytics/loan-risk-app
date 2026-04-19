@@ -19,7 +19,7 @@ import time
 st.set_page_config(page_title="AI Loan Risk System", layout="wide")
 
 # ==============================
-# 3. THEME & STYLES (Premium Dark UI + App)
+# 3. THEME & STYLES (Sky Blue + Dark Sidebar)
 # ==============================
 st.markdown("""
 <style>
@@ -29,17 +29,25 @@ st.markdown("""
     padding-bottom: 1rem !important;
 }
 
-/* Global */
+/* Global bright sky blue background */
 html, body {
-    background-color: #0e1117;
-    color: #e6edf3;
+    background: linear-gradient(145deg, #b8e1ff 0%, #d4efff 100%);
+    color: #1e293b;
     font-family: 'Inter', sans-serif;
 }
 
-/* --- Sidebar styling --- */
+/* --- Darker blue sidebar for contrast --- */
 section[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #0b1220, #0e1622);
-    border-right: 1px solid #1f2a36;
+    background: linear-gradient(180deg, #0b3b5c, #1e3a8a);
+    border-right: 1px solid #3b82f6;
+}
+section[data-testid="stSidebar"] * {
+    color: #f0f9ff !important;
+}
+section[data-testid="stSidebar"] .stMarkdown,
+section[data-testid="stSidebar"] .stRadio label,
+section[data-testid="stSidebar"] .stButton button {
+    color: #f0f9ff !important;
 }
 
 /* Navigation spacing */
@@ -47,7 +55,7 @@ section[data-testid="stSidebar"] .stRadio > div {
     gap: 10px;
 }
 
-/* Navigation items */
+/* Navigation items – visible light text on dark background */
 section[data-testid="stSidebar"] label {
     padding: 10px 14px;
     border-radius: 10px;
@@ -56,29 +64,44 @@ section[data-testid="stSidebar"] label {
     white-space: nowrap !important;
     width: 100% !important;
     box-sizing: border-box;
+    color: #f0f9ff !important;
+    background: transparent;
 }
 
 /* Hover effect */
 section[data-testid="stSidebar"] label:hover {
-    background: #1a2330;
+    background: rgba(255, 255, 255, 0.15);
 }
 
 /* Selected item */
 section[data-testid="stSidebar"] label[data-selected="true"] {
-    background: #2563eb;
-    color: white;
+    background: #3b82f6;
+    color: white !important;
 }
 
-/* --- Login Page --- */
+/* Sidebar user info and logout button */
+section[data-testid="stSidebar"] .stMarkdown p,
+section[data-testid="stSidebar"] .stButton button {
+    color: #f0f9ff !important;
+}
+section[data-testid="stSidebar"] .stButton button {
+    background: #2563eb;
+    border: none;
+}
+section[data-testid="stSidebar"] .stButton button:hover {
+    background: #3b82f6;
+}
+
+/* --- Login Page (light cards on sky background) --- */
 .title {
     font-size: 42px;
     font-weight: 700;
-    color: white;
+    color: #0b3b5c;
     text-align: center;
     margin-bottom: 8px;
 }
 .subtitle {
-    color: #A0AEC0;
+    color: #1e4a6b;
     text-align: center;
     margin-bottom: 40px;
     font-size: 16px;
@@ -87,17 +110,26 @@ section[data-testid="stSidebar"] label[data-selected="true"] {
     font-size: 22px;
     font-weight: 600;
     text-align: center;
-    color: white;
+    color: #0b3b5c;
     margin-bottom: 8px;
 }
 .small {
     text-align: center;
-    color: #A0AEC0;
+    color: #2c5a7a;
     margin-bottom: 24px;
     font-size: 14px;
 }
 
-/* Only affect login page radios, NOT sidebar */
+/* Glass-morphism login card (light) */
+.login-card {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 24px;
+    padding: 40px 32px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
 .login-card div[role="radiogroup"] {
     display: flex !important;
     flex-direction: row !important;
@@ -109,10 +141,10 @@ section[data-testid="stSidebar"] label[data-selected="true"] {
     flex: 1;
     min-width: 120px;
     padding: 12px 16px;
-    background: #1a222c;
-    border: 1px solid #2a3748;
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid #3b82f6;
     border-radius: 12px;
-    color: #8a94a3;
+    color: #0b3b5c;
     font-weight: 500;
     text-align: center;
     cursor: pointer;
@@ -121,8 +153,8 @@ section[data-testid="stSidebar"] label[data-selected="true"] {
     white-space: nowrap;
 }
 .login-card div[role="radiogroup"] label[data-selected="true"] {
-    background: #1e3a5f;
-    border-color: #3b82f6;
+    background: #3b82f6;
+    border-color: #1e3a8a;
     color: white;
 }
 .login-card div[role="radiogroup"] input {
@@ -131,18 +163,18 @@ section[data-testid="stSidebar"] label[data-selected="true"] {
 
 /* Input fields */
 .stTextInput > div > div > input {
-    background: #1a222c;
-    border: 1px solid #2a3748;
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid #3b82f6;
     border-radius: 12px;
-    color: white;
+    color: #0b3b5c;
     padding: 12px 16px;
     width: 100% !important;
     box-sizing: border-box;
 }
 
-/* Sign In button & all primary buttons */
+/* Primary buttons */
 .stButton > button {
-    background: #1f77ff;
+    background: #2563eb;
     color: white;
     border-radius: 8px;
     border: none;
@@ -153,40 +185,43 @@ section[data-testid="stSidebar"] label[data-selected="true"] {
     height: 45px;
 }
 .stButton > button:hover {
-    background: #155edb;
+    background: #3b82f6;
     transform: translateY(-1px);
-    box-shadow: 0 8px 16px rgba(31, 119, 255, 0.3);
+    box-shadow: 0 8px 16px rgba(37, 99, 235, 0.3);
 }
 
 /* Sign up link */
 .login-footer {
     text-align: center;
     margin-top: 16px;
-    color: #8a94a3;
+    color: #1e4a6b;
 }
 .login-footer a {
-    color: #3b82f6;
+    color: #2563eb;
     text-decoration: none;
 }
 
 /* Error messages */
 .stAlert {
     background: transparent;
-    color: #ef4444;
+    color: #dc2626;
     border: none;
     padding: 8px 0;
 }
 
-/* --- App styles --- */
+/* --- App cards (light with subtle shadow) --- */
 .card {
-    background: linear-gradient(145deg, #111827, #0b1220);
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(59, 130, 246, 0.3);
     padding: 20px;
     border-radius: 16px;
     margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 .app-subtitle {
     text-align: center;
-    color: #94a3b8;
+    color: #1e4a6b;
     margin-bottom: 20px;
 }
 .notification-badge {
@@ -197,24 +232,28 @@ section[data-testid="stSidebar"] label[data-selected="true"] {
     font-size: 12px;
     margin-left: 8px;
 }
+
+/* Chat panel */
 .unified-chat {
-    background: #0b1220;
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(8px);
     border-radius: 20px;
-    border: 1px solid #1f2a36;
+    border: 1px solid rgba(59, 130, 246, 0.3);
     overflow: hidden;
     margin-bottom: 20px;
 }
 .chat-input-container {
     padding: 16px 20px;
-    background: #0e1622;
-    border-top: 1px solid #1f2a36;
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(8px);
+    border-top: 1px solid rgba(59, 130, 246, 0.3);
     margin-top: 0;
 }
 .chat-input-container .stTextInput > div > div > input {
-    background: #1a2330;
-    border: 1px solid #2a3748;
+    background: white;
+    border: 1px solid #3b82f6;
     border-radius: 24px;
-    color: white;
+    color: #0b3b5c;
     padding: 12px 18px;
 }
 .chat-input-container .stButton > button {
@@ -363,7 +402,7 @@ def logout():
     st.rerun()
 
 # ==============================
-# LOGIN PAGE (Enter to submit)
+# LOGIN PAGE
 # ==============================
 def show_login_page():
     st.markdown('<div class="title">AI Loan Risk Platform</div>', unsafe_allow_html=True)
@@ -408,7 +447,7 @@ def show_login_page():
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ==============================
-# MAIN APP (after login)
+# MAIN APP
 # ==============================
 def show_main_app():
     st.sidebar.markdown("## 🧭 Navigation")
@@ -437,11 +476,11 @@ def show_main_app():
     if st.sidebar.button("🚪 Logout", use_container_width=True):
         logout()
 
-    st.markdown("<h1 style='text-align:center;color:#3b82f6'>AI Loan Risk Platform</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align:center;color:#0b3b5c'>AI Loan Risk Platform</h1>", unsafe_allow_html=True)
     st.markdown("<div class='app-subtitle'>Real-time credit risk evaluation powered by machine learning</div>", unsafe_allow_html=True)
 
     # ------------------------------
-    # LOAN ANALYSIS (Aligned results)
+    # LOAN ANALYSIS
     # ------------------------------
     if "Loan Analysis" in page:
         st.markdown('<div class="card">', unsafe_allow_html=True)
@@ -470,7 +509,6 @@ def show_main_app():
         k3.metric("Rate", f"{interest_rate}%")
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # Two buttons side by side
         col_btn1, col_btn2 = st.columns(2)
         with col_btn1:
             if st.button("💰 Calculate Repayment", use_container_width=True):
@@ -516,7 +554,6 @@ def show_main_app():
                     st.error("Model features mismatch. Please check inputs.")
                     st.session_state.risk_result = None
 
-        # Display both results side by side
         col_left_result, col_right_result = st.columns(2)
         with col_left_result:
             if st.session_state.repayment_result:
@@ -551,12 +588,12 @@ def show_main_app():
                 st.markdown('</div>', unsafe_allow_html=True)
 
     # ------------------------------
-    # CONTACT (User chat)
+    # CONTACT
     # ------------------------------
     elif "Contact" in page:
         st.subheader("💬 Customer Support Chat")
         if st.session_state.role == "admin":
-            st.info("👑 Admin view: You can see all conversations in the Admin Dashboard. This page is for user chat simulation.")
+            st.info("👑 Admin view: You can see all conversations in the Admin Dashboard.")
         else:
             user_id = st.session_state.user["id"]
             mark_messages_as_read(user_id)
@@ -612,28 +649,28 @@ def show_main_app():
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <style>
-            body {{ margin: 0; background: #0b1220; font-family: 'Inter', sans-serif; color: #e6edf3; display: flex; height: 100%; }}
+            body {{ margin: 0; background: transparent; font-family: 'Inter', sans-serif; color: #1e293b; display: flex; height: 100%; }}
             .chat-wrapper {{ display: flex; width: 100%; height: 450px; position: relative; }}
             .chat-messages {{ flex: 1; overflow-y: auto; padding: 20px 10px 20px 20px; scrollbar-width: none; -ms-overflow-style: none; }}
             .chat-messages::-webkit-scrollbar {{ display: none; }}
             .chat-messages:hover::-webkit-scrollbar {{ display: block; width: 6px; }}
-            .chat-messages:hover::-webkit-scrollbar-thumb {{ background: #3a4450; border-radius: 10px; }}
-            .timeline {{ width: 40px; background: transparent; display: flex; flex-direction: column; align-items: center; padding: 20px 5px; position: relative; border-left: 1px dashed #2a3748; }}
-            .timeline-dot {{ width: 8px; height: 8px; background: #4b5a6a; border-radius: 50%; margin: 8px 0; cursor: pointer; transition: all 0.2s; position: relative; }}
+            .chat-messages:hover::-webkit-scrollbar-thumb {{ background: #3b82f6; border-radius: 10px; }}
+            .timeline {{ width: 40px; background: transparent; display: flex; flex-direction: column; align-items: center; padding: 20px 5px; position: relative; border-left: 1px dashed #3b82f6; }}
+            .timeline-dot {{ width: 8px; height: 8px; background: #94a3b8; border-radius: 50%; margin: 8px 0; cursor: pointer; transition: all 0.2s; position: relative; }}
             .timeline-dot:hover {{ background: #3b82f6; transform: scale(1.5); }}
             .timeline-dot.active {{ background: #3b82f6; box-shadow: 0 0 8px #3b82f6; }}
-            .timeline-dot::after {{ content: attr(data-date); position: absolute; right: 20px; top: -4px; background: #1e2630; color: #e4e8f0; padding: 2px 8px; border-radius: 12px; font-size: 10px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s; border: 1px solid #2a3748; }}
+            .timeline-dot::after {{ content: attr(data-date); position: absolute; right: 20px; top: -4px; background: white; color: #0b3b5c; padding: 2px 8px; border-radius: 12px; font-size: 10px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s; border: 1px solid #3b82f6; }}
             .timeline-dot:hover::after {{ opacity: 1; }}
             .chat-bubble-row {{ display: flex; margin-bottom: 12px; }}
             .chat-bubble-row.user {{ justify-content: flex-end; }}
             .chat-bubble-row.admin {{ justify-content: flex-start; }}
-            .chat-bubble {{ max-width: 70%; padding: 12px 16px; border-radius: 18px; font-size: 14px; line-height: 1.4; word-wrap: break-word; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }}
-            .user .chat-bubble {{ background: #0084ff; color: white; border-bottom-right-radius: 4px; }}
-            .admin .chat-bubble {{ background: #3a3b3c; color: #e4e6eb; border-bottom-left-radius: 4px; }}
-            .chat-timestamp {{ font-size: 11px; color: #8a8d91; margin-top: 4px; text-align: right; }}
-            .user .chat-timestamp {{ color: #b0d4ff; }}
-            .reply-badge {{ background: #1d4ed8; color: white; border-radius: 16px; padding: 4px 12px; font-size: 12px; margin-bottom: 8px; display: inline-block; }}
-            .read-receipt {{ font-size: 11px; color: #8a8d91; margin-left: 8px; }}
+            .chat-bubble {{ max-width: 70%; padding: 12px 16px; border-radius: 18px; font-size: 14px; line-height: 1.4; word-wrap: break-word; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }}
+            .user .chat-bubble {{ background: #3b82f6; color: white; border-bottom-right-radius: 4px; }}
+            .admin .chat-bubble {{ background: #e2e8f0; color: #0b3b5c; border-bottom-left-radius: 4px; }}
+            .chat-timestamp {{ font-size: 11px; color: #64748b; margin-top: 4px; text-align: right; }}
+            .user .chat-timestamp {{ color: #e0f2fe; }}
+            .reply-badge {{ background: #0b3b5c; color: white; border-radius: 16px; padding: 4px 12px; font-size: 12px; margin-bottom: 8px; display: inline-block; }}
+            .read-receipt {{ font-size: 11px; color: #64748b; margin-left: 8px; }}
             </style>
             </head>
             <body>
@@ -746,7 +783,7 @@ def show_main_app():
                 st.rerun()
 
     # ------------------------------
-    # ADMIN DASHBOARD (Admin only)
+    # ADMIN DASHBOARD
     # ------------------------------
     elif "Admin Dashboard" in page:
         st.subheader("📊 Admin Control Panel")
@@ -796,18 +833,18 @@ def show_main_app():
 
                     chat_html = '''
                     <html><head><meta charset="UTF-8"><style>
-                    body { margin:0; background:#0b1220; font-family:'Inter',sans-serif; }
+                    body { margin:0; background:transparent; font-family:'Inter',sans-serif; }
                     .chat-messages { display:flex; flex-direction:column; padding:20px; }
                     .chat-bubble-row { display:flex; margin-bottom:12px; }
                     .chat-bubble-row.user { justify-content:flex-end; }
                     .chat-bubble-row.admin { justify-content:flex-start; }
-                    .chat-bubble { max-width:70%; padding:12px 16px; border-radius:18px; font-size:14px; line-height:1.4; word-wrap:break-word; box-shadow:0 1px 2px rgba(0,0,0,0.1); }
-                    .user .chat-bubble { background:#0084ff; color:white; border-bottom-right-radius:4px; }
-                    .admin .chat-bubble { background:#3a3b3c; color:#e4e6eb; border-bottom-left-radius:4px; }
-                    .chat-timestamp { font-size:11px; color:#8a8d91; margin-top:4px; text-align:right; }
-                    .user .chat-timestamp { color:#b0d4ff; }
-                    .reply-badge { background:#1d4ed8; color:white; border-radius:16px; padding:4px 12px; font-size:12px; margin-bottom:8px; display:inline-block; }
-                    .read-receipt { font-size:11px; color:#8a8d91; margin-left:8px; }
+                    .chat-bubble { max-width:70%; padding:12px 16px; border-radius:18px; font-size:14px; line-height:1.4; word-wrap:break-word; box-shadow:0 1px 2px rgba(0,0,0,0.05); }
+                    .user .chat-bubble { background:#3b82f6; color:white; border-bottom-right-radius:4px; }
+                    .admin .chat-bubble { background:#e2e8f0; color:#0b3b5c; border-bottom-left-radius:4px; }
+                    .chat-timestamp { font-size:11px; color:#64748b; margin-top:4px; text-align:right; }
+                    .user .chat-timestamp { color:#e0f2fe; }
+                    .reply-badge { background:#0b3b5c; color:white; border-radius:16px; padding:4px 12px; font-size:12px; margin-bottom:8px; display:inline-block; }
+                    .read-receipt { font-size:11px; color:#64748b; margin-left:8px; }
                     </style></head><body><div class="chat-messages">
                     '''
                     for msg in user_msgs:
