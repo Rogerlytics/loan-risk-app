@@ -605,7 +605,7 @@ def show_login_page():
     """, height=0)
 
 # ==============================
-# ABOUT PAGE
+# ABOUT PAGE (Centered, no Tech Stack)
 # ==============================
 def show_about_page():
     st.markdown('<div class="gradient-title">AI Loan Risk Platform</div>', unsafe_allow_html=True)
@@ -613,13 +613,13 @@ def show_about_page():
 
     col1, col2, col3 = st.columns([1, 3, 1])
     with col2:
-        st.markdown('<div class="about-card">', unsafe_allow_html=True)
-        st.markdown('<div class="about-heading">🚀 About This Platform</div>', unsafe_allow_html=True)
-        st.markdown('<p class="about-text">The AI Loan Risk Platform is a state‑of‑the‑art credit assessment tool that leverages machine learning to provide real‑time risk evaluation for vehicle loans. Designed for both financial institutions and individual borrowers, it delivers transparent, data‑driven insights to support smarter lending decisions.</p>', unsafe_allow_html=True)
+        st.markdown('<div class="about-card" style="text-align: center;">', unsafe_allow_html=True)
+        st.markdown('<div class="about-heading" style="text-align: center;">🚀 About This Platform</div>', unsafe_allow_html=True)
+        st.markdown('<p class="about-text" style="text-align: center;">The AI Loan Risk Platform is a state‑of‑the‑art credit assessment tool that leverages machine learning to provide real‑time risk evaluation for vehicle loans. Designed for both financial institutions and individual borrowers, it delivers transparent, data‑driven insights to support smarter lending decisions.</p>', unsafe_allow_html=True)
         
-        st.markdown('<div class="about-heading">✨ Key Features</div>', unsafe_allow_html=True)
+        st.markdown('<div class="about-heading" style="text-align: center;">✨ Key Features</div>', unsafe_allow_html=True)
         st.markdown("""
-        <ul class="feature-list">
+        <ul class="feature-list" style="text-align: center; list-style-position: inside;">
             <li>🔍 <strong>Instant Risk Scoring</strong> – Proprietary ML model evaluates applicant profiles in milliseconds.</li>
             <li>📊 <strong>Repayment Calculator</strong> – View monthly, weekly, and daily instalments instantly.</li>
             <li>💬 <strong>Integrated Support Chat</strong> – Real‑time conversation with customer service.</li>
@@ -629,21 +629,11 @@ def show_about_page():
         </ul>
         """, unsafe_allow_html=True)
 
-        st.markdown('<div class="about-heading">🛠️ Technology Stack</div>', unsafe_allow_html=True)
-        st.markdown("""
-        <ul class="feature-list">
-            <li>🐍 <strong>Backend & AI</strong> – Python, Scikit‑learn, Pandas</li>
-            <li>🎈 <strong>Frontend</strong> – Streamlit (Pure Python)</li>
-            <li>🗄️ <strong>Database & Auth</strong> – Supabase (PostgreSQL)</li>
-            <li>📦 <strong>Deployment</strong> – Streamlit Cloud</li>
-        </ul>
-        """, unsafe_allow_html=True)
+        st.markdown('<div class="about-heading" style="text-align: center;">📬 Contact & Support</div>', unsafe_allow_html=True)
+        st.markdown('<p class="about-text" style="text-align: center;">For inquiries, feedback, or technical support, please use the <strong>Contact</strong> page within the app. Our team typically responds within a few hours during business days.</p>', unsafe_allow_html=True)
 
-        st.markdown('<div class="about-heading">📬 Contact & Support</div>', unsafe_allow_html=True)
-        st.markdown('<p class="about-text">For inquiries, feedback, or technical support, please use the <strong>Contact</strong> page within the app. Our team typically responds within a few hours during business days.</p>', unsafe_allow_html=True)
-
-        st.markdown('<div class="about-heading">📄 Version</div>', unsafe_allow_html=True)
-        st.markdown('<p class="about-text">v2.0.0 – April 2026</p>', unsafe_allow_html=True)
+        st.markdown('<div class="about-heading" style="text-align: center;">📄 Version</div>', unsafe_allow_html=True)
+        st.markdown('<p class="about-text" style="text-align: center;">v2.0.0 – April 2026</p>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ==============================
