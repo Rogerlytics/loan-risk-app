@@ -105,12 +105,18 @@ section[data-testid="stSidebar"] .stButton button:hover {
 }
 
 /* ---------- LOGIN PAGE ---------- */
+/* 3D Gradient Blue Title */
 .title {
     font-size: 42px;
     font-weight: 700;
-    color: #F0F4F8;
     text-align: center;
     margin-bottom: 8px;
+    background: linear-gradient(135deg, #3b82f6, #60a5fa, #1e3a8a, #2563eb);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5), 0 0 20px rgba(37, 99, 235, 0.5);
+    letter-spacing: 1px;
 }
 .subtitle {
     color: #A0AEC0;
