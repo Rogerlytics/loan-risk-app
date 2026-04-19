@@ -257,6 +257,8 @@ if "draft_message" not in st.session_state:
     st.session_state.draft_message = ""
 if "risk_result" not in st.session_state:
     st.session_state.risk_result = None
+if "repayment_result" not in st.session_state:
+    st.session_state.repayment_result = None
 
 # ==============================
 # 6. MODEL
@@ -439,7 +441,7 @@ def show_main_app():
     st.markdown("<div class='app-subtitle'>Real-time credit risk evaluation powered by machine learning</div>", unsafe_allow_html=True)
 
     # ------------------------------
-    # LOAN ANALYSIS (Aligned risk result)
+    # LOAN ANALYSIS (Aligned results)
     # ------------------------------
     if "Loan Analysis" in page:
         st.markdown('<div class="card">', unsafe_allow_html=True)
@@ -475,14 +477,14 @@ def show_main_app():
                 if interest_rate > 0 and loan_term > 0 and loan_amount > 0:
                     r = interest_rate / 100 / 12
                     m = loan_amount * r * (1 + r) ** loan_term / ((1 + r) ** loan_term - 1)
-                    st.markdown('<div class="card">', unsafe_allow_html=True)
-                    st.subheader("💳 Repayment Breakdown")
-                    st.write(f"Monthly: KES {m:,.2f}")
-                    st.write(f"Weekly: KES {m/4.33:,.2f}")
-                    st.write(f"Daily: KES {m/30:,.2f}")
-                    st.markdown('</div>', unsafe_allow_html=True)
+                    st.session_state.repayment_result = {
+                        "monthly": m,
+                        "weekly": m/4.33,
+                        "daily": m/30
+                    }
                 else:
                     st.warning("Please ensure loan amount, interest rate, and loan term are valid.")
+                    st.session_state.repayment_result = None
 
         with col_btn2:
             if st.button("🤖 Check Loan Risk", use_container_width=True):
@@ -514,8 +516,18 @@ def show_main_app():
                     st.error("Model features mismatch. Please check inputs.")
                     st.session_state.risk_result = None
 
-        # Risk result aligned under the right button
-        col_left_spacer, col_right_result = st.columns(2)
+        # Display both results side by side
+        col_left_result, col_right_result = st.columns(2)
+        with col_left_result:
+            if st.session_state.repayment_result:
+                res = st.session_state.repayment_result
+                st.markdown('<div class="card">', unsafe_allow_html=True)
+                st.subheader("💳 Repayment Breakdown")
+                st.write(f"Monthly: KES {res['monthly']:,.2f}")
+                st.write(f"Weekly: KES {res['weekly']:,.2f}")
+                st.write(f"Daily: KES {res['daily']:,.2f}")
+                st.markdown('</div>', unsafe_allow_html=True)
+
         with col_right_result:
             if st.session_state.risk_result:
                 res = st.session_state.risk_result
