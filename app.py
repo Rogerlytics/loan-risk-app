@@ -20,7 +20,7 @@ import base64
 st.set_page_config(page_title="AI Loan Risk System", layout="wide")
 
 # ==============================
-# 3. CUSTOM CSS – DARK BLUE THEME WITH VISIBLE SIDEBAR BUTTONS
+# 3. CUSTOM CSS – DARK BLUE THEME WITH 3D GRADIENT TITLE
 # ==============================
 st.markdown("""
 <style>
@@ -46,6 +46,20 @@ div[data-testid="stVerticalBlock"] > div,
 div[data-testid="stHorizontalBlock"] > div,
 section[data-testid="stSidebar"] {
     background-color: #0B1B2B !important;
+}
+
+/* ---------- 3D GRADIENT TITLE (used on all pages) ---------- */
+.gradient-title {
+    font-size: 42px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #3b82f6, #60a5fa, #1e3a8a, #2563eb);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5), 0 0 20px rgba(37, 99, 235, 0.5);
+    letter-spacing: 1px;
 }
 
 /* ---------- SIDEBAR (Left Column) ---------- */
@@ -105,7 +119,6 @@ section[data-testid="stSidebar"] .stButton button:hover {
 }
 
 /* ---------- LOGIN PAGE ---------- */
-/* 3D Gradient Blue Title */
 .title {
     font-size: 42px;
     font-weight: 700;
@@ -256,6 +269,34 @@ section[data-testid="stSidebar"] .stButton button:hover {
     padding: 2px 8px;
     font-size: 12px;
     margin-left: 8px;
+}
+
+/* About page specific */
+.about-card {
+    background: #1A2E44;
+    border: 1px solid #2563eb;
+    padding: 30px;
+    border-radius: 24px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+.about-heading {
+    color: #60A5FA;
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 16px;
+}
+.about-text {
+    color: #E2E8F0;
+    font-size: 16px;
+    line-height: 1.6;
+}
+.feature-list {
+    list-style-type: none;
+    padding-left: 0;
+}
+.feature-list li {
+    margin-bottom: 12px;
+    color: #E2E8F0;
 }
 
 /* ---------- CHAT PANEL ---------- */
@@ -564,15 +605,57 @@ def show_login_page():
     """, height=0)
 
 # ==============================
+# ABOUT PAGE
+# ==============================
+def show_about_page():
+    st.markdown('<div class="gradient-title">AI Loan Risk Platform</div>', unsafe_allow_html=True)
+    st.markdown('<div class="app-subtitle">Intelligent credit evaluation for smarter lending</div>', unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns([1, 3, 1])
+    with col2:
+        st.markdown('<div class="about-card">', unsafe_allow_html=True)
+        st.markdown('<div class="about-heading">🚀 About This Platform</div>', unsafe_allow_html=True)
+        st.markdown('<p class="about-text">The AI Loan Risk Platform is a state‑of‑the‑art credit assessment tool that leverages machine learning to provide real‑time risk evaluation for vehicle loans. Designed for both financial institutions and individual borrowers, it delivers transparent, data‑driven insights to support smarter lending decisions.</p>', unsafe_allow_html=True)
+        
+        st.markdown('<div class="about-heading">✨ Key Features</div>', unsafe_allow_html=True)
+        st.markdown("""
+        <ul class="feature-list">
+            <li>🔍 <strong>Instant Risk Scoring</strong> – Proprietary ML model evaluates applicant profiles in milliseconds.</li>
+            <li>📊 <strong>Repayment Calculator</strong> – View monthly, weekly, and daily instalments instantly.</li>
+            <li>💬 <strong>Integrated Support Chat</strong> – Real‑time conversation with customer service.</li>
+            <li>📈 <strong>Admin Dashboard</strong> – Comprehensive overview of all conversations and system metrics.</li>
+            <li>🔐 <strong>Secure Authentication</strong> – Role‑based access with "Remember Me" convenience.</li>
+            <li>🌙 <strong>Premium Dark Interface</strong> – Optimised for long‑duration use with minimal eye strain.</li>
+        </ul>
+        """, unsafe_allow_html=True)
+
+        st.markdown('<div class="about-heading">🛠️ Technology Stack</div>', unsafe_allow_html=True)
+        st.markdown("""
+        <ul class="feature-list">
+            <li>🐍 <strong>Backend & AI</strong> – Python, Scikit‑learn, Pandas</li>
+            <li>🎈 <strong>Frontend</strong> – Streamlit (Pure Python)</li>
+            <li>🗄️ <strong>Database & Auth</strong> – Supabase (PostgreSQL)</li>
+            <li>📦 <strong>Deployment</strong> – Streamlit Cloud</li>
+        </ul>
+        """, unsafe_allow_html=True)
+
+        st.markdown('<div class="about-heading">📬 Contact & Support</div>', unsafe_allow_html=True)
+        st.markdown('<p class="about-text">For inquiries, feedback, or technical support, please use the <strong>Contact</strong> page within the app. Our team typically responds within a few hours during business days.</p>', unsafe_allow_html=True)
+
+        st.markdown('<div class="about-heading">📄 Version</div>', unsafe_allow_html=True)
+        st.markdown('<p class="about-text">v2.0.0 – April 2026</p>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+# ==============================
 # MAIN APP
 # ==============================
 def show_main_app():
     st.sidebar.markdown("## 🧭 Navigation")
     
     if st.session_state.role == "user":
-        menu = ["📊 Loan Analysis", "💬 Contact"]
+        menu = ["📊 Loan Analysis", "💬 Contact", "ℹ️ About"]
     else:
-        menu = ["📊 Loan Analysis", "💬 Contact", "⚙️ Admin Dashboard"]
+        menu = ["📊 Loan Analysis", "💬 Contact", "⚙️ Admin Dashboard", "ℹ️ About"]
     
     page = st.sidebar.radio("", menu)
 
@@ -593,8 +676,14 @@ def show_main_app():
     if st.sidebar.button("🚪 Logout", use_container_width=True):
         logout()
 
-    st.markdown("<h1 style='text-align:center;color:#F0F4F8'>AI Loan Risk Platform</h1>", unsafe_allow_html=True)
-    st.markdown("<div class='app-subtitle'>Real-time credit risk evaluation powered by machine learning</div>", unsafe_allow_html=True)
+    # ========== ABOUT PAGE (rendered before header to avoid duplicate title) ==========
+    if "About" in page:
+        show_about_page()
+        return
+
+    # ========== REGULAR PAGES ==========
+    st.markdown('<div class="gradient-title">AI Loan Risk Platform</div>', unsafe_allow_html=True)
+    st.markdown('<div class="app-subtitle">Real-time credit risk evaluation powered by machine learning</div>', unsafe_allow_html=True)
 
     # ------------------------------
     # LOAN ANALYSIS
