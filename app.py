@@ -19,7 +19,7 @@ import time
 st.set_page_config(page_title="AI Loan Risk System", layout="wide")
 
 # ==============================
-# 3. CUSTOM CSS – FULL DARK BLUE THEME
+# 3. CUSTOM CSS – DARK BLUE THEME WITH VISIBLE SIDEBAR BUTTONS
 # ==============================
 st.markdown("""
 <style>
@@ -55,18 +55,22 @@ section[data-testid="stSidebar"] {
 section[data-testid="stSidebar"] * {
     color: #F0F4F8 !important;
 }
-section[data-testid="stSidebar"] .stMarkdown,
-section[data-testid="stSidebar"] .stRadio label,
-section[data-testid="stSidebar"] .stButton button {
+
+/* Sidebar title "Navigation" */
+section[data-testid="stSidebar"] .stMarkdown h2 {
     color: #F0F4F8 !important;
+    background: #1A2E44;
+    padding: 8px 12px;
+    border-radius: 8px;
+    text-align: center;
 }
 
-/* Sidebar radio buttons */
+/* Sidebar radio buttons – visible background */
 section[data-testid="stSidebar"] .stRadio > div {
     gap: 10px;
 }
 section[data-testid="stSidebar"] label {
-    padding: 10px 14px;
+    padding: 12px 16px;
     border-radius: 10px;
     transition: all 0.2s ease;
     cursor: pointer;
@@ -74,20 +78,26 @@ section[data-testid="stSidebar"] label {
     width: 100% !important;
     box-sizing: border-box;
     color: #F0F4F8 !important;
-    background: transparent;
+    background: #1A2E44;                     /* Visible background */
+    border: 1px solid #2563eb;
+    font-weight: 500;
 }
 section[data-testid="stSidebar"] label:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: #2563eb;                     /* Brighter on hover */
+    color: white !important;
 }
 section[data-testid="stSidebar"] label[data-selected="true"] {
-    background: #2563eb;
+    background: #2563eb;                     /* Selected state */
     color: white !important;
+    border-color: #3b82f6;
+    box-shadow: 0 0 8px rgba(37, 99, 235, 0.5);
 }
 
 /* Sidebar user info and logout */
 section[data-testid="stSidebar"] .stButton button {
     background: #2563eb;
     border: none;
+    color: white;
 }
 section[data-testid="stSidebar"] .stButton button:hover {
     background: #3b82f6;
