@@ -1,83 +1,55 @@
-#  AI Loan Risk Assessment System
+# 🚀 AI Loan Risk Platform
 
-##  Project Overview
-This project is a Machine Learning-powered web application that predicts the risk of loan default based on borrower and vehicle data.
+**Real‑time credit risk evaluation powered by machine learning**
 
-It helps simulate real-world financial decision-making by assessing whether a loan applicant is high or low risk.
-
----
-
-##  Features
-
--  AI-powered loan risk prediction
--  Risk score (probability of default)
--  Explainable AI (why the decision was made)
--  Loan repayment calculator
--  Clean and interactive UI (Streamlit)
+[![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=Streamlit&logoColor=white)](https://streamlit.io/)
+[![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
+[![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![scikit-learn](https://img.shields.io/badge/scikit--learn-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
 
 ---
 
-##  Machine Learning
+## 📖 Overview
 
-The model was trained using features such as:
-- Borrower demographics (age, income)
-- Loan details (amount, interest rate, term)
-- Vehicle data (value, age, mileage)
-- Financial history (previous loans, defaults)
+The **AI Loan Risk Platform** is a state‑of‑the‑art credit assessment tool that leverages machine learning to provide real‑time risk evaluation for vehicle loans. Designed for both financial institutions and individual borrowers, it delivers transparent, data‑driven insights to support smarter lending decisions.
 
-### Engineered Features:
-- Loan-to-Value Ratio
-- Income-to-Loan Ratio
+With a premium dark interface, role‑based access (user / administrator), integrated support chat, and a powerful admin dashboard, the platform offers a seamless experience for all stakeholders.
 
 ---
 
-##  Risk Interpretation
+## ✨ Key Features
 
-The system provides:
-- Risk classification (High / Low)
-- Risk probability (%)
-- Explanation of contributing factors
-
----
-
-##  Tech Stack
-
-- Python
-- Pandas
-- Scikit-learn
-- Streamlit
-
----
-
-##  Live Demo
-
-👉 [Click here to use the app]([loan-risk-app-frgbfmd4vf3slainz4kvmv](https://loan-risk-app-pfjcxqbqzrdqkz9q7kx7ux.streamlit.app/)
-
----
-
-##  Project Structure
+- **🔍 Instant Risk Scoring** – Proprietary ML model evaluates applicant profiles in milliseconds.
+- **📊 Repayment Calculator** – View monthly, weekly, and daily instalments instantly.
+- **💬 Integrated Support Chat** – Real‑time conversation with customer service (Facebook‑style bubbles, timeline navigation).
+- **📈 Admin Dashboard** – Comprehensive overview of all conversations, reply to users, and monitor system metrics.
+- **🔐 Secure Authentication** – Role‑based access (User / Administrator) with "Remember Me" convenience and auto‑login.
+- **🌙 Premium Dark Interface** – Optimised for long‑duration use with minimal eye strain.
+- **⚡ Live Updates** – Auto‑refresh for chat and dashboard, plus real‑time risk assessment.
+- **📱 Fully Responsive** – Works flawlessly on desktop, tablet, and mobile devices.
 
 
+
+## 📸 Screenshots
+
+> *Add actual screenshots of your app here*
+
+| Login Page | Loan Analysis | Customer Chat | Admin Dashboard |
+|------------|---------------|---------------|-----------------|
+| ![Login](screenshots/login.png) | ![Loan](screenshots/loan.png) | ![Chat](screenshots/chat.png) | ![Admin](screenshots/admin.png) |
 
 ---
 
-##  Key Insights
+## 🚦 Getting Started
 
-- High loan-to-value ratio increases risk
-- Low income relative to loan increases default probability
-- Previous defaults strongly impact risk classification
+### Prerequisites
 
----
+- Python 3.9+
+- [Supabase](https://supabase.com/) account (free tier works)
+- Streamlit Cloud account (for deployment)
 
-##  Future Improvements
+### 1. Clone the Repository
 
-- Add recommendation engine (how to reduce risk)
-- Add visual analytics (charts)
-- Improve model performance with more data
-
----
-
-##  Author
-
-Mr. Rogers  
-Data Analyst | Machine Learning Enthusiast
+```bash
+git clone https://github.com/yourusername/ai-loan-risk-platform.git
+cd ai-loan-risk-platform
