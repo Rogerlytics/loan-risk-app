@@ -32,6 +32,7 @@ With a premium dark interface, role‑based access (user / administrator), integ
 
 ## 📸 Screenshots
 
+Login Page
 Loan Analysis
 ![image alt](https://github.com/Rogerlytics/loan-risk-app/blob/b9fdbbc5d32929cd6e9a3162f11cc6887023853f/screenshots/Loan-Analysis.PNG))
 Customer Chat
