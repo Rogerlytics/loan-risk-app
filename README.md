@@ -38,6 +38,8 @@ Loan Analysis
 ![image alt](https://github.com/Rogerlytics/loan-risk-app/blob/b9fdbbc5d32929cd6e9a3162f11cc6887023853f/screenshots/Loan-Analysis.PNG)
 Customer Chat
 ![image alt](https://github.com/Rogerlytics/loan-risk-app/blob/9988eb8abdd7c1ea2cefa60555805820c3b5e11e/screenshots/Contact_Us.PNG)
+Admin Dashboard
+
 > *Add actual screenshots of your app here*
 
 | Login Page | Loan Analysis | Customer Chat | Admin Dashboard |
