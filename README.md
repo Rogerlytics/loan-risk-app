@@ -58,6 +58,33 @@ Admin Dashboard
 - [Supabase](https://supabase.com/) account (free tier works)
 - Streamlit Cloud account (for deployment)
 
+---
+
+## 🧩 System Architecture
+
+```mermaid
+flowchart TD
+
+    A[👤 User / Admin] --> B[🌐 Streamlit Frontend]
+
+    B --> C[🧠 ML Risk Engine]
+    C --> D[📊 Risk Score + Factors]
+
+    B --> E[💬 Chat System]
+    E --> F[(🗄️ Supabase Database)]
+
+    B --> G[🔐 Authentication Service]
+    G --> F
+
+    B --> H[📈 Admin Dashboard]
+    H --> F
+
+    C --> I[(📦 Trained Model - scikit-learn)]
+
+    F --> J[(PostgreSQL Storage)]
+
+    D --> B
+
 ### 1. Clone the Repository
 
 ```bash
