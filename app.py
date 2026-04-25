@@ -594,37 +594,90 @@ def show_login_page() -> None:
                     padding:32px;border-radius:20px;border:1px solid #1f2a36;">
         """, unsafe_allow_html=True)
 
-        st.markdown('<div class="section">Welcome back</div>', unsafe_allow_html=True)
-        st.markdown(
-            '<div class="small">Sign in to access your account</div>',
-            unsafe_allow_html=True,
-        )
+        tab_login, tab_signup = st.tabs(["Sign In", "Sign Up"])
 
-        email    = st.text_input("Email", placeholder="you@example.com", key="login_email")
-        password = st.text_input(
-            "Password", type="password", placeholder="••••••••", key="login_password"
-        )
+        # ── LOGIN TAB ──────────────────────────────────────────
+        with tab_login:
+            st.markdown('<div class="section">Welcome back</div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="small">Sign in to access your account</div>',
+                unsafe_allow_html=True,
+            )
 
-        if st.button("Sign In", use_container_width=True, key="signin_btn"):
-            if not email or not password:
-                st.error("Please enter both email and password.")
-            else:
-                with st.spinner("Signing in..."):
-                    user = authenticate(email, password)
-                if user:
-                    st.session_state.authenticated = True
-                    st.session_state.user = user
-                    # ✅ Role comes from the database — never from UI input
-                    st.session_state.role = user["role"]
-                    st.rerun()
+            email    = st.text_input("Email", placeholder="you@example.com", key="login_email")
+            password = st.text_input(
+                "Password", type="password", placeholder="••••••••", key="login_password"
+            )
+
+            if st.button("Sign In", use_container_width=True, key="signin_btn"):
+                if not email or not password:
+                    st.error("Please enter both email and password.")
                 else:
-                    st.error("Invalid email or password.")
+                    with st.spinner("Signing in..."):
+                        user = authenticate(email, password)
+                    if user:
+                        st.session_state.authenticated = True
+                        st.session_state.user = user
+                        # ✅ Role comes from the database — never from UI input
+                        st.session_state.role = user["role"]
+                        st.rerun()
+                    else:
+                        st.error("Invalid email or password.")
 
-        st.markdown(
-            '<p class="login-footer">Don\'t have an account? '
-            '<a href="#">Sign up</a></p>',
-            unsafe_allow_html=True,
-        )
+        # ── SIGNUP TAB ─────────────────────────────────────────
+        with tab_signup:
+            st.markdown('<div class="section">Create account</div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="small">Sign up to get started</div>',
+                unsafe_allow_html=True,
+            )
+
+            new_username = st.text_input("Full Name", placeholder="John Doe", key="signup_username")
+            new_email    = st.text_input("Email", placeholder="you@example.com", key="signup_email")
+            new_password = st.text_input(
+                "Password", type="password", placeholder="Min 6 characters", key="signup_password"
+            )
+            confirm_password = st.text_input(
+                "Confirm Password", type="password", placeholder="Repeat password", key="signup_confirm"
+            )
+
+            if st.button("Create Account", use_container_width=True, key="signup_btn"):
+                # Validation
+                if not new_username or not new_email or not new_password or not confirm_password:
+                    st.error("Please fill in all fields.")
+                elif new_password != confirm_password:
+                    st.error("Passwords do not match.")
+                elif len(new_password) < 6:
+                    st.error("Password must be at least 6 characters.")
+                else:
+                    try:
+                        with st.spinner("Creating your account..."):
+                            # Step 1 — Create auth user
+                            res = supabase.auth.sign_up({
+                                "email":    new_email.lower().strip(),
+                                "password": new_password,
+                                "options":  {"data": {"username": new_username.strip()}}
+                            })
+
+                        if res.user:
+                            # Step 2 — Insert into public.users (role defaults to 'user')
+                            supabase.table("users").upsert({
+                                "id":       str(res.user.id),
+                                "username": new_username.strip(),
+                                "email":    new_email.lower().strip(),
+                                "role":     "user",
+                            }).execute()
+                            st.success("✅ Account created! You can now sign in.")
+                        else:
+                            st.error("Signup failed. This email may already be registered.")
+                    except Exception as exc:
+                        logger.error("Signup error: %s", exc)
+                        err_msg = str(exc).lower()
+                        if "already registered" in err_msg or "already exists" in err_msg:
+                            st.error("An account with this email already exists.")
+                        else:
+                            st.error("Signup failed. Please try again.")
+
         st.markdown("</div>", unsafe_allow_html=True)
 
 # ==============================
