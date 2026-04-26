@@ -254,6 +254,7 @@ _SESSION_DEFAULTS: Dict[str, Any] = {
     "selected_user_id": None,
     "auto_refresh": False,
     "draft_message": "",
+    "password_reset_mode": False,
 }
 
 for _key, _default in _SESSION_DEFAULTS.items():
@@ -1068,9 +1069,89 @@ def show_main_app() -> None:
         show_admin_dashboard()
 
 # ==============================
-# 16. ENTRY POINT
+# 16. PASSWORD RESET PAGE
 # ==============================
-if not st.session_state.authenticated:
+def show_password_reset_page() -> None:
+    st.markdown('<div class="title">AI Loan Risk Platform</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="subtitle">Reset your password</div>',
+        unsafe_allow_html=True,
+    )
+
+    _, col, _ = st.columns([1, 2, 1])
+    with col:
+        st.markdown("""
+        <div style="background:linear-gradient(145deg,#111827,#0b1220);
+                    padding:32px;border-radius:20px;border:1px solid #1f2a36;">
+        """, unsafe_allow_html=True)
+
+        st.markdown('<div class="section">Set New Password</div>', unsafe_allow_html=True)
+
+        new_password = st.text_input(
+            "New Password", type="password", placeholder="Min 6 characters", key="reset_pw"
+        )
+        confirm_password = st.text_input(
+            "Confirm Password", type="password", placeholder="Repeat password", key="reset_confirm"
+        )
+
+        if st.button("Update Password", use_container_width=True, key="reset_btn"):
+            if not new_password or not confirm_password:
+                st.error("Please fill in both fields.")
+            elif new_password != confirm_password:
+                st.error("Passwords do not match.")
+            elif len(new_password) < 6:
+                st.error("Password must be at least 6 characters.")
+            else:
+                try:
+                    supabase = get_supabase_client()
+                    supabase.auth.update_user({"password": new_password})
+                    st.success("✅ Password updated! You can now sign in.")
+                    st.session_state.password_reset_mode = False
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Failed to update password: {str(e)}")
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+
+# ==============================
+# 17. ENTRY POINT
+# ==============================
+
+# Inject JS to capture access_token from URL fragment and store in query params
+components.html("""
+<script>
+const hash = window.location.hash;
+if (hash && hash.includes('type=recovery')) {
+    const params = new URLSearchParams(hash.substring(1));
+    const access_token = params.get('access_token');
+    if (access_token) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('recovery_token', access_token);
+        url.hash = '';
+        window.location.replace(url.toString());
+    }
+}
+</script>
+""", height=0)
+
+# Check for recovery token in query params
+query_params = st.query_params
+recovery_token = query_params.get("recovery_token", None)
+
+if recovery_token and not st.session_state.authenticated:
+    try:
+        supabase = get_supabase_client()
+        # Exchange token for session
+        res = supabase.auth.set_session(recovery_token, recovery_token)
+        if res and res.session:
+            st.session_state.password_reset_mode = True
+    except Exception:
+        st.session_state.password_reset_mode = False
+
+if st.session_state.get("password_reset_mode"):
+    show_password_reset_page()
+elif not st.session_state.authenticated:
     show_login_page()
 else:
     show_main_app()
