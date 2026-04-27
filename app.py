@@ -290,10 +290,13 @@ def authenticate(email: str, password: str) -> Optional[Dict[str, Any]]:
             "password": password,
         })
 
-        if not auth_res.user:
+        if not auth_res.user or not auth_res.session:
             return None
 
-        # Step 2 — Fetch role + profile from public.users
+        # Step 2 — Fetch role + profile using the access token explicitly
+        access_token = auth_res.session.access_token
+        supabase.postgrest.auth(access_token)
+
         profile_res = (
             supabase.table("users")
             .select("id, username, email, role")
