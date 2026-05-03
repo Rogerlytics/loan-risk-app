@@ -325,15 +325,22 @@ model = load_model()
 def check_password(p: str) -> bool:
     return bcrypt.checkpw(p.encode(), ADMIN_PASSWORD_HASH.encode())
 
-def login_user(email: str, password: str) -> Optional[Dict[str, Any]]:
+def login_user(email: str, password: str):
+    """Authenticate user via Supabase Auth."""
     try:
-        res = supabase.table("users").select("*").eq("email", email).execute()
-        if res.data:
-            u = res.data[0]
-            if bcrypt.checkpw(password.encode(), u["password"].encode()):
-                return u
+        res = supabase.auth.sign_in_with_password({
+            "email": email,
+            "password": password
+        })
+
+        if res.user:
+            return {
+                "id": res.user.id,
+                "email": res.user.email
+            }
     except Exception as e:
         st.error(f"Login error: {e}")
+
     return None
 
 def login_admin(username: str, password: str) -> bool:
@@ -385,7 +392,7 @@ def relative_time(ts: str) -> str:
     except:
         return ts
 
-def get_unread_reply_count(user_id: int) -> int:
+def get_unread_reply_count(user_id: str) -> int:
     try:
         msgs = supabase.table("messages").select("id, reply, read_by_customer").eq("user_id", user_id).execute().data
         unseen = 0
@@ -396,7 +403,7 @@ def get_unread_reply_count(user_id: int) -> int:
     except:
         return 0
 
-def mark_messages_as_read(user_id: int):
+def mark_messages_as_read(user_id: str):
     try:
         supabase.table("messages").update({"read_by_customer": True})\
             .eq("user_id", user_id).eq("read_by_customer", False).execute()
@@ -436,7 +443,11 @@ def show_login_page():
                     user_data = login_user(email, password)
                     if user_data:
                         st.session_state.authenticated = True
-                        st.session_state.user = user_data
+                        st.session_state.user = {
+                            "id": user_data["id"],
+                            "email": user_data["email"],
+                            "username": email
+                        }
                         st.session_state.role = "user"
                         st.rerun()
                     else:
@@ -450,7 +461,10 @@ def show_login_page():
                 if submitted:
                     if login_admin(username, password):
                         st.session_state.authenticated = True
-                        st.session_state.user = {"username": username, "role": "admin"}
+                        st.session_state.user = {
+                            "username": username,
+                            "role": "admin"
+                        }
                         st.session_state.role = "admin"
                         st.rerun()
                     else:
@@ -474,13 +488,14 @@ def show_main_app():
 
     if st.session_state.role == "user":
         unread = get_unread_reply_count(st.session_state.user["id"])
-        name = st.session_state.user["username"]
+        display_name = st.session_state.user["email"]
         if unread > 0:
-            st.sidebar.markdown(f"👤 **{name}** 🔴 {unread}")
+            st.sidebar.markdown(f"👤 **{display_name}** 🔴 {unread}")
         else:
-            st.sidebar.markdown(f"👤 **{name}**")
+            st.sidebar.markdown(f"👤 **{display_name}**")
     else:
-        st.sidebar.markdown(f"👑 **Admin: {st.session_state.user['username']}**")
+        safe_name = st.session_state.user.get("username", st.session_state.user.get("email"))
+        st.sidebar.markdown(f"👑 **Admin: {safe_name}**")
 
     st.sidebar.markdown("---")
 
@@ -607,6 +622,7 @@ def show_main_app():
             st.info("👑 Admin view: You can see all conversations in the Admin Dashboard.")
         else:
             user_id = st.session_state.user["id"]
+            user_email = st.session_state.user.get("email", "")
             mark_messages_as_read(user_id)
 
             col1, col2 = st.columns([1, 4])
@@ -770,8 +786,8 @@ def show_main_app():
                     try:
                         supabase.table("messages").insert({
                             "user_id": user_id,
-                            "name": st.session_state.user["username"],
-                            "email": st.session_state.user["email"],
+                            "name": user_email,
+                            "email": user_email,
                             "message": msg,
                             "status": "sent",
                             "timestamp": datetime.now().isoformat(),
