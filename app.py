@@ -1,4 +1,3 @@
-
 import pickle
 import os
 import streamlit as st
@@ -110,24 +109,16 @@ else:
             interest_rate = st.number_input("Interest Rate (%)", 0.1, 100.0, 12.5)
             loan_term = st.selectbox("Loan Term (months)", [12, 24, 36, 48, 60])
 
+            check_risk = st.button("🔍 Check Loan Risk")
+
         car_value = st.number_input("Car Value", 1)
         car_age = st.slider("Car Age", 0, 20, 5)
 
         emp_map = {"salaried": 0, "self-employed": 1, "informal": 2}
 
-        # Repayment Calculation
-        if st.button("Calculate Repayment"):
-            monthly_rate = interest_rate / 100 / 12
-            monthly_payment = (loan_amount * monthly_rate) / (1 - (1 + monthly_rate) ** -loan_term)
-            st.subheader("Repayment Breakdown")
-            st.write(f"Monthly: {monthly_payment:.2f}")
-            st.write(f"Weekly: {monthly_payment / 4:.2f}")
-            st.write(f"Daily: {monthly_payment / 30:.2f}")
-
-        if st.button("Check Loan Risk"):
-
+        if check_risk:
             if loan_amount == 0 or car_value == 0:
-                st.error("Invalid values")
+                st.error("❌ Invalid values")
                 st.stop()
 
             df = pd.DataFrame({
@@ -149,15 +140,29 @@ else:
                 pred = model.predict(X)[0]
                 prob = model.predict_proba(X)[0][1] * 100
 
-                st.subheader(f"Risk Score: {prob:.2f}%")
+                colA, colB = st.columns(2)
 
-                if pred == 1:
-                    st.error("High Risk")
-                else:
-                    st.success("Low Risk")
+                with colA:
+                    st.subheader("💳 Repayment Breakdown")
+                    monthly_rate = interest_rate / 100 / 12
+                    monthly_payment = (loan_amount * monthly_rate) / (1 - (1 + monthly_rate) ** -loan_term)
+
+                    st.write(f"Monthly: KES {monthly_payment:,.2f}")
+                    st.write(f"Weekly: KES {monthly_payment / 4:,.2f}")
+                    st.write(f"Daily: KES {monthly_payment / 30:,.2f}")
+
+                with colB:
+                    st.subheader("🧠 AI Risk Decision")
+                    st.write(f"Risk Score: {prob:.2f}%")
+                    st.progress(min(int(prob), 100))
+
+                    if pred == 1:
+                        st.error("❌ High Risk")
+                    else:
+                        st.success("✅ Low Risk")
 
             except Exception as e:
-                st.error(f"Error: {str(e)}")
+                st.error(f"❌ Error: {str(e)}")
 
     elif page == "Contact":
         st.title("Contact Support")
@@ -172,4 +177,3 @@ else:
     elif page == "Admin":
         st.title("Admin Dashboard")
         st.write("Admin features coming soon...")
-
