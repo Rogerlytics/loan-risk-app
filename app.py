@@ -5,7 +5,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 import pickle
 import pandas as pd
-import bcrypt
+import bcrypt  # no longer used for admin; kept for compatibility if needed elsewhere
 import plotly.express as px
 from datetime import datetime, timedelta
 from supabase import create_client, Client
@@ -23,19 +23,235 @@ st.set_page_config(page_title="AI Loan Risk System", layout="wide")
 # ==============================
 st.markdown("""
 <style>
-/* … (same CSS as 08.py) … */
+/* ---------- GLOBAL RESET ---------- */
+html, body, [class*="css"] {
+    font-family: 'Inter', sans-serif;
+}
+
+/* Force dark blue on the entire app */
+.stApp {
+    background-color: #0B1B2B;
+}
+
+/* Main content container */
+.main .block-container {
+    background-color: #0B1B2B;
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+}
+
+/* Override any white containers */
+div[data-testid="stVerticalBlock"] > div,
+div[data-testid="stHorizontalBlock"] > div,
+section[data-testid="stSidebar"] {
+    background-color: #0B1B2B !important;
+}
+
+/* ---------- SIDEBAR (Left Column) ---------- */
+section[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #0A192F, #102A43) !important;
+    border-right: 1px solid #2563eb;
+}
+section[data-testid="stSidebar"] * {
+    color: #F0F4F8 !important;
+}
+section[data-testid="stSidebar"] .stMarkdown,
+section[data-testid="stSidebar"] .stRadio label,
+section[data-testid="stSidebar"] .stButton button {
+    color: #F0F4F8 !important;
+}
+
+/* Sidebar radio buttons */
+section[data-testid="stSidebar"] .stRadio > div {
+    gap: 10px;
+}
+section[data-testid="stSidebar"] label {
+    padding: 10px 14px;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    white-space: nowrap !important;
+    width: 100% !important;
+    box-sizing: border-box;
+    color: #F0F4F8 !important;
+    background: transparent;
+}
+section[data-testid="stSidebar"] label:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+section[data-testid="stSidebar"] label[data-selected="true"] {
+    background: #2563eb;
+    color: white !important;
+}
+
+/* Sidebar user info and logout */
+section[data-testid="stSidebar"] .stButton button {
+    background: #2563eb;
+    border: none;
+}
+section[data-testid="stSidebar"] .stButton button:hover {
+    background: #3b82f6;
+}
+
+/* ---------- LOGIN PAGE ---------- */
+.title {
+    font-size: 42px;
+    font-weight: 700;
+    color: #F0F4F8;
+    text-align: center;
+    margin-bottom: 8px;
+}
+.subtitle {
+    color: #A0AEC0;
+    text-align: center;
+    margin-bottom: 40px;
+    font-size: 16px;
+}
+.section {
+    font-size: 22px;
+    font-weight: 600;
+    text-align: center;
+    color: #F0F4F8;
+    margin-bottom: 8px;
+}
+.small {
+    text-align: center;
+    color: #A0AEC0;
+    margin-bottom: 24px;
+    font-size: 14px;
+}
+
+/* Login card */
+.login-card {
+    background: rgba(26, 46, 68, 0.8);
+    backdrop-filter: blur(12px);
+    border: 1px solid #2563eb;
+    border-radius: 24px;
+    padding: 40px 32px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* Input fields */
+.stTextInput > div > div > input {
+    background: #1A2E44;
+    border: 1px solid #2563eb;
+    border-radius: 12px;
+    color: white;
+    padding: 12px 16px;
+    width: 100% !important;
+    box-sizing: border-box;
+}
+.stTextInput > div > div > input::placeholder {
+    color: #94A3B8;
+}
+
+/* Buttons */
+.stButton > button {
+    background: #2563eb;
+    color: white;
+    border-radius: 8px;
+    border: none;
+    padding: 12px 24px;
+    font-weight: 600;
+    width: 100%;
+    transition: all 0.2s;
+    height: 45px;
+}
+.stButton > button:hover {
+    background: #3b82f6;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 16px rgba(37, 99, 235, 0.3);
+}
+
+/* Sign up link */
+.login-footer {
+    text-align: center;
+    margin-top: 16px;
+    color: #A0AEC0;
+}
+.login-footer a {
+    color: #60A5FA;
+    text-decoration: none;
+}
+
+/* Error messages */
+.stAlert {
+    background: transparent;
+    color: #F87171;
+    border: none;
+    padding: 8px 0;
+}
+
+/* ---------- APP CARDS ---------- */
+.card {
+    background: #1A2E44;
+    border: 1px solid #2563eb;
+    padding: 20px;
+    border-radius: 16px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+.app-subtitle {
+    text-align: center;
+    color: #A0AEC0;
+    margin-bottom: 20px;
+}
+.notification-badge {
+    background-color: #EF4444;
+    color: white;
+    border-radius: 50%;
+    padding: 2px 8px;
+    font-size: 12px;
+    margin-left: 8px;
+}
+
+/* ---------- CHAT PANEL ---------- */
+.unified-chat {
+    background: #1A2E44;
+    border-radius: 20px;
+    border: 1px solid #2563eb;
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+.chat-input-container {
+    padding: 16px 20px;
+    background: #0F2336;
+    border-top: 1px solid #2563eb;
+    margin-top: 0;
+}
+.chat-input-container .stTextInput > div > div > input {
+    background: #1A2E44;
+    border: 1px solid #2563eb;
+    border-radius: 24px;
+    color: white;
+    padding: 12px 18px;
+}
+.chat-input-container .stButton > button {
+    border-radius: 24px;
+    height: auto;
+    padding: 10px 20px;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #0B1B2B;
+}
+::-webkit-scrollbar-thumb {
+    background: #2563eb;
+    border-radius: 10px;
+}
 </style>
 """, unsafe_allow_html=True)
 
 # ==============================
-# 4. SUPABASE
+# 4. SUPABASE (ONLY URL AND KEY)
 # ==============================
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
-# Removed: ADMIN_USERNAME = st.secrets["ADMIN_USERNAME"]
-# Removed: ADMIN_PASSWORD_HASH = st.secrets["ADMIN_PASSWORD_HASH"]
-# New: only store the admin email for role verification
-ADMIN_EMAIL = st.secrets["ADMIN_EMAIL"]  # must be set in secrets.toml
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -47,7 +263,7 @@ if "authenticated" not in st.session_state:
 if "user" not in st.session_state:
     st.session_state.user = None
 if "role" not in st.session_state:
-    st.session_state.role = None
+    st.session_state.role = None   # "user" or "admin"
 if "seen_notified" not in st.session_state:
     st.session_state.seen_notified = set()
 if "selected_user_id" not in st.session_state:
@@ -73,12 +289,8 @@ model = load_model()
 # ==============================
 # HELPER FUNCTIONS
 # ==============================
-def check_password(p: str) -> bool:
-    # Only used for old admin hash – can be removed entirely now
-    pass
-
 def login_user(email: str, password: str):
-    """Authenticate regular user via Supabase Auth."""
+    """Authenticate user via Supabase Auth."""
     try:
         res = supabase.auth.sign_in_with_password({
             "email": email,
@@ -91,27 +303,6 @@ def login_user(email: str, password: str):
             }
     except Exception as e:
         st.error(f"Login error: {e}")
-    return None
-
-def login_admin(username: str, password: str) -> Optional[Dict[str, Any]]:
-    """
-    Authenticate admin via Supabase Auth.
-    The username field in the form is actually the email.
-    Returns user dict if successful and the email matches ADMIN_EMAIL.
-    """
-    try:
-        res = supabase.auth.sign_in_with_password({
-            "email": username,  # admin form uses "username" but expects email
-            "password": password
-        })
-        if res.user and res.user.email == ADMIN_EMAIL:
-            return {
-                "id": res.user.id,
-                "email": res.user.email,
-                "username": username  # for display
-            }
-    except Exception as e:
-        st.error(f"Admin login error: {e}")
     return None
 
 def explain_risk_with_citations(df: pd.DataFrame) -> Tuple[List[str], List[Dict[str, str]]]:
@@ -188,7 +379,7 @@ def logout():
     st.rerun()
 
 # ==============================
-# LOGIN PAGE
+# LOGIN PAGE (Single form, no admin selector)
 # ==============================
 def show_login_page():
     st.markdown('<div class="title">AI Loan Risk Platform</div>', unsafe_allow_html=True)
@@ -200,46 +391,38 @@ def show_login_page():
         st.markdown('<div class="section">Welcome back</div>', unsafe_allow_html=True)
         st.markdown('<div class="small">Sign in to access your account</div>', unsafe_allow_html=True)
 
-        role = st.radio("", ["User", "Administrator"], horizontal=True, label_visibility="collapsed")
-        
-        if role == "User":
-            with st.form("login_form_user", clear_on_submit=False):
-                email = st.text_input("Email", placeholder="you@example.com", key="login_email")
-                password = st.text_input("Password", type="password", placeholder="••••••••", key="login_password")
-                submitted = st.form_submit_button("Sign In", use_container_width=True)
-                if submitted:
-                    user_data = login_user(email, password)
-                    if user_data:
-                        st.session_state.authenticated = True
-                        st.session_state.user = {
-                            "id": user_data["id"],
-                            "email": user_data["email"],
-                            "username": email
-                        }
+        with st.form("login_form", clear_on_submit=False):
+            email = st.text_input("Email", placeholder="you@example.com")
+            password = st.text_input("Password", type="password", placeholder="••••••••")
+            submitted = st.form_submit_button("Login", use_container_width=True)
+            if submitted:
+                user_data = login_user(email, password)
+                if user_data:
+                    st.session_state.authenticated = True
+                    st.session_state.user = {
+                        "id": user_data["id"],
+                        "email": user_data["email"],
+                        "username": email
+                    }
+
+                    # Fetch role from profiles table
+                    try:
+                        profile = supabase.table("profiles") \
+                            .select("role") \
+                            .eq("id", user_data["id"]) \
+                            .execute()
+                        if profile.data:
+                            st.session_state.role = profile.data[0]["role"]
+                        else:
+                            st.session_state.role = "user"
+                    except Exception as e:
                         st.session_state.role = "user"
-                        st.rerun()
-                    else:
-                        st.error("Invalid email or password")
-            st.markdown('<p class="login-footer">Don\'t have an account? <a href="#">Sign up</a></p>', unsafe_allow_html=True)
-        else:
-            with st.form("login_form_admin", clear_on_submit=False):
-                username = st.text_input("Admin Email", placeholder="admin@example.com", key="admin_user")
-                password = st.text_input("Admin Password", type="password", placeholder="••••••••", key="admin_pass")
-                submitted = st.form_submit_button("Sign In as Admin", use_container_width=True)
-                if submitted:
-                    admin_data = login_admin(username, password)
-                    if admin_data:
-                        st.session_state.authenticated = True
-                        st.session_state.user = {
-                            "id": admin_data["id"],
-                            "email": admin_data["email"],
-                            "username": admin_data["username"],
-                            "role": "admin"
-                        }
-                        st.session_state.role = "admin"
-                        st.rerun()
-                    else:
-                        st.error("Invalid admin credentials")
+
+                    st.rerun()
+                else:
+                    st.error("Invalid email or password")
+
+        st.markdown('<p class="login-footer">Don\'t have an account? <a href="#">Sign up</a></p>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ==============================
@@ -247,16 +430,17 @@ def show_login_page():
 # ==============================
 def show_main_app():
     st.sidebar.markdown("## 🧭 Navigation")
-    
-    if st.session_state.role == "user":
-        menu = ["📊 Loan Analysis", "💬 Contact"]
-    else:
+
+    if st.session_state.role == "admin":
         menu = ["📊 Loan Analysis", "💬 Contact", "⚙️ Admin Dashboard"]
-    
+    else:
+        menu = ["📊 Loan Analysis", "💬 Contact"]
+
     page = st.sidebar.radio("", menu)
 
     st.sidebar.markdown("---")
 
+    # User info
     if st.session_state.role == "user":
         unread = get_unread_reply_count(st.session_state.user["id"])
         display_name = st.session_state.user["email"]
@@ -267,6 +451,9 @@ def show_main_app():
     else:
         safe_name = st.session_state.user.get("username", st.session_state.user.get("email"))
         st.sidebar.markdown(f"👑 **Admin: {safe_name}**")
+
+    # Optional role badge
+    st.sidebar.markdown(f"Role: **{st.session_state.role.upper()}**")
 
     st.sidebar.markdown("---")
 
@@ -385,7 +572,7 @@ def show_main_app():
                 st.markdown('</div>', unsafe_allow_html=True)
 
     # ------------------------------
-    # CONTACT (unchanged from 08.py)
+    # CONTACT (same as before, user email safe)
     # ------------------------------
     elif "Contact" in page:
         st.subheader("💬 Customer Support Chat")
@@ -581,9 +768,13 @@ def show_main_app():
                 st.rerun()
 
     # ------------------------------
-    # ADMIN DASHBOARD (unchanged from 08.py)
+    # ADMIN DASHBOARD (protected)
     # ------------------------------
     elif "Admin Dashboard" in page:
+        if st.session_state.role != "admin":
+            st.error("Access denied 🚫")
+            st.stop()
+
         st.subheader("📊 Admin Control Panel")
 
         col1, col2 = st.columns([1, 4])
