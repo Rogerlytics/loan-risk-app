@@ -5,7 +5,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 import pickle
 import pandas as pd
-import bcrypt  # no longer used for admin; kept for compatibility if needed elsewhere
+import bcrypt
 import plotly.express as px
 from datetime import datetime, timedelta
 from supabase import create_client, Client
@@ -405,17 +405,19 @@ def show_login_page():
                         "username": email
                     }
 
-                    # Fetch role from profiles table
+                    # Fetch role from profiles table – SAFE VERSION
                     try:
                         profile = supabase.table("profiles") \
                             .select("role") \
                             .eq("id", user_data["id"]) \
                             .execute()
-                        if profile.data:
-                            st.session_state.role = profile.data[0]["role"]
+
+                        if profile.data and len(profile.data) > 0:
+                            st.session_state.role = profile.data[0].get("role", "user")
                         else:
-                            st.session_state.role = "user"
+                            st.session_state.role = "user"  # fallback
                     except Exception as e:
+                        st.error(f"Role fetch error: {e}")
                         st.session_state.role = "user"
 
                     st.rerun()
@@ -452,8 +454,9 @@ def show_main_app():
         safe_name = st.session_state.user.get("username", st.session_state.user.get("email"))
         st.sidebar.markdown(f"👑 **Admin: {safe_name}**")
 
-    # Optional role badge
-    st.sidebar.markdown(f"Role: **{st.session_state.role.upper()}**")
+    # Safe role display
+    role_display = (st.session_state.role or "user").upper()
+    st.sidebar.markdown(f"Role: **{role_display}**")
 
     st.sidebar.markdown("---")
 
@@ -572,7 +575,7 @@ def show_main_app():
                 st.markdown('</div>', unsafe_allow_html=True)
 
     # ------------------------------
-    # CONTACT (same as before, user email safe)
+    # CONTACT (unchanged)
     # ------------------------------
     elif "Contact" in page:
         st.subheader("💬 Customer Support Chat")
