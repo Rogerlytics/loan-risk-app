@@ -12,7 +12,6 @@ from supabase import create_client, Client
 from typing import Optional, Dict, Any, List, Tuple
 import html
 import time
-import base64
 
 # ==============================
 # 2. CONFIG
@@ -20,7 +19,7 @@ import base64
 st.set_page_config(page_title="AI Loan Risk System", layout="wide")
 
 # ==============================
-# 3. CUSTOM CSS – DARK BLUE THEME WITH 3D GRADIENT TITLE
+# 3. CUSTOM CSS – FULL DARK BLUE THEME
 # ==============================
 st.markdown("""
 <style>
@@ -48,20 +47,6 @@ section[data-testid="stSidebar"] {
     background-color: #0B1B2B !important;
 }
 
-/* ---------- 3D GRADIENT TITLE (used on all pages) ---------- */
-.gradient-title {
-    font-size: 42px;
-    font-weight: 700;
-    text-align: center;
-    margin-bottom: 8px;
-    background: linear-gradient(135deg, #3b82f6, #60a5fa, #1e3a8a, #2563eb);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5), 0 0 20px rgba(37, 99, 235, 0.5);
-    letter-spacing: 1px;
-}
-
 /* ---------- SIDEBAR (Left Column) ---------- */
 section[data-testid="stSidebar"] {
     background: linear-gradient(180deg, #0A192F, #102A43) !important;
@@ -70,22 +55,18 @@ section[data-testid="stSidebar"] {
 section[data-testid="stSidebar"] * {
     color: #F0F4F8 !important;
 }
-
-/* Sidebar title "Navigation" */
-section[data-testid="stSidebar"] .stMarkdown h2 {
+section[data-testid="stSidebar"] .stMarkdown,
+section[data-testid="stSidebar"] .stRadio label,
+section[data-testid="stSidebar"] .stButton button {
     color: #F0F4F8 !important;
-    background: #1A2E44;
-    padding: 8px 12px;
-    border-radius: 8px;
-    text-align: center;
 }
 
-/* Sidebar radio buttons – visible background */
+/* Sidebar radio buttons */
 section[data-testid="stSidebar"] .stRadio > div {
     gap: 10px;
 }
 section[data-testid="stSidebar"] label {
-    padding: 12px 16px;
+    padding: 10px 14px;
     border-radius: 10px;
     transition: all 0.2s ease;
     cursor: pointer;
@@ -93,43 +74,32 @@ section[data-testid="stSidebar"] label {
     width: 100% !important;
     box-sizing: border-box;
     color: #F0F4F8 !important;
-    background: #1A2E44;
-    border: 1px solid #2563eb;
-    font-weight: 500;
+    background: transparent;
 }
 section[data-testid="stSidebar"] label:hover {
-    background: #2563eb;
-    color: white !important;
+    background: rgba(255, 255, 255, 0.1);
 }
 section[data-testid="stSidebar"] label[data-selected="true"] {
     background: #2563eb;
     color: white !important;
-    border-color: #3b82f6;
-    box-shadow: 0 0 8px rgba(37, 99, 235, 0.5);
 }
 
 /* Sidebar user info and logout */
 section[data-testid="stSidebar"] .stButton button {
-    background: #2563eb !important;
-    border: none !important;
-    color: white !important;
+    background: #2563eb;
+    border: none;
 }
 section[data-testid="stSidebar"] .stButton button:hover {
-    background: #3b82f6 !important;
+    background: #3b82f6;
 }
 
 /* ---------- LOGIN PAGE ---------- */
 .title {
     font-size: 42px;
     font-weight: 700;
+    color: #F0F4F8;
     text-align: center;
     margin-bottom: 8px;
-    background: linear-gradient(135deg, #3b82f6, #60a5fa, #1e3a8a, #2563eb);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5), 0 0 20px rgba(37, 99, 235, 0.5);
-    letter-spacing: 1px;
 }
 .subtitle {
     color: #A0AEC0;
@@ -206,27 +176,22 @@ section[data-testid="stSidebar"] .stButton button:hover {
     color: #94A3B8;
 }
 
-/* ALL BUTTONS – Bright Blue */
+/* Buttons */
 .stButton > button {
-    background: #2563eb !important;
-    color: white !important;
-    border-radius: 8px !important;
-    border: none !important;
-    padding: 12px 24px !important;
-    font-weight: 600 !important;
-    width: 100% !important;
-    transition: all 0.2s !important;
-    height: 45px !important;
+    background: #2563eb;
+    color: white;
+    border-radius: 8px;
+    border: none;
+    padding: 12px 24px;
+    font-weight: 600;
+    width: 100%;
+    transition: all 0.2s;
+    height: 45px;
 }
 .stButton > button:hover {
-    background: #3b82f6 !important;
-    transform: translateY(-1px) !important;
-    box-shadow: 0 8px 16px rgba(37, 99, 235, 0.3) !important;
-}
-
-/* Checkbox */
-.stCheckbox label {
-    color: #A0AEC0 !important;
+    background: #3b82f6;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 16px rgba(37, 99, 235, 0.3);
 }
 
 /* Sign up link */
@@ -271,34 +236,6 @@ section[data-testid="stSidebar"] .stButton button:hover {
     margin-left: 8px;
 }
 
-/* About page specific */
-.about-card {
-    background: #1A2E44;
-    border: 1px solid #2563eb;
-    padding: 30px;
-    border-radius: 24px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
-}
-.about-heading {
-    color: #60A5FA;
-    font-size: 24px;
-    font-weight: 600;
-    margin-bottom: 16px;
-}
-.about-text {
-    color: #E2E8F0;
-    font-size: 16px;
-    line-height: 1.6;
-}
-.feature-list {
-    list-style-type: none;
-    padding-left: 0;
-}
-.feature-list li {
-    margin-bottom: 12px;
-    color: #E2E8F0;
-}
-
 /* ---------- CHAT PANEL ---------- */
 .unified-chat {
     background: #1A2E44;
@@ -321,9 +258,9 @@ section[data-testid="stSidebar"] .stButton button:hover {
     padding: 12px 18px;
 }
 .chat-input-container .stButton > button {
-    border-radius: 24px !important;
-    height: auto !important;
-    padding: 10px 20px !important;
+    border-radius: 24px;
+    height: auto;
+    padding: 10px 20px;
 }
 
 /* Scrollbars */
@@ -467,71 +404,16 @@ def mark_messages_as_read(user_id: int):
         pass
 
 # ==============================
-# REMEMBER ME TOKEN
-# ==============================
-def generate_token(email: str, role: str) -> str:
-    """Generate a simple token for remember me (demo purpose)."""
-    data = f"{email}|{role}|{datetime.now().strftime('%Y%m%d')}"
-    return base64.b64encode(data.encode()).decode()
-
-def decode_token(token: str) -> Optional[Tuple[str, str]]:
-    """Decode token to get email and role."""
-    try:
-        decoded = base64.b64decode(token.encode()).decode()
-        parts = decoded.split('|')
-        if len(parts) >= 2:
-            return parts[0], parts[1]
-    except:
-        pass
-    return None
-
-# ==============================
 # LOGOUT FUNCTION
 # ==============================
 def logout():
     st.session_state.authenticated = False
     st.session_state.user = None
     st.session_state.role = None
-    # Clear local storage via JS
-    components.html("""
-    <script>
-    localStorage.removeItem('loanapp_remember');
-    </script>
-    """, height=0)
     st.rerun()
 
 # ==============================
-# AUTO-LOGIN CHECK
-# ==============================
-def check_auto_login():
-    """If there's a valid token in localStorage, attempt auto-login."""
-    query_params = st.query_params
-    if "auto_token" in query_params:
-        token = query_params["auto_token"]
-        result = decode_token(token)
-        if result:
-            email, role = result
-            if role == "user":
-                try:
-                    res = supabase.table("users").select("*").eq("email", email).execute()
-                    if res.data:
-                        st.session_state.authenticated = True
-                        st.session_state.user = res.data[0]
-                        st.session_state.role = "user"
-                        st.query_params.clear()
-                        st.rerun()
-                except:
-                    pass
-            elif role == "admin":
-                st.session_state.authenticated = True
-                st.session_state.user = {"username": ADMIN_USERNAME, "role": "admin"}
-                st.session_state.role = "admin"
-                st.query_params.clear()
-                st.rerun()
-        st.query_params.clear()
-
-# ==============================
-# LOGIN PAGE (with Remember Me)
+# LOGIN PAGE
 # ==============================
 def show_login_page():
     st.markdown('<div class="title">AI Loan Risk Platform</div>', unsafe_allow_html=True)
@@ -544,8 +426,7 @@ def show_login_page():
         st.markdown('<div class="small">Sign in to access your account</div>', unsafe_allow_html=True)
 
         role = st.radio("", ["User", "Administrator"], horizontal=True, label_visibility="collapsed")
-        remember_me = st.checkbox("Remember me")
-
+        
         if role == "User":
             with st.form("login_form_user", clear_on_submit=False):
                 email = st.text_input("Email", placeholder="you@example.com", key="login_email")
@@ -557,13 +438,6 @@ def show_login_page():
                         st.session_state.authenticated = True
                         st.session_state.user = user_data
                         st.session_state.role = "user"
-                        if remember_me:
-                            token = generate_token(email, "user")
-                            components.html(f"""
-                            <script>
-                            localStorage.setItem('loanapp_remember', '{token}');
-                            </script>
-                            """, height=0)
                         st.rerun()
                     else:
                         st.error("Invalid email or password")
@@ -578,62 +452,9 @@ def show_login_page():
                         st.session_state.authenticated = True
                         st.session_state.user = {"username": username, "role": "admin"}
                         st.session_state.role = "admin"
-                        if remember_me:
-                            token = generate_token(username, "admin")
-                            components.html(f"""
-                            <script>
-                            localStorage.setItem('loanapp_remember', '{token}');
-                            </script>
-                            """, height=0)
                         st.rerun()
                     else:
                         st.error("Invalid admin credentials")
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    # JavaScript to check localStorage and redirect with token on page load
-    components.html("""
-    <script>
-    (function() {
-        const token = localStorage.getItem('loanapp_remember');
-        if (token && !window.location.search.includes('auto_token')) {
-            const url = new URL(window.location.href);
-            url.searchParams.set('auto_token', token);
-            window.location.href = url.toString();
-        }
-    })();
-    </script>
-    """, height=0)
-
-# ==============================
-# ABOUT PAGE (Centered, no Tech Stack)
-# ==============================
-def show_about_page():
-    st.markdown('<div class="gradient-title">AI Loan Risk Platform</div>', unsafe_allow_html=True)
-    st.markdown('<div class="app-subtitle">Intelligent credit evaluation for smarter lending</div>', unsafe_allow_html=True)
-
-    col1, col2, col3 = st.columns([1, 3, 1])
-    with col2:
-        st.markdown('<div class="about-card" style="text-align: center;">', unsafe_allow_html=True)
-        st.markdown('<div class="about-heading" style="text-align: center;">🚀 About This Platform</div>', unsafe_allow_html=True)
-        st.markdown('<p class="about-text" style="text-align: center;">The AI Loan Risk Platform is a state‑of‑the‑art credit assessment tool that leverages machine learning to provide real‑time risk evaluation for vehicle loans. Designed for both financial institutions and individual borrowers, it delivers transparent, data‑driven insights to support smarter lending decisions.</p>', unsafe_allow_html=True)
-        
-        st.markdown('<div class="about-heading" style="text-align: center;">✨ Key Features</div>', unsafe_allow_html=True)
-        st.markdown("""
-        <ul class="feature-list" style="text-align: center; list-style-position: inside;">
-            <li>🔍 <strong>Instant Risk Scoring</strong> – Proprietary ML model evaluates applicant profiles in milliseconds.</li>
-            <li>📊 <strong>Repayment Calculator</strong> – View monthly, weekly, and daily instalments instantly.</li>
-            <li>💬 <strong>Integrated Support Chat</strong> – Real‑time conversation with customer service.</li>
-            <li>📈 <strong>Admin Dashboard</strong> – Comprehensive overview of all conversations and system metrics.</li>
-            <li>🔐 <strong>Secure Authentication</strong> – Role‑based access with "Remember Me" convenience.</li>
-            <li>🌙 <strong>Premium Dark Interface</strong> – Optimised for long‑duration use with minimal eye strain.</li>
-        </ul>
-        """, unsafe_allow_html=True)
-
-        st.markdown('<div class="about-heading" style="text-align: center;">📬 Contact & Support</div>', unsafe_allow_html=True)
-        st.markdown('<p class="about-text" style="text-align: center;">For inquiries, feedback, or technical support, please use the <strong>Contact</strong> page within the app. Our team typically responds within a few hours during business days.</p>', unsafe_allow_html=True)
-
-        st.markdown('<div class="about-heading" style="text-align: center;">📄 Version</div>', unsafe_allow_html=True)
-        st.markdown('<p class="about-text" style="text-align: center;">v2.0.0 – April 2026</p>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ==============================
@@ -643,9 +464,9 @@ def show_main_app():
     st.sidebar.markdown("## 🧭 Navigation")
     
     if st.session_state.role == "user":
-        menu = ["📊 Loan Analysis", "💬 Contact", "ℹ️ About"]
+        menu = ["📊 Loan Analysis", "💬 Contact"]
     else:
-        menu = ["📊 Loan Analysis", "💬 Contact", "⚙️ Admin Dashboard", "ℹ️ About"]
+        menu = ["📊 Loan Analysis", "💬 Contact", "⚙️ Admin Dashboard"]
     
     page = st.sidebar.radio("", menu)
 
@@ -666,14 +487,8 @@ def show_main_app():
     if st.sidebar.button("🚪 Logout", use_container_width=True):
         logout()
 
-    # ========== ABOUT PAGE (rendered before header to avoid duplicate title) ==========
-    if "About" in page:
-        show_about_page()
-        return
-
-    # ========== REGULAR PAGES ==========
-    st.markdown('<div class="gradient-title">AI Loan Risk Platform</div>', unsafe_allow_html=True)
-    st.markdown('<div class="app-subtitle">Real-time credit risk evaluation powered by machine learning</div>', unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align:center;color:#F0F4F8'>AI Loan Risk Platform</h1>", unsafe_allow_html=True)
+    st.markdown("<div class='app-subtitle'>Real-time credit risk evaluation powered by machine learning</div>", unsafe_allow_html=True)
 
     # ------------------------------
     # LOAN ANALYSIS
@@ -1115,8 +930,6 @@ def show_main_app():
 # MAIN ENTRY POINT
 # ==============================
 if not st.session_state.authenticated:
-    check_auto_login()
-    if not st.session_state.authenticated:
-        show_login_page()
+    show_login_page()
 else:
     show_main_app()
