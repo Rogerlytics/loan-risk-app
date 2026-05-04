@@ -407,7 +407,7 @@ def logout():
     st.rerun()
 
 # ==============================
-# LOGIN PAGE – DEBUGGING ROLE (stops instead of rerun)
+# LOGIN PAGE – CLEAN ROLE FETCH
 # ==============================
 def show_login_page():
     st.markdown('<div class="title">AI Loan Risk Platform</div>', unsafe_allow_html=True)
@@ -433,22 +433,18 @@ def show_login_page():
                         "username": email
                     }
 
-                    # --- DEBUG: inspect the profile fetch ---
+                    # Fetch role from profiles table – safe, lowercase-converted
                     try:
                         profile = supabase.table("profiles") \
                             .select("role") \
                             .eq("id", st.session_state.user["id"]) \
                             .single() \
                             .execute()
-                        st.write("DEBUG profile:", profile.data)   # ← temporary
                         st.session_state.role = profile.data.get("role", "user").lower()
                     except Exception as e:
-                        st.write("DEBUG error:", str(e))           # ← temporary
                         st.session_state.role = "user"
 
-                    st.write("FINAL ROLE SET TO:", st.session_state.role)  # ← added
-                    st.stop()   # ← temporarily replaced st.rerun()
-                    # st.rerun()   # (commented out)
+                    st.rerun()
                 else:
                     st.error("Invalid email or password")
 
@@ -488,11 +484,12 @@ def show_about_page():
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ==============================
-# MAIN APP (unchanged)
+# MAIN APP
 # ==============================
 def show_main_app():
     st.sidebar.markdown("## 🧭 Navigation")
 
+    # Role-based menu: admin sees extra "Admin Dashboard", everyone sees About
     if st.session_state.role == "admin":
         menu = ["📊 Loan Analysis", "💬 Contact", "⚙️ Admin Dashboard", "ℹ️ About"]
     else:
@@ -502,6 +499,7 @@ def show_main_app():
 
     st.sidebar.markdown("---")
 
+    # User info
     if st.session_state.role == "user":
         unread = get_unread_reply_count(st.session_state.user["id"])
         display_name = st.session_state.user["email"]
@@ -513,6 +511,7 @@ def show_main_app():
         safe_name = st.session_state.user.get("username", st.session_state.user.get("email"))
         st.sidebar.markdown(f"👑 **Admin: {safe_name}**")
 
+    # Safe role display
     role_display = (st.session_state.role or "user").upper()
     st.sidebar.markdown(f"Role: **{role_display}**")
 
@@ -521,10 +520,12 @@ def show_main_app():
     if st.sidebar.button("🚪 Logout", use_container_width=True):
         logout()
 
+    # ========== ABOUT PAGE (rendered before header to avoid duplicate title) ==========
     if "About" in page:
         show_about_page()
         return
 
+    # ========== REGULAR PAGES ==========
     st.markdown("<h1 style='text-align:center;color:#F0F4F8'>AI Loan Risk Platform</h1>", unsafe_allow_html=True)
     st.markdown("<div class='app-subtitle'>Real-time credit risk evaluation powered by machine learning</div>", unsafe_allow_html=True)
 
@@ -637,7 +638,7 @@ def show_main_app():
                 st.markdown('</div>', unsafe_allow_html=True)
 
     # ------------------------------
-    # CONTACT (unchanged)
+    # CONTACT
     # ------------------------------
     elif "Contact" in page:
         st.subheader("💬 Customer Support Chat")
@@ -833,7 +834,7 @@ def show_main_app():
                 st.rerun()
 
     # ------------------------------
-    # ADMIN DASHBOARD (unchanged)
+    # ADMIN DASHBOARD (protected)
     # ------------------------------
     elif "Admin Dashboard" in page:
         if st.session_state.role != "admin":
