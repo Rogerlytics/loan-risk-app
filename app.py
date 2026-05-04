@@ -407,7 +407,7 @@ def logout():
     st.rerun()
 
 # ==============================
-# LOGIN PAGE – FIXED ROLE FETCH
+# LOGIN PAGE – WITH DEBUG OUTPUT
 # ==============================
 def show_login_page():
     st.markdown('<div class="title">AI Loan Risk Platform</div>', unsafe_allow_html=True)
@@ -433,18 +433,19 @@ def show_login_page():
                         "username": email
                     }
 
-                    # Fetch role from profiles table – safe, lowercase-converted
+                    # --- DEBUG: inspect the profile fetch ---
                     try:
                         profile = supabase.table("profiles") \
                             .select("role") \
                             .eq("id", st.session_state.user["id"]) \
                             .single() \
                             .execute()
-                        # Force lowercase to avoid 'Admin' vs 'admin' mismatch
+                        st.write("DEBUG profile:", profile.data)   # ← temporary
                         st.session_state.role = profile.data.get("role", "user").lower()
                     except Exception as e:
-                        # If no row or error, fallback to "user"
+                        st.write("DEBUG error:", str(e))           # ← temporary
                         st.session_state.role = "user"
+                    # --- end of debug block ---
 
                     st.rerun()
                 else:
