@@ -205,6 +205,34 @@ section[data-testid="stSidebar"] .stButton button:hover {
     margin-left: 8px;
 }
 
+/* About page specific */
+.about-card {
+    background: #1A2E44;
+    border: 1px solid #2563eb;
+    padding: 30px;
+    border-radius: 24px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+.about-heading {
+    color: #60A5FA;
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 16px;
+}
+.about-text {
+    color: #E2E8F0;
+    font-size: 16px;
+    line-height: 1.6;
+}
+.feature-list {
+    list-style-type: none;
+    padding-left: 0;
+}
+.feature-list li {
+    margin-bottom: 12px;
+    color: #E2E8F0;
+}
+
 /* ---------- CHAT PANEL ---------- */
 .unified-chat {
     background: #1A2E44;
@@ -405,19 +433,15 @@ def show_login_page():
                         "username": email
                     }
 
-                    # Fetch role from profiles table – SAFE VERSION
+                    # Fetch role from profiles table – .single() approach
                     try:
                         profile = supabase.table("profiles") \
                             .select("role") \
-                            .eq("id", user_data["id"]) \
+                            .eq("id", st.session_state.user["id"]) \
+                            .single() \
                             .execute()
-
-                        if profile.data and len(profile.data) > 0:
-                            st.session_state.role = profile.data[0].get("role", "user")
-                        else:
-                            st.session_state.role = "user"  # fallback
+                        st.session_state.role = profile.data.get("role", "user")
                     except Exception as e:
-                        st.error(f"Role fetch error: {e}")
                         st.session_state.role = "user"
 
                     st.rerun()
@@ -428,15 +452,48 @@ def show_login_page():
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ==============================
+# ABOUT PAGE
+# ==============================
+def show_about_page():
+    st.markdown('<div class="gradient-title" style="text-align:center; font-size:42px; font-weight:700; color:#F0F4F8;">AI Loan Risk Platform</div>', unsafe_allow_html=True)
+    st.markdown('<div class="app-subtitle">Intelligent credit evaluation for smarter lending</div>', unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns([1, 3, 1])
+    with col2:
+        st.markdown('<div class="about-card" style="text-align: center;">', unsafe_allow_html=True)
+        st.markdown('<div class="about-heading" style="text-align: center;">🚀 About This Platform</div>', unsafe_allow_html=True)
+        st.markdown('<p class="about-text" style="text-align: center;">The AI Loan Risk Platform is a state‑of‑the‑art credit assessment tool that leverages machine learning to provide real‑time risk evaluation for vehicle loans. Designed for both financial institutions and individual borrowers, it delivers transparent, data‑driven insights to support smarter lending decisions.</p>', unsafe_allow_html=True)
+        
+        st.markdown('<div class="about-heading" style="text-align: center;">✨ Key Features</div>', unsafe_allow_html=True)
+        st.markdown("""
+        <ul class="feature-list" style="text-align: center; list-style-position: inside;">
+            <li>🔍 <strong>Instant Risk Scoring</strong> – Proprietary ML model evaluates applicant profiles in milliseconds.</li>
+            <li>📊 <strong>Repayment Calculator</strong> – View monthly, weekly, and daily instalments instantly.</li>
+            <li>💬 <strong>Integrated Support Chat</strong> – Real‑time conversation with customer service.</li>
+            <li>📈 <strong>Admin Dashboard</strong> – Comprehensive overview of all conversations and system metrics.</li>
+            <li>🔐 <strong>Secure Authentication</strong> – Role‑based access with "Remember Me" convenience.</li>
+            <li>🌙 <strong>Premium Dark Interface</strong> – Optimised for long‑duration use with minimal eye strain.</li>
+        </ul>
+        """, unsafe_allow_html=True)
+
+        st.markdown('<div class="about-heading" style="text-align: center;">📬 Contact & Support</div>', unsafe_allow_html=True)
+        st.markdown('<p class="about-text" style="text-align: center;">For inquiries, feedback, or technical support, please use the <strong>Contact</strong> page within the app. Our team typically responds within a few hours during business days.</p>', unsafe_allow_html=True)
+
+        st.markdown('<div class="about-heading" style="text-align: center;">📄 Version</div>', unsafe_allow_html=True)
+        st.markdown('<p class="about-text" style="text-align: center;">v2.0.0 – April 2026</p>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+# ==============================
 # MAIN APP
 # ==============================
 def show_main_app():
     st.sidebar.markdown("## 🧭 Navigation")
 
+    # Role-based menu: admin sees extra "Admin Dashboard", everyone sees About
     if st.session_state.role == "admin":
-        menu = ["📊 Loan Analysis", "💬 Contact", "⚙️ Admin Dashboard"]
+        menu = ["📊 Loan Analysis", "💬 Contact", "⚙️ Admin Dashboard", "ℹ️ About"]
     else:
-        menu = ["📊 Loan Analysis", "💬 Contact"]
+        menu = ["📊 Loan Analysis", "💬 Contact", "ℹ️ About"]
 
     page = st.sidebar.radio("", menu)
 
@@ -463,6 +520,12 @@ def show_main_app():
     if st.sidebar.button("🚪 Logout", use_container_width=True):
         logout()
 
+    # ========== ABOUT PAGE (rendered before header to avoid duplicate title) ==========
+    if "About" in page:
+        show_about_page()
+        return
+
+    # ========== REGULAR PAGES ==========
     st.markdown("<h1 style='text-align:center;color:#F0F4F8'>AI Loan Risk Platform</h1>", unsafe_allow_html=True)
     st.markdown("<div class='app-subtitle'>Real-time credit risk evaluation powered by machine learning</div>", unsafe_allow_html=True)
 
@@ -575,7 +638,7 @@ def show_main_app():
                 st.markdown('</div>', unsafe_allow_html=True)
 
     # ------------------------------
-    # CONTACT (unchanged)
+    # CONTACT
     # ------------------------------
     elif "Contact" in page:
         st.subheader("💬 Customer Support Chat")
