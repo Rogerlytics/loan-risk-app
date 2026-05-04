@@ -407,7 +407,7 @@ def logout():
     st.rerun()
 
 # ==============================
-# LOGIN PAGE – WITH DEBUG OUTPUT
+# LOGIN PAGE – DEBUGGING ROLE (stops instead of rerun)
 # ==============================
 def show_login_page():
     st.markdown('<div class="title">AI Loan Risk Platform</div>', unsafe_allow_html=True)
@@ -445,9 +445,10 @@ def show_login_page():
                     except Exception as e:
                         st.write("DEBUG error:", str(e))           # ← temporary
                         st.session_state.role = "user"
-                    # --- end of debug block ---
 
-                    st.rerun()
+                    st.write("FINAL ROLE SET TO:", st.session_state.role)  # ← added
+                    st.stop()   # ← temporarily replaced st.rerun()
+                    # st.rerun()   # (commented out)
                 else:
                     st.error("Invalid email or password")
 
@@ -487,12 +488,11 @@ def show_about_page():
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ==============================
-# MAIN APP
+# MAIN APP (unchanged)
 # ==============================
 def show_main_app():
     st.sidebar.markdown("## 🧭 Navigation")
 
-    # Role-based menu: admin sees extra "Admin Dashboard", everyone sees About
     if st.session_state.role == "admin":
         menu = ["📊 Loan Analysis", "💬 Contact", "⚙️ Admin Dashboard", "ℹ️ About"]
     else:
@@ -502,7 +502,6 @@ def show_main_app():
 
     st.sidebar.markdown("---")
 
-    # User info
     if st.session_state.role == "user":
         unread = get_unread_reply_count(st.session_state.user["id"])
         display_name = st.session_state.user["email"]
@@ -514,7 +513,6 @@ def show_main_app():
         safe_name = st.session_state.user.get("username", st.session_state.user.get("email"))
         st.sidebar.markdown(f"👑 **Admin: {safe_name}**")
 
-    # Safe role display
     role_display = (st.session_state.role or "user").upper()
     st.sidebar.markdown(f"Role: **{role_display}**")
 
@@ -523,12 +521,10 @@ def show_main_app():
     if st.sidebar.button("🚪 Logout", use_container_width=True):
         logout()
 
-    # ========== ABOUT PAGE (rendered before header to avoid duplicate title) ==========
     if "About" in page:
         show_about_page()
         return
 
-    # ========== REGULAR PAGES ==========
     st.markdown("<h1 style='text-align:center;color:#F0F4F8'>AI Loan Risk Platform</h1>", unsafe_allow_html=True)
     st.markdown("<div class='app-subtitle'>Real-time credit risk evaluation powered by machine learning</div>", unsafe_allow_html=True)
 
@@ -641,7 +637,7 @@ def show_main_app():
                 st.markdown('</div>', unsafe_allow_html=True)
 
     # ------------------------------
-    # CONTACT
+    # CONTACT (unchanged)
     # ------------------------------
     elif "Contact" in page:
         st.subheader("💬 Customer Support Chat")
@@ -837,7 +833,7 @@ def show_main_app():
                 st.rerun()
 
     # ------------------------------
-    # ADMIN DASHBOARD (protected)
+    # ADMIN DASHBOARD (unchanged)
     # ------------------------------
     elif "Admin Dashboard" in page:
         if st.session_state.role != "admin":
