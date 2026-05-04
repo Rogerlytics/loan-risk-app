@@ -407,7 +407,7 @@ def logout():
     st.rerun()
 
 # ==============================
-# LOGIN PAGE (Single form, no admin selector)
+# LOGIN PAGE – FIXED ROLE FETCH
 # ==============================
 def show_login_page():
     st.markdown('<div class="title">AI Loan Risk Platform</div>', unsafe_allow_html=True)
@@ -433,15 +433,17 @@ def show_login_page():
                         "username": email
                     }
 
-                    # Fetch role from profiles table – .single() approach
+                    # Fetch role from profiles table – safe, lowercase-converted
                     try:
                         profile = supabase.table("profiles") \
                             .select("role") \
                             .eq("id", st.session_state.user["id"]) \
                             .single() \
                             .execute()
-                        st.session_state.role = profile.data.get("role", "user")
+                        # Force lowercase to avoid 'Admin' vs 'admin' mismatch
+                        st.session_state.role = profile.data.get("role", "user").lower()
                     except Exception as e:
+                        # If no row or error, fallback to "user"
                         st.session_state.role = "user"
 
                     st.rerun()
