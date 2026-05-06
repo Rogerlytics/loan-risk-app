@@ -545,7 +545,7 @@ def show_main_app():
                 with col_button:
                     submitted = st.form_submit_button("📤 Send", use_container_width=True)
                 if submitted and msg.strip():
-                    send_message(supabase, user_id, user_email, user_email, msg)
+                    send_message(supabase, user_id, user_email, msg)
                     st.session_state.draft_message = ""
                     st.success("Message sent!")
                     time.sleep(0.5)
