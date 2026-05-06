@@ -12,24 +12,34 @@ from supabase import create_client, Client
 from typing import Optional, Dict, Any, List, Tuple
 import html
 import time
-from styles.theme import apply_theme          # ← NEW
+from styles.theme import apply_theme
+from services.supabase_service import (
+    login_user,
+    signup_user,
+    get_user_role,
+    get_user_messages,
+    get_all_messages,
+    send_message,
+    send_reply,
+    get_unread_reply_count,
+    mark_messages_as_read
+)
 
 # ==============================
 # 2. CONFIG
 # ==============================
 st.set_page_config(page_title="AI Loan Risk System", layout="wide")
-apply_theme()                                  # ← NEW
+apply_theme()
 
 # ==============================
-# 4. SUPABASE (ONLY URL AND KEY)
+# 3. SUPABASE CLIENT
 # ==============================
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
-
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ==============================
-# 5. SESSION STATE
+# 4. SESSION STATE
 # ==============================
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
@@ -51,7 +61,7 @@ if "repayment_result" not in st.session_state:
     st.session_state.repayment_result = None
 
 # ==============================
-# 6. MODEL
+# 5. MODEL
 # ==============================
 @st.cache_resource
 def load_model():
@@ -60,40 +70,8 @@ def load_model():
 model = load_model()
 
 # ==============================
-# HELPER FUNCTIONS
+# HELPER FUNCTIONS (non‑DB)
 # ==============================
-def login_user(email: str, password: str):
-    """Authenticate user via Supabase Auth."""
-    try:
-        res = supabase.auth.sign_in_with_password({
-            "email": email,
-            "password": password
-        })
-        if res.user:
-            return {
-                "id": res.user.id,
-                "email": res.user.email
-            }
-    except Exception as e:
-        st.error(f"Login error: {e}")
-    return None
-
-def signup_user(email: str, password: str):
-    """Register new user via Supabase Auth."""
-    try:
-        res = supabase.auth.sign_up({
-            "email": email,
-            "password": password
-        })
-        if res.user:
-            return {
-                "id": res.user.id,
-                "email": res.user.email
-            }
-    except Exception as e:
-        st.error(f"Signup error: {e}")
-    return None
-
 def explain_risk_with_citations(df: pd.DataFrame) -> Tuple[List[str], List[Dict[str, str]]]:
     reasons = []
     citations = []
@@ -140,24 +118,6 @@ def relative_time(ts: str) -> str:
     except:
         return ts
 
-def get_unread_reply_count(user_id: str) -> int:
-    try:
-        msgs = supabase.table("messages").select("id, reply, read_by_customer").eq("user_id", user_id).execute().data
-        unseen = 0
-        for m in msgs:
-            if m.get("reply") and not m.get("read_by_customer", False):
-                unseen += 1
-        return unseen
-    except:
-        return 0
-
-def mark_messages_as_read(user_id: str):
-    try:
-        supabase.table("messages").update({"read_by_customer": True})\
-            .eq("user_id", user_id).eq("read_by_customer", False).execute()
-    except:
-        pass
-
 # ==============================
 # LOGOUT FUNCTION
 # ==============================
@@ -174,7 +134,6 @@ def show_login_page():
     st.markdown('<div class="title">AI Loan Risk Platform</div>', unsafe_allow_html=True)
     st.markdown('<div class="subtitle">Intelligent credit evaluation for smarter lending</div>', unsafe_allow_html=True)
 
-    # Toggle between login and signup
     if "show_signup" not in st.session_state:
         st.session_state.show_signup = False
 
@@ -182,7 +141,6 @@ def show_login_page():
     with col_center:
         st.markdown('<div class="login-card">', unsafe_allow_html=True)
 
-        # ── LOGIN FORM ──
         if not st.session_state.show_signup:
             st.markdown('<div class="section">Welcome back</div>', unsafe_allow_html=True)
             st.markdown('<div class="small">Sign in to access your account</div>', unsafe_allow_html=True)
@@ -195,7 +153,7 @@ def show_login_page():
                     if not email or not password:
                         st.error("Please enter both email and password.")
                     else:
-                        user_data = login_user(email, password)
+                        user_data = login_user(supabase, email, password)
                         if user_data:
                             st.session_state.authenticated = True
                             st.session_state.user = {
@@ -203,15 +161,7 @@ def show_login_page():
                                 "email": user_data["email"],
                                 "username": email
                             }
-                            try:
-                                profile = supabase.table("profiles") \
-                                    .select("role") \
-                                    .eq("id", st.session_state.user["id"]) \
-                                    .single() \
-                                    .execute()
-                                st.session_state.role = profile.data.get("role", "user").lower()
-                            except Exception:
-                                st.session_state.role = "user"
+                            st.session_state.role = get_user_role(supabase, st.session_state.user["id"])
                             st.rerun()
                         else:
                             st.error("Invalid email or password.")
@@ -219,8 +169,6 @@ def show_login_page():
             if st.button("Don't have an account? Sign up →", use_container_width=True):
                 st.session_state.show_signup = True
                 st.rerun()
-
-        # ── SIGNUP FORM ──
         else:
             st.markdown('<div class="section">Create Account</div>', unsafe_allow_html=True)
             st.markdown('<div class="small">Sign up for a new account</div>', unsafe_allow_html=True)
@@ -238,7 +186,7 @@ def show_login_page():
                     elif new_password != confirm_password:
                         st.error("Passwords do not match.")
                     else:
-                        user_data = signup_user(new_email, new_password)
+                        user_data = signup_user(supabase, new_email, new_password)
                         if user_data:
                             st.success("✅ Account created! Please check your email to confirm, then log in.")
                         else:
@@ -288,7 +236,6 @@ def show_about_page():
 def show_main_app():
     st.sidebar.markdown("## 🧭 Navigation")
 
-    # Role-based menu: admin sees extra "Admin Dashboard", everyone sees About
     if st.session_state.role == "admin":
         menu = ["📊 Loan Analysis", "💬 Contact", "⚙️ Admin Dashboard", "ℹ️ About"]
     else:
@@ -298,9 +245,8 @@ def show_main_app():
 
     st.sidebar.markdown("---")
 
-    # User info
     if st.session_state.role == "user":
-        unread = get_unread_reply_count(st.session_state.user["id"])
+        unread = get_unread_reply_count(supabase, st.session_state.user["id"])
         display_name = st.session_state.user["email"]
         if unread > 0:
             st.sidebar.markdown(f"👤 **{display_name}** 🔴 {unread}")
@@ -310,7 +256,6 @@ def show_main_app():
         safe_name = st.session_state.user.get("username", st.session_state.user.get("email"))
         st.sidebar.markdown(f"👑 **Admin: {safe_name}**")
 
-    # Safe role display
     role_display = (st.session_state.role or "user").upper()
     st.sidebar.markdown(f"Role: **{role_display}**")
 
@@ -319,12 +264,10 @@ def show_main_app():
     if st.sidebar.button("🚪 Logout", use_container_width=True):
         logout()
 
-    # ========== ABOUT PAGE (rendered before header to avoid duplicate title) ==========
     if "About" in page:
         show_about_page()
         return
 
-    # ========== REGULAR PAGES ==========
     st.markdown("<h1 style='text-align:center;color:#F0F4F8'>AI Loan Risk Platform</h1>", unsafe_allow_html=True)
     st.markdown("<div class='app-subtitle'>Real-time credit risk evaluation powered by machine learning</div>", unsafe_allow_html=True)
 
@@ -446,7 +389,7 @@ def show_main_app():
         else:
             user_id = st.session_state.user["id"]
             user_email = st.session_state.user.get("email", "")
-            mark_messages_as_read(user_id)
+            mark_messages_as_read(supabase, user_id)
 
             col1, col2 = st.columns([1, 4])
             with col1:
@@ -456,11 +399,7 @@ def show_main_app():
                 auto = st.checkbox("Auto-refresh (3s)", value=st.session_state.auto_refresh)
                 st.session_state.auto_refresh = auto
 
-            try:
-                msgs = supabase.table("messages").select("*").eq("user_id", user_id).order("id", desc=False).execute().data
-            except Exception as e:
-                st.error(f"Failed to load messages: {e}")
-                msgs = []
+            msgs = get_user_messages(supabase, user_id)
 
             st.markdown("**Quick Actions**")
             cols = st.columns(4)
@@ -606,25 +545,11 @@ def show_main_app():
                 with col_button:
                     submitted = st.form_submit_button("📤 Send", use_container_width=True)
                 if submitted and msg.strip():
-                    try:
-                        supabase.table("messages").insert({
-                            "user_id": user_id,
-                            "name": user_email,
-                            "email": user_email,
-                            "message": msg,
-                            "status": "sent",
-                            "timestamp": datetime.now().isoformat(),
-                            "read_by_customer": False,
-                            "delivered": True
-                        }).execute()
-                        st.session_state.draft_message = ""
-                        st.success("Message sent!")
-                        time.sleep(0.5)
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Failed to send: {e}")
-                else:
-                    st.session_state.draft_message = msg
+                    send_message(supabase, user_id, user_email, user_email, msg)
+                    st.session_state.draft_message = ""
+                    st.success("Message sent!")
+                    time.sleep(0.5)
+                    st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
@@ -650,11 +575,7 @@ def show_main_app():
             auto = st.checkbox("Auto-refresh (3s)", value=st.session_state.auto_refresh, key="admin_auto")
             st.session_state.auto_refresh = auto
 
-        try:
-            data = supabase.table("messages").select("*").order("timestamp", desc=False).execute().data
-        except Exception as e:
-            st.error(f"Failed to fetch messages: {e}")
-            data = []
+        data = get_all_messages(supabase)
 
         if not data:
             st.info("No messages yet.")
@@ -741,16 +662,9 @@ def show_main_app():
                             unreplied = [m for m in user_msgs if not m.get('reply')]
                             if unreplied:
                                 msg_to_reply = unreplied[-1]
-                                try:
-                                    supabase.table("messages").update({
-                                        "reply": reply_text,
-                                        "replied_at": datetime.now().isoformat(),
-                                        "status": "replied"
-                                    }).eq("id", msg_to_reply["id"]).execute()
-                                    st.success("Reply sent!")
-                                    st.rerun()
-                                except Exception as e:
-                                    st.error(f"Failed to send reply: {e}")
+                                send_reply(supabase, msg_to_reply["id"], reply_text)
+                                st.success("Reply sent!")
+                                st.rerun()
                             else:
                                 st.warning("No unreplied messages for this user.")
                 else:
