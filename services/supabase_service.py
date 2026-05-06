@@ -10,7 +10,9 @@ from datetime import datetime
 # AUTH
 # ------------------------------
 def login_user(supabase, email: str, password: str):
-    """Authenticate user via Supabase Auth."""
+    """Authenticate user via Supabase Auth.
+    Returns dict with id, email, access_token, refresh_token on success.
+    """
     try:
         res = supabase.auth.sign_in_with_password({
             "email": email,
@@ -19,7 +21,9 @@ def login_user(supabase, email: str, password: str):
         if res.user:
             return {
                 "id": res.user.id,
-                "email": res.user.email
+                "email": res.user.email,
+                "access_token": res.session.access_token,    # ← ADDED
+                "refresh_token": res.session.refresh_token   # ← ADDED
             }
     except Exception as e:
         st.error(f"Login error: {e}")
