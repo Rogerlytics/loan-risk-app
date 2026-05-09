@@ -15,7 +15,7 @@ def logout():
 
 
 def show_login_page(supabase):
-    # Extra aggressive sidebar + collapse arrow hide on login
+    # Hide sidebar completely on login page
     st.markdown("""
     <style>
     [data-testid="stSidebar"] { display: none !important; }
@@ -24,20 +24,19 @@ def show_login_page(supabase):
     </style>
     """, unsafe_allow_html=True)
 
-    # 3D Blue Title — centred, same style as all other pages
+    # ── Gradient 3D Blue Title ──
     st.markdown("""
     <div style="
         text-align: center;
-        font-size: 48px;
+        font-size: 52px;
         font-weight: 800;
-        color: #60A5FA;
-        text-shadow:
-            0 1px 0 #2563eb,
-            0 2px 0 #1d4ed8,
-            0 3px 0 #1e40af,
-            0 4px 0 #1e3a8a,
-            0 5px 10px rgba(0,0,0,0.6);
-        letter-spacing: -0.5px;
+        background: linear-gradient(180deg, #93C5FD 0%, #3B82F6 45%, #1D4ED8 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6));
+        letter-spacing: -1px;
+        line-height: 1.1;
         margin-top: 40px;
         margin-bottom: 10px;
     ">AI Loan Risk Platform</div>
@@ -51,16 +50,13 @@ def show_login_page(supabase):
 
     col_left, col_center, col_right = st.columns([1, 2, 1])
     with col_center:
-        # Single HTML block for the card — avoids the empty box bug
         st.markdown("""
         <div style="
-            background: rgba(26,46,68,0.85);
-            backdrop-filter: blur(12px);
-            border: 1px solid #2563eb;
-            border-radius: 24px;
+            background: linear-gradient(145deg, #111827, #0b1220);
+            border: 1px solid #1f2a36;
+            border-radius: 20px;
             padding: 36px 32px 24px 32px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-            margin-bottom: 0px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
         ">
         """, unsafe_allow_html=True)
 
