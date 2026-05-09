@@ -1,8 +1,12 @@
+# ==============================
+# styles/theme.py
+# ==============================
 import streamlit as st
 
 def apply_theme():
     st.markdown("""
 <style>
+
 /* ── Hide Streamlit auto page nav ── */
 [data-testid="stSidebarNav"] { display: none !important; }
 
@@ -14,11 +18,15 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
     padding-top: 2rem !important;
     padding-bottom: 2rem !important;
 }
+div[data-testid="stVerticalBlock"] > div,
+div[data-testid="stHorizontalBlock"] > div {
+    background-color: #0B1B2B !important;
+}
 
-/* ── 3D Bright Blue Title ── */
+/* ── 3D Bright Blue Title — used across all pages ── */
 .page-title {
     text-align: center;
-    font-size: 42px;
+    font-size: 48px;
     font-weight: 800;
     color: #60A5FA;
     text-shadow:
@@ -26,7 +34,7 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
         0 2px 0 #1d4ed8,
         0 3px 0 #1e40af,
         0 4px 0 #1e3a8a,
-        0 5px 8px rgba(0, 0, 0, 0.5);
+        0 5px 10px rgba(0, 0, 0, 0.6);
     letter-spacing: -0.5px;
     margin-bottom: 8px;
 }
@@ -60,7 +68,9 @@ section[data-testid="stSidebar"] .stButton button {
     border: none;
     color: white !important;
 }
-section[data-testid="stSidebar"] .stButton button:hover { background: #3b82f6; }
+section[data-testid="stSidebar"] .stButton button:hover {
+    background: #3b82f6;
+}
 
 /* ── Inputs ── */
 .stTextInput > div > div > input {
@@ -70,6 +80,7 @@ section[data-testid="stSidebar"] .stButton button:hover { background: #3b82f6; }
     color: white;
     padding: 12px 16px;
     width: 100% !important;
+    box-sizing: border-box;
 }
 .stTextInput > div > div > input::placeholder { color: #94A3B8; }
 
@@ -91,31 +102,6 @@ section[data-testid="stSidebar"] .stButton button:hover { background: #3b82f6; }
     box-shadow: 0 8px 16px rgba(37,99,235,0.3);
 }
 
-/* ── Login Card ── */
-.login-title {
-    font-size: 38px;
-    font-weight: 800;
-    text-align: center;
-    color: #60A5FA;
-    text-shadow:
-        0 1px 0 #2563eb,
-        0 2px 0 #1d4ed8,
-        0 3px 0 #1e40af,
-        0 4px 6px rgba(0,0,0,0.5);
-    margin-bottom: 6px;
-}
-.subtitle { color: #A0AEC0; text-align: center; margin-bottom: 40px; font-size: 16px; }
-.section { font-size: 22px; font-weight: 600; text-align: center; color: #F0F4F8; margin-bottom: 8px; }
-.small { text-align: center; color: #A0AEC0; margin-bottom: 24px; font-size: 14px; }
-.login-card {
-    background: rgba(26,46,68,0.8);
-    backdrop-filter: blur(12px);
-    border: 1px solid #2563eb;
-    border-radius: 24px;
-    padding: 40px 32px;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-}
-
 /* ── Cards ── */
 .card {
     background: #1A2E44;
@@ -125,7 +111,11 @@ section[data-testid="stSidebar"] .stButton button:hover { background: #3b82f6; }
     margin-bottom: 20px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
-.app-subtitle { text-align: center; color: #A0AEC0; margin-bottom: 20px; }
+.app-subtitle {
+    text-align: center;
+    color: #A0AEC0;
+    margin-bottom: 20px;
+}
 
 /* ── Section headings (replaces st.subheader) ── */
 .section-heading {
@@ -145,7 +135,12 @@ section[data-testid="stSidebar"] .stButton button:hover { background: #3b82f6; }
     border-radius: 24px;
     box-shadow: 0 8px 20px rgba(0,0,0,0.3);
 }
-.about-heading { color: #60A5FA; font-size: 24px; font-weight: 600; margin-bottom: 16px; }
+.about-heading {
+    color: #60A5FA;
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 16px;
+}
 .about-text { color: #E2E8F0; font-size: 16px; line-height: 1.6; }
 .feature-list { list-style-type: none; padding-left: 0; }
 .feature-list li { margin-bottom: 12px; color: #E2E8F0; }
@@ -164,6 +159,9 @@ section[data-testid="stSidebar"] .stButton button:hover { background: #3b82f6; }
 
 /* ── Hide empty element containers (fixes stray boxes) ── */
 .element-container:empty { display: none !important; }
-[data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"]:empty { display: none !important; }
+[data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"]:empty {
+    display: none !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
