@@ -1,4 +1,4 @@
-# 🚀 AI Loan Risk Platform
+#  AI Loan Risk Platform
 
 **Real‑time credit risk evaluation powered by machine learning**
 
@@ -9,7 +9,7 @@
 
 ---
 
-## 📖 Overview
+## Overview
 
 The **AI Loan Risk Platform** is a state‑of‑the‑art credit assessment tool that leverages machine learning to provide real‑time risk evaluation for vehicle loans. Designed for both financial institutions and individual borrowers, it delivers transparent, data‑driven insights to support smarter lending decisions.
 
@@ -17,16 +17,16 @@ With a premium dark interface, role‑based access (user / administrator), integ
 
 ---
 
-## ✨ Key Features
+##  Key Features
 
-- **🔍 Instant Risk Scoring** – Proprietary ML model evaluates applicant profiles in milliseconds.
-- **📊 Repayment Calculator** – View monthly, weekly, and daily instalments instantly.
-- **💬 Integrated Support Chat** – Real‑time conversation with customer service (Facebook‑style bubbles, timeline navigation).
-- **📈 Admin Dashboard** – Comprehensive overview of all conversations, reply to users, and monitor system metrics.
-- **🔐 Secure Authentication** – Role‑based access (User / Administrator) with "Remember Me" convenience and auto‑login.
-- **🌙 Premium Dark Interface** – Optimised for long‑duration use with minimal eye strain.
-- **⚡ Live Updates** – Auto‑refresh for chat and dashboard, plus real‑time risk assessment.
-- **📱 Fully Responsive** – Works flawlessly on desktop, tablet, and mobile devices.
+- ** Instant Risk Scoring** – Proprietary ML model evaluates applicant profiles in milliseconds.
+- ** Repayment Calculator** – View monthly, weekly, and daily instalments instantly.
+- **Integrated Support Chat** – Real‑time conversation with customer service (Facebook‑style bubbles, timeline navigation).
+- ** Admin Dashboard** – Comprehensive overview of all conversations, reply to users, and monitor system metrics.
+- ** Secure Authentication** – Role‑based access (User / Administrator) with "Remember Me" convenience and auto‑login.
+- ** Premium Dark Interface** – Optimised for long‑duration use with minimal eye strain.
+- ** Live Updates** – Auto‑refresh for chat and dashboard, plus real‑time risk assessment.
+- ** Fully Responsive** – Works flawlessly on desktop, tablet, and mobile devices.
 
 
 
