@@ -51,43 +51,73 @@ def load_model():
 
 model = load_model()
 
-# ── Routing ──
+# ══════════════════════════════
+# NOT LOGGED IN — show login only, no sidebar
+# ══════════════════════════════
 if not st.session_state.authenticated:
+    # Completely hide the sidebar on login page
+    st.markdown("""
+    <style>
+    [data-testid="stSidebar"] { display: none !important; }
+    [data-testid="collapsedControl"] { display: none !important; }
+    </style>
+    """, unsafe_allow_html=True)
     show_login_page(supabase)
+
+# ══════════════════════════════
+# LOGGED IN — show sidebar + pages
+# ══════════════════════════════
 else:
-    # Sidebar
-    st.sidebar.markdown("## 🧭 Navigation")
-    menu = ["📊 Loan Analysis", "💬 Contact", "⚙️ Admin Dashboard", "ℹ️ About"] \
-        if st.session_state.role == "admin" \
-        else ["📊 Loan Analysis", "💬 Contact", "ℹ️ About"]
+    # ── Sidebar ──
+    with st.sidebar:
+        st.markdown("## Navigation")
+        st.markdown("---")
 
-    page = st.sidebar.radio("", menu)
-    st.sidebar.markdown("---")
+        # Build menu without emojis (cleaner radio buttons)
+        if st.session_state.role == "admin":
+            menu = ["Loan Analysis", "Contact", "Admin Dashboard", "About"]
+        else:
+            menu = ["Loan Analysis", "Contact", "About"]
 
-    if st.session_state.role == "user":
-        unread = get_unread_reply_count(supabase, st.session_state.user["id"])
-        display_name = st.session_state.user["email"]
-        st.sidebar.markdown(f"👤 **{display_name}**" + (f" 🔴 {unread}" if unread > 0 else ""))
-    else:
-        safe_name = st.session_state.user.get("username", st.session_state.user.get("email"))
-        st.sidebar.markdown(f"👑 **Admin: {safe_name}**")
+        page = st.radio("", menu, label_visibility="collapsed")
 
-    st.sidebar.markdown(f"Role: **{(st.session_state.role or 'user').upper()}**")
-    st.sidebar.markdown("---")
+        st.markdown("---")
 
-    if st.sidebar.button("🚪 Logout", use_container_width=True):
-        logout()
+        # User info
+        if st.session_state.role == "user":
+            unread = get_unread_reply_count(supabase, st.session_state.user["id"])
+            display_name = st.session_state.user["email"]
+            if unread > 0:
+                st.markdown(f"👤 **{display_name}** 🔴 {unread}")
+            else:
+                st.markdown(f"👤 **{display_name}**")
+        else:
+            safe_name = st.session_state.user.get("username", st.session_state.user.get("email"))
+            st.markdown(f"👑 **Admin:** {safe_name}")
 
-    # Page routing
-    if "About" in page:
+        st.markdown(f"Role: **{(st.session_state.role or 'user').upper()}**")
+        st.markdown("---")
+
+        if st.button("Logout", use_container_width=True):
+            logout()
+
+    # ── Page routing ──
+    if page == "About":
         show_about_page()
-    else:
-        st.markdown("<h1 style='text-align:center;color:#F0F4F8'>AI Loan Risk Platform</h1>", unsafe_allow_html=True)
-        st.markdown("<div class='app-subtitle'>Real-time credit risk evaluation powered by machine learning</div>", unsafe_allow_html=True)
 
-        if "Loan Analysis" in page:
+    else:
+        st.markdown(
+            "<h1 style='text-align:center;color:#F0F4F8'>AI Loan Risk Platform</h1>",
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            "<div class='app-subtitle'>Real-time credit risk evaluation powered by machine learning</div>",
+            unsafe_allow_html=True
+        )
+
+        if page == "Loan Analysis":
             show_loan_analysis(model)
-        elif "Contact" in page:
+        elif page == "Contact":
             show_contact(supabase)
-        elif "Admin Dashboard" in page:
+        elif page == "Admin Dashboard":
             show_admin_dashboard(supabase)
