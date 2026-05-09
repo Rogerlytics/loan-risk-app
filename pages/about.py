@@ -5,8 +5,8 @@ import streamlit as st
 
 
 def show_about_page():
-    st.markdown('<div class="gradient-title" style="text-align:center; font-size:42px; font-weight:700; color:#F0F4F8;">AI Loan Risk Platform</div>', unsafe_allow_html=True)
-    st.markdown('<div class="app-subtitle">Intelligent credit evaluation for smarter lending</div>', unsafe_allow_html=True)
+    st.markdown('<div class="page-title">AI Loan Risk Platform</div>', unsafe_allow_html=True)
+    st.markdown('<div class="page-subtitle">Intelligent credit evaluation for smarter lending</div>', unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns([1, 3, 1])
     with col2:
