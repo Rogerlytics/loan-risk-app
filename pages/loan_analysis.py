@@ -8,7 +8,7 @@ from utils.helpers import explain_risk_with_citations, suggest_improvements
 
 def show_loan_analysis(model):
     st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.subheader("📊 Loan Input Details")
+    st.subheader(" Loan Input Details")
     col1, col2 = st.columns(2)
     with col1:
         age = st.number_input("Age", 0, 100, 30, key="age")
@@ -26,7 +26,7 @@ def show_loan_analysis(model):
     st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.subheader("📈 Key Financial Metrics")
+    st.subheader(" Key Financial Metrics")
     k1, k2, k3 = st.columns(3)
     k1.metric("Loan", f"KES {loan_amount:,}")
     k2.metric("Income", f"KES {income:,}")
