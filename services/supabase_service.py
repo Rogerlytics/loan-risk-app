@@ -33,12 +33,23 @@ def login_user(supabase, email: str, password: str):
 
 def signup_user(supabase, email: str, password: str):
     try:
+        # ── Check if email already exists in profiles ──
+        # This catches both confirmed and unconfirmed existing accounts
+        existing = (
+            supabase.table("profiles")
+            .select("id")
+            .eq("email", email)
+            .execute()
+        )
+        if existing.data and len(existing.data) > 0:
+            return {"error": "already_registered"}
+
+        # ── Proceed with signup ──
         res = supabase.auth.sign_up({
             "email": email,
             "password": password
         })
         if res.user:
-            # Check if email confirmation is required
             confirmed = res.user.email_confirmed_at is not None
             return {
                 "id":        res.user.id,
