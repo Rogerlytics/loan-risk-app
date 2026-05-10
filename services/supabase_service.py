@@ -18,9 +18,15 @@ def login_user(supabase, email: str, password: str):
                 "id":            res.user.id,
                 "email":         res.user.email,
                 "access_token":  res.session.access_token,
-                "refresh_token": res.session.refresh_token
+                "refresh_token": res.session.refresh_token,
+                "confirmed":     res.user.email_confirmed_at is not None
             }
     except Exception as e:
+        error_msg = str(e).lower()
+        if "email not confirmed" in error_msg:
+            return {"error": "email_not_confirmed"}
+        if "invalid login" in error_msg or "invalid credentials" in error_msg:
+            return {"error": "invalid_credentials"}
         st.error(f"Login error: {e}")
     return None
 
@@ -32,13 +38,32 @@ def signup_user(supabase, email: str, password: str):
             "password": password
         })
         if res.user:
+            # Check if email confirmation is required
+            confirmed = res.user.email_confirmed_at is not None
             return {
-                "id":    res.user.id,
-                "email": res.user.email
+                "id":        res.user.id,
+                "email":     res.user.email,
+                "confirmed": confirmed
             }
     except Exception as e:
+        error_msg = str(e).lower()
+        if "already registered" in error_msg or "already exists" in error_msg:
+            return {"error": "already_registered"}
         st.error(f"Signup error: {e}")
     return None
+
+
+def resend_confirmation_email(supabase, email: str) -> bool:
+    """Resend the confirmation email to the user."""
+    try:
+        supabase.auth.resend({
+            "type":  "signup",
+            "email": email
+        })
+        return True
+    except Exception as e:
+        st.error(f"Failed to resend confirmation: {e}")
+        return False
 
 
 # ── Profiles ─────────────────────────────────────
