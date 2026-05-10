@@ -77,3 +77,61 @@ def validate_secrets():
         """, unsafe_allow_html=True)
 
         st.stop()
+
+
+def require_role(allowed_roles: list):
+    """
+    Hard route protection — call at the top of any page function.
+    Immediately stops the page if the user's role is not in allowed_roles.
+    Works even if someone manually changes the URL or session state.
+    """
+    role = st.session_state.get("role")
+    authenticated = st.session_state.get("authenticated", False)
+
+    # Not logged in at all
+    if not authenticated or not role:
+        st.markdown("""
+        <div style="
+            background: linear-gradient(145deg, #111827, #0b1220);
+            border: 1px solid #ef4444;
+            border-radius: 16px;
+            padding: 32px;
+            text-align: center;
+            margin-top: 40px;
+        ">
+            <div style="font-size:48px; margin-bottom:16px;">🔒</div>
+            <div style="color:#F87171; font-size:20px; font-weight:700;
+                        margin-bottom:8px;">Session Expired</div>
+            <div style="color:#94A3B8; font-size:14px;">
+                Please log in to access this page.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        st.stop()
+
+    # Logged in but wrong role
+    if role not in allowed_roles:
+        st.markdown(f"""
+        <div style="
+            background: linear-gradient(145deg, #111827, #0b1220);
+            border: 1px solid #ef4444;
+            border-radius: 16px;
+            padding: 32px;
+            text-align: center;
+            margin-top: 40px;
+        ">
+            <div style="font-size:48px; margin-bottom:16px;">⛔</div>
+            <div style="color:#F87171; font-size:20px; font-weight:700;
+                        margin-bottom:8px;">Access Denied</div>
+            <div style="color:#94A3B8; font-size:14px;">
+                You don't have permission to view this page.<br>
+                Your current role is
+                <b style="color:#60A5FA;">{role.upper()}</b> —
+                this page requires
+                <b style="color:#60A5FA;">
+                    {" or ".join(r.upper() for r in allowed_roles)}
+                </b>.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        st.stop()
