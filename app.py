@@ -11,6 +11,7 @@ from pages.loan_analysis import show_loan_analysis
 from pages.contact import show_contact
 from pages.admin_dashboard import show_admin_dashboard
 from services.supabase_service import get_unread_reply_count
+from config.settings import validate_secrets          # ← NEW import
 
 # ── Config ──
 st.set_page_config(
@@ -19,6 +20,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 apply_theme()
+validate_secrets()                                   # ← NEW call
 
 # ── Supabase ──
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
