@@ -53,9 +53,7 @@ Admin Dashboard
 
 ---
 
-## 🧩 System Architecture
 
-```mermaid
 flowchart TD
 
     A[👤 User / Admin] --> B[🌐 Streamlit Frontend]
