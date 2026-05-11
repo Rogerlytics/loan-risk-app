@@ -12,7 +12,6 @@ from services.supabase_service import (
     get_audit_logs,
     get_all_users,
     update_user_role,
-    get_total_message_count,
     log_action
 )
 from utils.helpers import relative_time
@@ -45,10 +44,6 @@ def show_admin_dashboard(supabase):
         unsafe_allow_html=True
     )
 
-    # ── Initialise smart polling state ──
-    if "admin_last_count" not in st.session_state:
-        st.session_state.admin_last_count = 0
-
     tab1, tab2, tab3 = st.tabs([
         "Conversations", "User Management", "Audit Log"
     ])
@@ -57,37 +52,20 @@ def show_admin_dashboard(supabase):
     # TAB 1 — Conversations
     # ════════════════════════════
     with tab1:
-        col1, col2, col3 = st.columns([1, 1, 4])
+        col1, col2 = st.columns([1, 4])
         with col1:
             if st.button("Refresh", use_container_width=True):
                 st.rerun()
         with col2:
             auto = st.checkbox(
-                "Auto",
+                "Auto-refresh (3s)",
                 value=st.session_state.auto_refresh,
-                key="admin_auto",
-                help="Auto-refresh when new messages arrive"
+                key="admin_auto"
             )
             st.session_state.auto_refresh = auto
-        with col3:
-            if st.session_state.auto_refresh:
-                st.markdown(
-                    '<div style="color:#22c55e; font-size:13px; '
-                    'padding-top:8px;">● Live</div>',
-                    unsafe_allow_html=True
-                )
-            else:
-                st.markdown(
-                    '<div style="color:#64748B; font-size:13px; '
-                    'padding-top:8px;">○ Paused</div>',
-                    unsafe_allow_html=True
-                )
 
         with st.spinner("Loading conversations..."):
             data = get_all_messages(supabase)
-
-        # Update count after loading
-        st.session_state.admin_last_count = len(data)
 
         if not data:
             _empty_state(
@@ -263,14 +241,9 @@ def show_admin_dashboard(supabase):
                                 </div>
                             </div>''')
 
-                        chat_html_parts.append('''
-                        <div id="bottom"></div>
-                        <script>
-                            document.getElementById("bottom")
-                                .scrollIntoView();
-                        </script>
-                        </div></body></html>''')
-
+                        chat_html_parts.append(
+                            '</div></body></html>'
+                        )
                         components.html(
                             "".join(chat_html_parts),
                             height=450,
@@ -357,6 +330,11 @@ def show_admin_dashboard(supabase):
                     "Message activity will appear here once "
                     "users start chatting."
                 )
+
+        # Simple auto-refresh
+        if st.session_state.auto_refresh:
+            time.sleep(3)
+            st.rerun()
 
     # ════════════════════════════
     # TAB 2 — User Management
@@ -530,13 +508,3 @@ def show_admin_dashboard(supabase):
                                 white-space:nowrap;">{ts}</div>
                 </div>
                 """, unsafe_allow_html=True)
-
-    # ── Smart polling — only rerun when count changes ──
-    if st.session_state.auto_refresh:
-        time.sleep(2)
-        current_count = get_total_message_count(supabase)
-        if current_count != st.session_state.admin_last_count:
-            st.session_state.admin_last_count = current_count
-            st.rerun()
-        else:
-            st.rerun()
