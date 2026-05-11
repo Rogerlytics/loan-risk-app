@@ -25,7 +25,8 @@ def login_user(supabase, email: str, password: str):
         error_msg = str(e).lower()
         if "email not confirmed" in error_msg:
             return {"error": "email_not_confirmed"}
-        if "invalid login" in error_msg or "invalid credentials" in error_msg:
+        if "invalid login" in error_msg or \
+                "invalid credentials" in error_msg:
             return {"error": "invalid_credentials"}
         st.error(f"Login error: {e}")
     return None
@@ -33,32 +34,32 @@ def login_user(supabase, email: str, password: str):
 
 def signup_user(supabase, email: str, password: str):
     try:
-        # ── Check if email already exists in profiles ──
-        # This catches both confirmed and unconfirmed existing accounts
-        existing = (
-            supabase.table("profiles")
-            .select("id")
-            .eq("email", email)
-            .execute()
-        )
-        if existing.data and len(existing.data) > 0:
-            return {"error": "already_registered"}
-
-        # ── Proceed with signup ──
         res = supabase.auth.sign_up({
             "email": email,
             "password": password
         })
+
+        # Supabase returns a user with no session when email
+        # already exists but is unconfirmed — identities list is empty
         if res.user:
+            identities = getattr(res.user, "identities", None)
+
+            # Empty identities = email already registered
+            if identities is not None and len(identities) == 0:
+                return {"error": "already_registered"}
+
             confirmed = res.user.email_confirmed_at is not None
             return {
                 "id":        res.user.id,
                 "email":     res.user.email,
                 "confirmed": confirmed
             }
+
     except Exception as e:
         error_msg = str(e).lower()
-        if "already registered" in error_msg or "already exists" in error_msg:
+        if "already registered" in error_msg or \
+                "already exists" in error_msg or \
+                "user already registered" in error_msg:
             return {"error": "already_registered"}
         st.error(f"Signup error: {e}")
     return None
