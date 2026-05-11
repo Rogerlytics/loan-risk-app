@@ -7,7 +7,8 @@ import time
 from services.supabase_service import (
     get_user_messages,
     send_message,
-    mark_messages_as_read
+    mark_messages_as_read,
+    log_action
 )
 from utils.helpers import relative_time, sanitise_text
 
@@ -102,7 +103,8 @@ def show_contact(supabase):
                 safe_reply = msg['reply']
                 chat_html_parts.append(f'''
             <div class="chat-bubble-row admin">
-                <div style="display:flex; flex-direction:column; max-width:70%;">
+                <div style="display:flex; flex-direction:column;
+                            max-width:70%;">
                     <div class="reply-badge">Support</div>
                     <div class="chat-bubble">{safe_reply}</div>
                     <div class="chat-timestamp">{reply_time}</div>
@@ -132,6 +134,14 @@ def show_contact(supabase):
                 clean_msg = sanitise_text(msg, max_length=500)
                 with st.spinner("Sending..."):
                     send_message(supabase, user_id, user_email, clean_msg)
+                # Log message sent
+                log_action(
+                    supabase,
+                    user_id,
+                    user_email,
+                    "message_sent",
+                    f"Message length: {len(clean_msg)} chars"
+                )
                 st.session_state.draft_message = ""
                 st.success("Message sent!")
                 time.sleep(0.5)
