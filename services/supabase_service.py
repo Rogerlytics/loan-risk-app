@@ -5,7 +5,40 @@ import streamlit as st
 from datetime import datetime
 
 
-# ── Auth ─────────────────────────────────────────
+# ── Audit Logging ─────────────────────────────────
+
+def log_action(supabase, user_id: str, email: str, action: str, details: str = ""):
+    """
+    Insert a row into audit_logs.
+    Fails silently — never breaks the main app flow.
+    """
+    try:
+        supabase.table("audit_logs").insert({
+            "user_id":    user_id,
+            "email":      email,
+            "action":     action,
+            "details":    details,
+            "created_at": datetime.now().isoformat()
+        }).execute()
+    except Exception:
+        pass  # Logging must never crash the app
+
+
+def get_audit_logs(supabase, limit: int = 100):
+    """Fetch most recent audit logs for admin view."""
+    try:
+        return (
+            supabase.table("audit_logs")
+            .select("*")
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute().data
+        )
+    except Exception:
+        return []
+
+
+# ── Auth ──────────────────────────────────────────
 
 def login_user(supabase, email: str, password: str):
     try:
@@ -38,23 +71,16 @@ def signup_user(supabase, email: str, password: str):
             "email": email,
             "password": password
         })
-
-        # Supabase returns a user with no session when email
-        # already exists but is unconfirmed — identities list is empty
         if res.user:
             identities = getattr(res.user, "identities", None)
-
-            # Empty identities = email already registered
             if identities is not None and len(identities) == 0:
                 return {"error": "already_registered"}
-
             confirmed = res.user.email_confirmed_at is not None
             return {
                 "id":        res.user.id,
                 "email":     res.user.email,
                 "confirmed": confirmed
             }
-
     except Exception as e:
         error_msg = str(e).lower()
         if "already registered" in error_msg or \
@@ -66,7 +92,6 @@ def signup_user(supabase, email: str, password: str):
 
 
 def resend_confirmation_email(supabase, email: str) -> bool:
-    """Resend the confirmation email to the user."""
     try:
         supabase.auth.resend({
             "type":  "signup",
@@ -78,7 +103,7 @@ def resend_confirmation_email(supabase, email: str) -> bool:
         return False
 
 
-# ── Profiles ─────────────────────────────────────
+# ── Profiles ──────────────────────────────────────
 
 def get_user_role(supabase, user_id: str) -> str:
     try:
@@ -94,7 +119,7 @@ def get_user_role(supabase, user_id: str) -> str:
         return "user"
 
 
-# ── Messages ─────────────────────────────────────
+# ── Messages ──────────────────────────────────────
 
 def get_user_messages(supabase, user_id: str):
     try:
