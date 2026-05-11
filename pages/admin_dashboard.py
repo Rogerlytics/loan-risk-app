@@ -10,6 +10,8 @@ from services.supabase_service import (
     get_all_messages,
     send_reply,
     get_audit_logs,
+    get_all_users,
+    update_user_role,
     log_action
 )
 from utils.helpers import relative_time
@@ -43,7 +45,9 @@ def show_admin_dashboard(supabase):
     )
 
     # ── Tabs ──
-    tab1, tab2 = st.tabs(["Conversations", "Audit Log"])
+    tab1, tab2, tab3 = st.tabs([
+        "Conversations", "User Management", "Audit Log"
+    ])
 
     # ════════════════════════════
     # TAB 1 — Conversations
@@ -87,7 +91,8 @@ def show_admin_dashboard(supabase):
                 )
                 for usr in user_list:
                     user_msgs = [
-                        m for m in data if m['user_id'] == usr['user_id']
+                        m for m in data
+                        if m['user_id'] == usr['user_id']
                     ]
                     unread = sum(
                         1 for m in user_msgs
@@ -106,8 +111,10 @@ def show_admin_dashboard(supabase):
                         st.rerun()
 
             with col_chat:
-                if st.session_state.selected_user_id is None and user_list:
-                    st.session_state.selected_user_id = user_list[0]['user_id']
+                if st.session_state.selected_user_id is None \
+                        and user_list:
+                    st.session_state.selected_user_id = \
+                        user_list[0]['user_id']
 
                 if not st.session_state.selected_user_id:
                     _empty_state(
@@ -118,7 +125,8 @@ def show_admin_dashboard(supabase):
                 else:
                     user_msgs = [
                         m for m in data
-                        if m['user_id'] == st.session_state.selected_user_id
+                        if m['user_id'] ==
+                        st.session_state.selected_user_id
                     ]
                     selected_email = next(
                         (u['email'] for u in user_list
@@ -144,28 +152,42 @@ def show_admin_dashboard(supabase):
                         <html><head><meta charset="UTF-8"><style>
                         body { margin:0; background:#0e1117;
                                font-family:"Inter",sans-serif; }
-                        .chat-messages { display:flex; flex-direction:column;
-                                         padding:20px; overflow-y:auto;
+                        .chat-messages { display:flex;
+                                         flex-direction:column;
+                                         padding:20px;
+                                         overflow-y:auto;
                                          height:430px; }
-                        .chat-bubble-row { display:flex; margin-bottom:12px; }
-                        .chat-bubble-row.user { justify-content:flex-end; }
-                        .chat-bubble-row.admin { justify-content:flex-start; }
-                        .chat-bubble { max-width:70%; padding:12px 16px;
-                                       border-radius:18px; font-size:14px;
-                                       line-height:1.4; word-wrap:break-word; }
-                        .user .chat-bubble  { background:#2563eb; color:white;
-                                              border-bottom-right-radius:4px; }
+                        .chat-bubble-row { display:flex;
+                                           margin-bottom:12px; }
+                        .chat-bubble-row.user {
+                            justify-content:flex-end; }
+                        .chat-bubble-row.admin {
+                            justify-content:flex-start; }
+                        .chat-bubble { max-width:70%;
+                                       padding:12px 16px;
+                                       border-radius:18px;
+                                       font-size:14px;
+                                       line-height:1.4;
+                                       word-wrap:break-word; }
+                        .user .chat-bubble { background:#2563eb;
+                                             color:white;
+                                             border-bottom-right-radius:4px; }
                         .admin .chat-bubble { background:#1f2a36;
                                               color:#F0F4F8;
                                               border-bottom-left-radius:4px; }
-                        .chat-timestamp { font-size:11px; color:#94A3B8;
+                        .chat-timestamp { font-size:11px;
+                                          color:#94A3B8;
                                           margin-top:4px; }
-                        .reply-badge { background:#0e1117; color:#60A5FA;
-                                       border-radius:16px; padding:4px 12px;
-                                       font-size:12px; margin-bottom:8px;
+                        .reply-badge { background:#0e1117;
+                                       color:#60A5FA;
+                                       border-radius:16px;
+                                       padding:4px 12px;
+                                       font-size:12px;
+                                       margin-bottom:8px;
                                        display:inline-block;
                                        border:1px solid #2563eb; }
-                        .read-receipt { font-size:11px; color:#94A3B8;
+                        .read-receipt { font-size:11px;
+                                        color:#94A3B8;
                                         margin-left:8px; }
                         </style></head><body>
                         <div class="chat-messages">''']
@@ -176,7 +198,8 @@ def show_admin_dashboard(supabase):
                             )
                             safe_message = msg['message']
                             read_status  = (
-                                "Read" if msg.get('read_by_customer')
+                                "Read"
+                                if msg.get('read_by_customer')
                                 else "Delivered"
                             )
                             chat_html_parts.append(f'''
@@ -209,7 +232,9 @@ def show_admin_dashboard(supabase):
                                 <div style="display:flex;
                                             flex-direction:column;
                                             max-width:70%;">
-                                    <div class="reply-badge">Reply</div>
+                                    <div class="reply-badge">
+                                        Reply
+                                    </div>
                                     <div class="chat-bubble">
                                         {safe_reply}
                                     </div>
@@ -219,14 +244,15 @@ def show_admin_dashboard(supabase):
                                 </div>
                             </div>''')
 
-                        chat_html_parts.append('</div></body></html>')
+                        chat_html_parts.append(
+                            '</div></body></html>'
+                        )
                         components.html(
                             "".join(chat_html_parts),
                             height=450,
                             scrolling=True
                         )
 
-                        # Reply form
                         with st.form(
                             key=f"reply_form_"
                                 f"{st.session_state.selected_user_id}",
@@ -257,7 +283,6 @@ def show_admin_dashboard(supabase):
                                                 unreplied[-1]["id"],
                                                 reply_text.strip()
                                             )
-                                        # Log admin reply
                                         admin = st.session_state.user
                                         log_action(
                                             supabase,
@@ -274,7 +299,6 @@ def show_admin_dashboard(supabase):
                                             "for this user."
                                         )
 
-            # Stats
             st.markdown("---")
             col_m1, col_m2, col_m3 = st.columns(3)
             col_m1.metric("Total Messages", len(data))
@@ -312,9 +336,131 @@ def show_admin_dashboard(supabase):
                 )
 
     # ════════════════════════════
-    # TAB 2 — Audit Log
+    # TAB 2 — User Management
     # ════════════════════════════
     with tab2:
+        st.markdown(
+            '<div class="section-heading">User Management</div>',
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            '<div style="color:#94A3B8; font-size:13px; '
+            'margin-bottom:20px;">Promote users to admin or demote '
+            'admins back to user. You cannot change your own role.'
+            '</div>',
+            unsafe_allow_html=True
+        )
+
+        with st.spinner("Loading users..."):
+            all_users = get_all_users(supabase)
+
+        if not all_users:
+            _empty_state(
+                "👥",
+                "No Users Found",
+                "No users have signed up yet."
+            )
+        else:
+            current_admin_id = st.session_state.user["id"]
+
+            for usr in all_users:
+                uid       = usr["id"]
+                email     = usr.get("email", "Unknown")
+                role      = usr.get("role", "user")
+                is_self   = uid == current_admin_id
+
+                # Role badge colours
+                if role == "admin":
+                    badge_bg = "#7c3aed22"
+                    badge_fg = "#a78bfa"
+                    badge_border = "#7c3aed44"
+                else:
+                    badge_bg = "#0369a122"
+                    badge_fg = "#38bdf8"
+                    badge_border = "#0369a144"
+
+                col_email, col_badge, col_action = st.columns([3, 1, 1])
+
+                with col_email:
+                    self_label = " (you)" if is_self else ""
+                    st.markdown(
+                        f'<div style="color:#F0F4F8; font-size:14px; '
+                        f'padding-top:8px;">'
+                        f'{email}'
+                        f'<span style="color:#64748B; font-size:12px;">'
+                        f'{self_label}</span></div>',
+                        unsafe_allow_html=True
+                    )
+
+                with col_badge:
+                    st.markdown(
+                        f'<div style="background:{badge_bg}; '
+                        f'color:{badge_fg}; '
+                        f'border:1px solid {badge_border}; '
+                        f'border-radius:20px; padding:6px 12px; '
+                        f'font-size:11px; font-weight:700; '
+                        f'text-transform:uppercase; text-align:center; '
+                        f'margin-top:4px;">'
+                        f'{role}</div>',
+                        unsafe_allow_html=True
+                    )
+
+                with col_action:
+                    if is_self:
+                        st.markdown(
+                            '<div style="color:#64748B; font-size:12px; '
+                            'padding-top:10px; text-align:center;">'
+                            'Your account</div>',
+                            unsafe_allow_html=True
+                        )
+                    else:
+                        new_role   = "user" if role == "admin" else "admin"
+                        btn_label  = (
+                            "Demote to User"
+                            if role == "admin"
+                            else "Promote to Admin"
+                        )
+                        btn_colour = (
+                            "#7f1d1d" if role == "admin" else "#1e3a5f"
+                        )
+                        btn_text   = (
+                            "#fca5a5" if role == "admin" else "#93c5fd"
+                        )
+
+                        if st.button(
+                            btn_label,
+                            key=f"role_btn_{uid}",
+                            use_container_width=True
+                        ):
+                            with st.spinner("Updating role..."):
+                                success, message = update_user_role(
+                                    supabase, uid, new_role
+                                )
+                            if success:
+                                admin = st.session_state.user
+                                log_action(
+                                    supabase,
+                                    admin["id"],
+                                    admin["email"],
+                                    "role_changed",
+                                    f"{email}: {role} → {new_role}"
+                                )
+                                st.success(
+                                    f"{email} is now {new_role.upper()}."
+                                )
+                                st.rerun()
+                            else:
+                                st.error(message)
+
+                st.markdown(
+                    '<hr style="border-color:#1f2a36; margin:8px 0;">',
+                    unsafe_allow_html=True
+                )
+
+    # ════════════════════════════
+    # TAB 3 — Audit Log
+    # ════════════════════════════
+    with tab3:
         st.markdown(
             '<div class="section-heading">Audit Log</div>',
             unsafe_allow_html=True
@@ -330,15 +476,15 @@ def show_admin_dashboard(supabase):
                 "User actions will be recorded here."
             )
         else:
-            # Action colour badges
             action_colours = {
-                "login":                 ("#dcfce7", "#166534"),
-                "logout":                ("#fee2e2", "#991b1b"),
-                "signup":                ("#dbeafe", "#1e40af"),
-                "risk_check":            ("#fef3c7", "#92400e"),
-                "repayment_calculated":  ("#ede9fe", "#5b21b6"),
-                "message_sent":          ("#e0f2fe", "#075985"),
-                "admin_reply":           ("#fce7f3", "#9d174d"),
+                "login":                ("#dcfce7", "#166534"),
+                "logout":               ("#fee2e2", "#991b1b"),
+                "signup":               ("#dbeafe", "#1e40af"),
+                "risk_check":           ("#fef3c7", "#92400e"),
+                "repayment_calculated": ("#ede9fe", "#5b21b6"),
+                "message_sent":         ("#e0f2fe", "#075985"),
+                "admin_reply":          ("#fce7f3", "#9d174d"),
+                "role_changed":         ("#fef9c3", "#713f12"),
             }
 
             for log in logs:
@@ -362,15 +508,13 @@ def show_admin_dashboard(supabase):
                 ">
                     <div style="
                         background:{bg}; color:{fg};
-                        border-radius: 20px;
-                        padding: 3px 10px;
-                        font-size: 11px;
-                        font-weight: 700;
-                        text-transform: uppercase;
-                        letter-spacing: 0.5px;
-                        white-space: nowrap;
-                        min-width: 120px;
-                        text-align: center;
+                        border-radius:20px; padding:3px 10px;
+                        font-size:11px; font-weight:700;
+                        text-transform:uppercase;
+                        letter-spacing:0.5px;
+                        white-space:nowrap;
+                        min-width:140px;
+                        text-align:center;
                     ">{action.replace("_", " ")}</div>
                     <div style="flex:1;">
                         <div style="color:#F0F4F8; font-size:13px;
