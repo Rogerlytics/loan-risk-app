@@ -8,9 +8,10 @@ from utils.helpers import (
     suggest_improvements,
     sanitise_number
 )
+from services.supabase_service import log_action
 
 
-def show_loan_analysis(model):
+def show_loan_analysis(model, supabase):
     st.markdown(
         '<div class="section-heading">Loan Input Details</div>',
         unsafe_allow_html=True
@@ -91,6 +92,17 @@ def show_loan_analysis(model):
                         "weekly":  monthly / 4.33,
                         "daily":   monthly / 30
                     }
+                # Log repayment calculation
+                user = st.session_state.user
+                log_action(
+                    supabase,
+                    user["id"],
+                    user["email"],
+                    "repayment_calculated",
+                    f"Loan: KES {loan_amount:,} | "
+                    f"Rate: {interest_rate}% | "
+                    f"Term: {loan_term} months"
+                )
             except ValueError as e:
                 st.error(str(e))
                 st.session_state.repayment_result = None
@@ -135,6 +147,17 @@ def show_loan_analysis(model):
                             "citations":   citations,
                             "suggestions": suggestions
                         }
+                        # Log risk check
+                        risk_label = "High Risk" if pred == 1 else "Low Risk"
+                        user = st.session_state.user
+                        log_action(
+                            supabase,
+                            user["id"],
+                            user["email"],
+                            "risk_check",
+                            f"Score: {prob:.1f}% | Result: {risk_label} | "
+                            f"Loan: KES {loan_amount:,}"
+                        )
                     except Exception:
                         st.error(
                             "Model features mismatch. "
@@ -148,7 +171,6 @@ def show_loan_analysis(model):
     # ── Results ──
     col_left, col_right = st.columns(2)
 
-    # Repayment result or empty state
     with col_left:
         if st.session_state.repayment_result:
             res = st.session_state.repayment_result
@@ -175,14 +197,12 @@ def show_loan_analysis(model):
                 <div style="color:#F0F4F8; font-weight:600;
                             margin-bottom:6px;">No Repayment Calculated</div>
                 <div style="color:#94A3B8; font-size:13px;">
-                    Fill in the loan details above and click
-                    <b style="color:#60A5FA;">Calculate Repayment</b>
-                    to see your monthly, weekly, and daily instalments.
+                    Fill in the loan details and click
+                    <b style="color:#60A5FA;">Calculate Repayment</b>.
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
-    # Risk result or empty state
     with col_right:
         if st.session_state.risk_result:
             res = st.session_state.risk_result
@@ -233,9 +253,8 @@ def show_loan_analysis(model):
                 <div style="color:#F0F4F8; font-weight:600;
                             margin-bottom:6px;">No Risk Assessment Yet</div>
                 <div style="color:#94A3B8; font-size:13px;">
-                    Fill in the loan details above and click
-                    <b style="color:#60A5FA;">Check Loan Risk</b>
-                    to get an AI-powered credit risk decision.
+                    Fill in the loan details and click
+                    <b style="color:#60A5FA;">Check Loan Risk</b>.
                 </div>
             </div>
             """, unsafe_allow_html=True)
