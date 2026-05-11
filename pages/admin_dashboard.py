@@ -12,6 +12,7 @@ from services.supabase_service import (
     get_audit_logs,
     get_all_users,
     update_user_role,
+    get_total_message_count,
     log_action
 )
 from utils.helpers import relative_time
@@ -44,7 +45,10 @@ def show_admin_dashboard(supabase):
         unsafe_allow_html=True
     )
 
-    # ── Tabs ──
+    # ── Initialise smart polling state ──
+    if "admin_last_count" not in st.session_state:
+        st.session_state.admin_last_count = 0
+
     tab1, tab2, tab3 = st.tabs([
         "Conversations", "User Management", "Audit Log"
     ])
@@ -53,20 +57,37 @@ def show_admin_dashboard(supabase):
     # TAB 1 — Conversations
     # ════════════════════════════
     with tab1:
-        col1, col2 = st.columns([1, 4])
+        col1, col2, col3 = st.columns([1, 1, 4])
         with col1:
             if st.button("Refresh", use_container_width=True):
                 st.rerun()
         with col2:
             auto = st.checkbox(
-                "Auto-refresh (3s)",
+                "Auto",
                 value=st.session_state.auto_refresh,
-                key="admin_auto"
+                key="admin_auto",
+                help="Auto-refresh when new messages arrive"
             )
             st.session_state.auto_refresh = auto
+        with col3:
+            if st.session_state.auto_refresh:
+                st.markdown(
+                    '<div style="color:#22c55e; font-size:13px; '
+                    'padding-top:8px;">● Live</div>',
+                    unsafe_allow_html=True
+                )
+            else:
+                st.markdown(
+                    '<div style="color:#64748B; font-size:13px; '
+                    'padding-top:8px;">○ Paused</div>',
+                    unsafe_allow_html=True
+                )
 
         with st.spinner("Loading conversations..."):
             data = get_all_messages(supabase)
+
+        # Update count after loading
+        st.session_state.admin_last_count = len(data)
 
         if not data:
             _empty_state(
@@ -169,12 +190,12 @@ def show_admin_dashboard(supabase):
                                        font-size:14px;
                                        line-height:1.4;
                                        word-wrap:break-word; }
-                        .user .chat-bubble { background:#2563eb;
-                                             color:white;
-                                             border-bottom-right-radius:4px; }
-                        .admin .chat-bubble { background:#1f2a36;
-                                              color:#F0F4F8;
-                                              border-bottom-left-radius:4px; }
+                        .user .chat-bubble {
+                            background:#2563eb; color:white;
+                            border-bottom-right-radius:4px; }
+                        .admin .chat-bubble {
+                            background:#1f2a36; color:#F0F4F8;
+                            border-bottom-left-radius:4px; }
                         .chat-timestamp { font-size:11px;
                                           color:#94A3B8;
                                           margin-top:4px; }
@@ -232,9 +253,7 @@ def show_admin_dashboard(supabase):
                                 <div style="display:flex;
                                             flex-direction:column;
                                             max-width:70%;">
-                                    <div class="reply-badge">
-                                        Reply
-                                    </div>
+                                    <div class="reply-badge">Reply</div>
                                     <div class="chat-bubble">
                                         {safe_reply}
                                     </div>
@@ -244,9 +263,14 @@ def show_admin_dashboard(supabase):
                                 </div>
                             </div>''')
 
-                        chat_html_parts.append(
-                            '</div></body></html>'
-                        )
+                        chat_html_parts.append('''
+                        <div id="bottom"></div>
+                        <script>
+                            document.getElementById("bottom")
+                                .scrollIntoView();
+                        </script>
+                        </div></body></html>''')
+
                         components.html(
                             "".join(chat_html_parts),
                             height=450,
@@ -277,7 +301,7 @@ def show_admin_dashboard(supabase):
                                         if not m.get('reply')
                                     ]
                                     if unreplied:
-                                        with st.spinner("Sending reply..."):
+                                        with st.spinner("Sending..."):
                                             send_reply(
                                                 supabase,
                                                 unreplied[-1]["id"],
@@ -329,8 +353,7 @@ def show_admin_dashboard(supabase):
                 st.plotly_chart(fig, use_container_width=True)
             else:
                 _empty_state(
-                    "📈",
-                    "No Chart Data Yet",
+                    "📈", "No Chart Data Yet",
                     "Message activity will appear here once "
                     "users start chatting."
                 )
@@ -356,27 +379,25 @@ def show_admin_dashboard(supabase):
 
         if not all_users:
             _empty_state(
-                "👥",
-                "No Users Found",
+                "👥", "No Users Found",
                 "No users have signed up yet."
             )
         else:
             current_admin_id = st.session_state.user["id"]
 
             for usr in all_users:
-                uid       = usr["id"]
-                email     = usr.get("email", "Unknown")
-                role      = usr.get("role", "user")
-                is_self   = uid == current_admin_id
+                uid     = usr["id"]
+                email   = usr.get("email", "Unknown")
+                role    = usr.get("role", "user")
+                is_self = uid == current_admin_id
 
-                # Role badge colours
                 if role == "admin":
-                    badge_bg = "#7c3aed22"
-                    badge_fg = "#a78bfa"
+                    badge_bg     = "#7c3aed22"
+                    badge_fg     = "#a78bfa"
                     badge_border = "#7c3aed44"
                 else:
-                    badge_bg = "#0369a122"
-                    badge_fg = "#38bdf8"
+                    badge_bg     = "#0369a122"
+                    badge_fg     = "#38bdf8"
                     badge_border = "#0369a144"
 
                 col_email, col_badge, col_action = st.columns([3, 1, 1])
@@ -385,8 +406,7 @@ def show_admin_dashboard(supabase):
                     self_label = " (you)" if is_self else ""
                     st.markdown(
                         f'<div style="color:#F0F4F8; font-size:14px; '
-                        f'padding-top:8px;">'
-                        f'{email}'
+                        f'padding-top:8px;">{email}'
                         f'<span style="color:#64748B; font-size:12px;">'
                         f'{self_label}</span></div>',
                         unsafe_allow_html=True
@@ -400,8 +420,7 @@ def show_admin_dashboard(supabase):
                         f'border-radius:20px; padding:6px 12px; '
                         f'font-size:11px; font-weight:700; '
                         f'text-transform:uppercase; text-align:center; '
-                        f'margin-top:4px;">'
-                        f'{role}</div>',
+                        f'margin-top:4px;">{role}</div>',
                         unsafe_allow_html=True
                     )
 
@@ -414,19 +433,12 @@ def show_admin_dashboard(supabase):
                             unsafe_allow_html=True
                         )
                     else:
-                        new_role   = "user" if role == "admin" else "admin"
-                        btn_label  = (
+                        new_role  = "user" if role == "admin" else "admin"
+                        btn_label = (
                             "Demote to User"
                             if role == "admin"
                             else "Promote to Admin"
                         )
-                        btn_colour = (
-                            "#7f1d1d" if role == "admin" else "#1e3a5f"
-                        )
-                        btn_text   = (
-                            "#fca5a5" if role == "admin" else "#93c5fd"
-                        )
-
                         if st.button(
                             btn_label,
                             key=f"role_btn_{uid}",
@@ -471,8 +483,7 @@ def show_admin_dashboard(supabase):
 
         if not logs:
             _empty_state(
-                "📋",
-                "No Audit Logs Yet",
+                "📋", "No Audit Logs Yet",
                 "User actions will be recorded here."
             )
         else:
@@ -486,7 +497,6 @@ def show_admin_dashboard(supabase):
                 "admin_reply":          ("#fce7f3", "#9d174d"),
                 "role_changed":         ("#fef9c3", "#713f12"),
             }
-
             for log in logs:
                 action  = log.get("action", "unknown")
                 email   = log.get("email", "unknown")
@@ -497,37 +507,36 @@ def show_admin_dashboard(supabase):
                 )
                 st.markdown(f"""
                 <div style="
-                    background: linear-gradient(145deg, #111827, #0b1220);
-                    border: 1px solid #1f2a36;
-                    border-radius: 12px;
-                    padding: 12px 16px;
-                    margin-bottom: 8px;
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
+                    background:linear-gradient(145deg,#111827,#0b1220);
+                    border:1px solid #1f2a36; border-radius:12px;
+                    padding:12px 16px; margin-bottom:8px;
+                    display:flex; align-items:center; gap:12px;
                 ">
-                    <div style="
-                        background:{bg}; color:{fg};
+                    <div style="background:{bg}; color:{fg};
                         border-radius:20px; padding:3px 10px;
                         font-size:11px; font-weight:700;
-                        text-transform:uppercase;
-                        letter-spacing:0.5px;
-                        white-space:nowrap;
-                        min-width:140px;
-                        text-align:center;
-                    ">{action.replace("_", " ")}</div>
+                        text-transform:uppercase; letter-spacing:0.5px;
+                        white-space:nowrap; min-width:140px;
+                        text-align:center;">
+                        {action.replace("_", " ")}
+                    </div>
                     <div style="flex:1;">
                         <div style="color:#F0F4F8; font-size:13px;
                                     font-weight:600;">{email}</div>
                         <div style="color:#94A3B8; font-size:12px;">
-                            {details}
-                        </div>
+                            {details}</div>
                     </div>
                     <div style="color:#64748B; font-size:11px;
                                 white-space:nowrap;">{ts}</div>
                 </div>
                 """, unsafe_allow_html=True)
 
+    # ── Smart polling — only rerun when count changes ──
     if st.session_state.auto_refresh:
-        time.sleep(3)
-        st.rerun()
+        time.sleep(2)
+        current_count = get_total_message_count(supabase)
+        if current_count != st.session_state.admin_last_count:
+            st.session_state.admin_last_count = current_count
+            st.rerun()
+        else:
+            st.rerun()
