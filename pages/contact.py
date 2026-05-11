@@ -114,7 +114,6 @@ def show_contact(supabase):
     chat_html_parts.append('</div></body></html>')
     components.html("".join(chat_html_parts), height=450, scrolling=True)
 
-    # Message input
     st.markdown('<div class="chat-input-container">', unsafe_allow_html=True)
     with st.form("chat_form", clear_on_submit=True):
         col_input, col_button = st.columns([5, 1])
@@ -127,18 +126,16 @@ def show_contact(supabase):
                 key="chat_input"
             )
         with col_button:
-            submitted = st.form_submit_button("Send", use_container_width=True)
-
+            submitted = st.form_submit_button(
+                "Send", use_container_width=True
+            )
         if submitted and msg.strip():
             try:
                 clean_msg = sanitise_text(msg, max_length=500)
                 with st.spinner("Sending..."):
                     send_message(supabase, user_id, user_email, clean_msg)
-                # Log message sent
                 log_action(
-                    supabase,
-                    user_id,
-                    user_email,
+                    supabase, user_id, user_email,
                     "message_sent",
                     f"Message length: {len(clean_msg)} chars"
                 )
