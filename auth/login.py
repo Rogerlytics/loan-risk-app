@@ -6,12 +6,26 @@ from services.supabase_service import (
     login_user,
     signup_user,
     get_user_role,
-    resend_confirmation_email
+    resend_confirmation_email,
+    log_action
 )
 from utils.helpers import sanitise_email, sanitise_password
 
 
-def logout():
+def logout(supabase):
+    """Log the logout action then wipe session."""
+    try:
+        user  = st.session_state.get("user")
+        if user:
+            log_action(
+                supabase,
+                user["id"],
+                user["email"],
+                "logout",
+                "User logged out"
+            )
+    except Exception:
+        pass
     st.session_state.authenticated = False
     st.session_state.user          = None
     st.session_state.role          = None
@@ -21,10 +35,6 @@ def logout():
 
 
 def _confirmation_banner(supabase, email: str):
-    """
-    Yellow banner shown when user tries to log in
-    before confirming their email.
-    """
     st.markdown(f"""
     <div style="
         background: linear-gradient(145deg, #1c1a05, #2a2005);
@@ -35,7 +45,7 @@ def _confirmation_banner(supabase, email: str):
     ">
         <div style="color:#fde68a; font-size:16px; font-weight:700;
                     margin-bottom:6px;">
-            📧 Email Not Confirmed
+            Email Not Confirmed
         </div>
         <div style="color:#fef3c7; font-size:13px; line-height:1.6;">
             We sent a confirmation link to
@@ -56,14 +66,9 @@ def _confirmation_banner(supabase, email: str):
             with st.spinner("Sending..."):
                 success = resend_confirmation_email(supabase, email)
             if success:
-                st.success(
-                    "Confirmation email resent! "
-                    "Please check your inbox."
-                )
+                st.success("Confirmation email resent! Check your inbox.")
             else:
-                st.error(
-                    "Failed to resend. Please try again in a few minutes."
-                )
+                st.error("Failed to resend. Please try again in a few minutes.")
     with col2:
         if st.button(
             "Back to Login",
@@ -84,7 +89,6 @@ def show_login_page(supabase):
     </style>
     """, unsafe_allow_html=True)
 
-    # Initialise session keys
     if "show_signup" not in st.session_state:
         st.session_state.show_signup = False
     if "pending_confirmation_email" not in st.session_state:
@@ -152,7 +156,6 @@ def show_login_page(supabase):
                 submitted = st.form_submit_button(
                     "Login", use_container_width=True
                 )
-
                 if submitted:
                     if not email or not password:
                         st.error("Please enter both email and password.")
@@ -164,23 +167,17 @@ def show_login_page(supabase):
                                 result = login_user(
                                     supabase, clean_email, password
                                 )
-
                             if result is None:
                                 st.error(
                                     "Something went wrong. Please try again."
                                 )
-                            elif isinstance(result, dict) and \
-                                    result.get("error") == "email_not_confirmed":
-                                # Show confirmation banner
+                            elif result.get("error") == "email_not_confirmed":
                                 st.session_state\
                                     .pending_confirmation_email = clean_email
                                 st.rerun()
-                            elif isinstance(result, dict) and \
-                                    result.get("error") == "invalid_credentials":
+                            elif result.get("error") == "invalid_credentials":
                                 st.error("Invalid email or password.")
-                            elif isinstance(result, dict) and \
-                                    result.get("id"):
-                                # Successful login
+                            elif result.get("id"):
                                 st.session_state.authenticated = True
                                 st.session_state.user = {
                                     "id":       result["id"],
@@ -195,6 +192,14 @@ def show_login_page(supabase):
                                 )
                                 st.session_state.role = get_user_role(
                                     supabase, result["id"]
+                                )
+                                # Log successful login
+                                log_action(
+                                    supabase,
+                                    result["id"],
+                                    result["email"],
+                                    "login",
+                                    f"Logged in as {st.session_state.role}"
                                 )
                                 st.rerun()
                             else:
@@ -234,7 +239,6 @@ def show_login_page(supabase):
                 submitted = st.form_submit_button(
                     "Create Account", use_container_width=True
                 )
-
                 if submitted:
                     if not new_email or not new_password \
                             or not confirm_password:
@@ -249,29 +253,29 @@ def show_login_page(supabase):
                                 result = signup_user(
                                     supabase, clean_email, new_password
                                 )
-
                             if result is None:
-                                st.error(
-                                    "Signup failed. Please try again."
-                                )
-                            elif isinstance(result, dict) and \
-                                    result.get("error") == "already_registered":
+                                st.error("Signup failed. Please try again.")
+                            elif result.get("error") == "already_registered":
                                 st.warning(
                                     "That email is already registered. "
                                     "Please log in instead."
                                 )
-                            elif isinstance(result, dict) and \
-                                    result.get("id"):
+                            elif result.get("id"):
+                                # Log signup
+                                log_action(
+                                    supabase,
+                                    result["id"],
+                                    clean_email,
+                                    "signup",
+                                    "New account created"
+                                )
                                 if result.get("confirmed"):
-                                    # Email confirmation disabled —
-                                    # log them straight in
                                     st.success(
                                         "Account created! You can now log in."
                                     )
                                     st.session_state.show_signup = False
                                     st.rerun()
                                 else:
-                                    # Confirmation required — show banner
                                     st.session_state\
                                         .pending_confirmation_email \
                                         = clean_email
@@ -280,9 +284,7 @@ def show_login_page(supabase):
                         except ValueError as e:
                             st.error(str(e))
 
-            if st.button(
-                "← Back to Login", use_container_width=True
-            ):
+            if st.button("← Back to Login", use_container_width=True):
                 st.session_state.show_signup = False
                 st.rerun()
 
