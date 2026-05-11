@@ -12,8 +12,7 @@ def log_action(
     action: str, details: str = ""
 ):
     """
-    Insert audit log via SECURITY DEFINER RPC function.
-    Bypasses RLS — always works regardless of session state.
+    Insert audit log via SECURITY DEFINER RPC.
     Fails silently — never crashes the app.
     """
     try:
@@ -155,12 +154,42 @@ def update_user_role(supabase, target_user_id: str, new_role: str):
     except Exception as e:
         error_msg = str(e)
         if "only admins can change roles" in error_msg.lower():
-            return False, "Permission denied: only admins can change roles."
+            return False, "Permission denied."
         if "cannot change your own role" in error_msg.lower():
             return False, "You cannot change your own role."
         if "invalid role" in error_msg.lower():
             return False, "Invalid role value."
         return False, f"Failed to update role: {error_msg}"
+
+
+# ── Smart Polling ─────────────────────────────────
+
+def get_message_count(supabase, user_id: str) -> int:
+    """
+    Lightweight count check for smart polling.
+    Much cheaper than fetching full message data.
+    """
+    try:
+        result = supabase.rpc(
+            "get_message_count",
+            {"p_user_id": user_id}
+        ).execute()
+        return result.data or 0
+    except Exception:
+        return 0
+
+
+def get_total_message_count(supabase) -> int:
+    """
+    Lightweight total count for admin smart polling.
+    """
+    try:
+        result = supabase.rpc(
+            "get_total_message_count"
+        ).execute()
+        return result.data or 0
+    except Exception:
+        return 0
 
 
 # ── Messages ──────────────────────────────────────
