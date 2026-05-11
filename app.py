@@ -1,166 +1,193 @@
 # ==============================
-# app.py — Entry point only
+# pages/contact.py
 # ==============================
 import streamlit as st
-import pickle
-from supabase import create_client, Client
-from styles.theme import apply_theme
-from auth.login import show_login_page, logout
-from pages.about import show_about_page
-from pages.loan_analysis import show_loan_analysis
-from pages.contact import show_contact
-from pages.admin_dashboard import show_admin_dashboard
-from services.supabase_service import get_unread_reply_count
-from config.settings import validate_secrets
-
-# ── Config ──
-st.set_page_config(
-    page_title="AI Loan Risk System",
-    layout="wide",
-    initial_sidebar_state="expanded"
+import streamlit.components.v1 as components
+import time
+from services.supabase_service import (
+    get_user_messages,
+    send_message,
+    mark_messages_as_read,
+    get_message_count,
+    log_action
 )
-apply_theme()
-validate_secrets()
+from utils.helpers import relative_time, sanitise_text
 
-# ── Supabase ──
-SUPABASE_URL = st.secrets["SUPABASE_URL"]
-SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# ── Restore session on every rerun ──
-if st.session_state.get("access_token") and \
-        st.session_state.get("refresh_token"):
-    try:
-        supabase.auth.set_session(
-            st.session_state.access_token,
-            st.session_state.refresh_token
+def show_contact(supabase):
+    st.markdown(
+        '<div class="section-heading">Customer Support Chat</div>',
+        unsafe_allow_html=True
+    )
+
+    if st.session_state.role == "admin":
+        st.info("Admin view: See all conversations in the Admin Dashboard.")
+        return
+
+    user_id    = st.session_state.user["id"]
+    user_email = st.session_state.user.get("email", "")
+
+    # ── Initialise smart polling state ──
+    if "last_message_count" not in st.session_state:
+        st.session_state.last_message_count = 0
+    if "last_poll_time" not in st.session_state:
+        st.session_state.last_poll_time = 0
+
+    with st.spinner("Loading messages..."):
+        mark_messages_as_read(supabase, user_id)
+        msgs = get_user_messages(supabase, user_id)
+
+    # Update count after loading
+    st.session_state.last_message_count = len(msgs)
+
+    col1, col2, col3 = st.columns([1, 1, 4])
+    with col1:
+        if st.button("Refresh", use_container_width=True):
+            st.rerun()
+    with col2:
+        auto = st.checkbox(
+            "Auto",
+            value=st.session_state.auto_refresh,
+            help="Auto-refresh when new messages arrive"
         )
-    except Exception:
-        pass
+        st.session_state.auto_refresh = auto
+    with col3:
+        if st.session_state.auto_refresh:
+            st.markdown(
+                '<div style="color:#22c55e; font-size:13px; '
+                'padding-top:8px;">● Live</div>',
+                unsafe_allow_html=True
+            )
+        else:
+            st.markdown(
+                '<div style="color:#64748B; font-size:13px; '
+                'padding-top:8px;">○ Paused</div>',
+                unsafe_allow_html=True
+            )
 
-# ── Session state defaults ──
-defaults = {
-    "authenticated":              False,
-    "user":                       None,
-    "role":                       None,
-    "access_token":               None,
-    "refresh_token":              None,
-    "seen_notified":              set(),
-    "selected_user_id":           None,
-    "auto_refresh":               False,
-    "draft_message":              "",
-    "risk_result":                None,
-    "repayment_result":           None,
-    "show_signup":                False,
-    "pending_confirmation_email": None
-}
-for key, value in defaults.items():
-    if key not in st.session_state:
-        st.session_state[key] = value
+    # Quick actions
+    st.markdown("**Quick Actions**")
+    cols = st.columns(4)
+    quick_actions = [
+        ("Loan Status",    "What is my loan application status?"),
+        ("Payment Help",   "I need help with my payment."),
+        ("Upload Docs",    "I need to upload documents."),
+        ("Reset Password", "I forgot my password."),
+    ]
+    for i, (label, draft) in enumerate(quick_actions):
+        with cols[i]:
+            if st.button(label, use_container_width=True):
+                st.session_state.draft_message = draft
+                st.rerun()
 
-# ── ML Model ──
-@st.cache_resource
-def load_model():
-    return pickle.load(open("loan_model.pkl", "rb"))
-
-model = load_model()
-
-# ══════════════════════════════
-# NOT LOGGED IN
-# ══════════════════════════════
-if not st.session_state.authenticated:
-    st.markdown("""
+    # Build chat HTML
+    chat_html_parts = ['''<html><head>
+    <meta charset="UTF-8">
     <style>
-    [data-testid="stSidebar"] { display: none !important; }
-    [data-testid="collapsedControl"] { display: none !important; }
-    </style>
-    """, unsafe_allow_html=True)
-    show_login_page(supabase)
+    body { margin:0; background:#0e1117;
+           font-family:"Inter",sans-serif; color:#F0F4F8; }
+    .chat-messages { overflow-y:auto; height:450px; padding:20px; }
+    .chat-bubble-row { display:flex; margin-bottom:12px; }
+    .chat-bubble-row.user { justify-content:flex-end; }
+    .chat-bubble-row.admin { justify-content:flex-start; }
+    .chat-bubble { max-width:70%; padding:12px 16px; border-radius:18px;
+                   font-size:14px; line-height:1.4; word-wrap:break-word; }
+    .user .chat-bubble  { background:#2563eb; color:white;
+                          border-bottom-right-radius:4px; }
+    .admin .chat-bubble { background:#1f2a36; color:#F0F4F8;
+                          border-bottom-left-radius:4px; }
+    .chat-timestamp { font-size:11px; color:#94A3B8;
+                      margin-top:4px; text-align:right; }
+    .reply-badge { background:#0e1117; color:#60A5FA; border-radius:16px;
+                   padding:4px 12px; font-size:12px; margin-bottom:8px;
+                   display:inline-block; border:1px solid #2563eb; }
+    .empty-state { text-align:center; color:#94A3B8;
+                   padding:60px 20px; font-size:14px; }
+    </style></head><body><div class="chat-messages" id="chatEnd">''']
 
-# ══════════════════════════════
-# LOGGED IN
-# ══════════════════════════════
-else:
-    with st.sidebar:
-        st.markdown(
-            '<p style="font-size:20px; font-weight:800; color:#60A5FA; '
-            'text-shadow:0 2px 4px rgba(0,0,0,0.5); margin-bottom:4px;">'
-            'Navigation</p>',
-            unsafe_allow_html=True
+    if not msgs:
+        chat_html_parts.append(
+            '<div class="empty-state">'
+            'No messages yet. Send a message below to start the conversation.'
+            '</div>'
         )
-        st.markdown(
-            '<hr style="border-color:#1f2a36; margin-top:0;">',
-            unsafe_allow_html=True
-        )
-
-        if st.session_state.role == "admin":
-            menu = ["Loan Analysis", "Contact", "Admin Dashboard", "About"]
-        else:
-            menu = ["Loan Analysis", "Contact", "About"]
-
-        page = st.radio("", menu, label_visibility="collapsed")
-
-        st.markdown(
-            '<hr style="border-color:#1f2a36;">',
-            unsafe_allow_html=True
-        )
-
-        if st.session_state.role == "user":
-            unread = get_unread_reply_count(
-                supabase, st.session_state.user["id"]
-            )
-            display_name = st.session_state.user["email"]
-            badge = (
-                f' <span style="background:#ef4444; color:white; '
-                f'border-radius:50%; padding:1px 7px; '
-                f'font-size:11px;">{unread}</span>'
-                if unread > 0 else ""
-            )
-            st.markdown(
-                f'<p style="color:#F0F4F8;">👤 <b>{display_name}</b>'
-                f'{badge}</p>',
-                unsafe_allow_html=True
-            )
-        else:
-            safe_name = st.session_state.user.get(
-                "username", st.session_state.user.get("email")
-            )
-            st.markdown(
-                f'<p style="color:#F0F4F8;">👑 <b>Admin:</b> '
-                f'{safe_name}</p>',
-                unsafe_allow_html=True
-            )
-
-        role_label = (st.session_state.role or "user").upper()
-        st.markdown(
-            f'<p style="color:#94A3B8; font-size:13px;">'
-            f'Role: <b>{role_label}</b></p>',
-            unsafe_allow_html=True
-        )
-        st.markdown(
-            '<hr style="border-color:#1f2a36;">',
-            unsafe_allow_html=True
-        )
-
-        if st.button("Logout", use_container_width=True):
-            logout(supabase)
-
-    # ── Page routing ──
-    if page == "About":
-        show_about_page()
     else:
-        st.markdown(
-            '<div class="page-title">AI Loan Risk Platform</div>',
-            unsafe_allow_html=True
-        )
-        st.markdown(
-            '<div class="page-subtitle">Real-time credit risk evaluation '
-            'powered by machine learning</div>',
-            unsafe_allow_html=True
-        )
-        if page == "Loan Analysis":
-            show_loan_analysis(model, supabase)
-        elif page == "Contact":
-            show_contact(supabase)
-        elif page == "Admin Dashboard":
-            show_admin_dashboard(supabase)
+        for msg in msgs:
+            timestamp    = relative_time(msg.get('timestamp', ''))
+            safe_message = msg['message']
+            chat_html_parts.append(f'''
+            <div class="chat-bubble-row user">
+                <div style="display:flex; flex-direction:column;
+                            align-items:flex-end; max-width:70%;">
+                    <div class="chat-bubble">{safe_message}</div>
+                    <div class="chat-timestamp">{timestamp}</div>
+                </div>
+            </div>''')
+            if msg.get('reply'):
+                reply_time = relative_time(msg.get('replied_at', ''))
+                safe_reply = msg['reply']
+                chat_html_parts.append(f'''
+            <div class="chat-bubble-row admin">
+                <div style="display:flex; flex-direction:column;
+                            max-width:70%;">
+                    <div class="reply-badge">Support</div>
+                    <div class="chat-bubble">{safe_reply}</div>
+                    <div class="chat-timestamp">{reply_time}</div>
+                </div>
+            </div>''')
+
+    # Auto-scroll to bottom
+    chat_html_parts.append('''
+    <div id="bottom"></div>
+    <script>
+        document.getElementById("bottom").scrollIntoView();
+    </script>
+    </div></body></html>''')
+
+    components.html("".join(chat_html_parts), height=450, scrolling=True)
+
+    # Message input
+    st.markdown('<div class="chat-input-container">', unsafe_allow_html=True)
+    with st.form("chat_form", clear_on_submit=True):
+        col_input, col_button = st.columns([5, 1])
+        with col_input:
+            msg = st.text_input(
+                "",
+                placeholder="Type a message...",
+                value=st.session_state.draft_message,
+                label_visibility="collapsed",
+                key="chat_input"
+            )
+        with col_button:
+            submitted = st.form_submit_button(
+                "Send", use_container_width=True
+            )
+        if submitted and msg.strip():
+            try:
+                clean_msg = sanitise_text(msg, max_length=500)
+                with st.spinner("Sending..."):
+                    send_message(supabase, user_id, user_email, clean_msg)
+                log_action(
+                    supabase, user_id, user_email,
+                    "message_sent",
+                    f"Message length: {len(clean_msg)} chars"
+                )
+                st.session_state.draft_message = ""
+                st.success("Message sent!")
+                time.sleep(0.3)
+                st.rerun()
+            except ValueError as e:
+                st.error(str(e))
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── Smart polling — only rerun when count changes ──
+    if st.session_state.auto_refresh:
+        time.sleep(2)
+        current_count = get_message_count(supabase, user_id)
+        if current_count != st.session_state.last_message_count:
+            # New message arrived — rerun to show it
+            st.session_state.last_message_count = current_count
+            st.rerun()
+        else:
+            # No change — rerun anyway to keep polling alive
+            st.rerun()
