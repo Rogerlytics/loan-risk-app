@@ -7,11 +7,11 @@ from datetime import datetime
 
 # ── Audit Logging ─────────────────────────────────
 
-def log_action(supabase, user_id: str, email: str, action: str, details: str = ""):
-    """
-    Insert a row into audit_logs.
-    Fails silently — never breaks the main app flow.
-    """
+def log_action(
+    supabase, user_id: str, email: str,
+    action: str, details: str = ""
+):
+    """Insert a row into audit_logs. Fails silently."""
     try:
         supabase.table("audit_logs").insert({
             "user_id":    user_id,
@@ -21,7 +21,7 @@ def log_action(supabase, user_id: str, email: str, action: str, details: str = "
             "created_at": datetime.now().isoformat()
         }).execute()
     except Exception:
-        pass  # Logging must never crash the app
+        pass
 
 
 def get_audit_logs(supabase, limit: int = 100):
@@ -117,6 +117,44 @@ def get_user_role(supabase, user_id: str) -> str:
         return profile.data.get("role", "user").lower()
     except Exception:
         return "user"
+
+
+def get_all_users(supabase):
+    """Fetch all users from profiles table."""
+    try:
+        return (
+            supabase.table("profiles")
+            .select("id, email, role")
+            .order("email", desc=False)
+            .execute().data
+        )
+    except Exception:
+        return []
+
+
+def update_user_role(supabase, target_user_id: str, new_role: str):
+    """
+    Update a user's role via secure RPC function.
+    Returns (success: bool, message: str)
+    """
+    try:
+        result = supabase.rpc(
+            "update_user_role",
+            {
+                "target_user_id": target_user_id,
+                "new_role":       new_role
+            }
+        ).execute()
+        return True, "Role updated successfully."
+    except Exception as e:
+        error_msg = str(e)
+        if "only admins can change roles" in error_msg.lower():
+            return False, "Permission denied: only admins can change roles."
+        if "cannot change your own role" in error_msg.lower():
+            return False, "You cannot change your own role."
+        if "invalid role" in error_msg.lower():
+            return False, "Invalid role value."
+        return False, f"Failed to update role: {error_msg}"
 
 
 # ── Messages ──────────────────────────────────────
