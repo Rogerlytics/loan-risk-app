@@ -11,21 +11,27 @@ def log_action(
     supabase, user_id: str, email: str,
     action: str, details: str = ""
 ):
-    """Insert a row into audit_logs. Fails silently."""
+    """
+    Insert audit log via SECURITY DEFINER RPC function.
+    Bypasses RLS — always works regardless of session state.
+    Fails silently — never crashes the app.
+    """
     try:
-        supabase.table("audit_logs").insert({
-            "user_id":    user_id,
-            "email":      email,
-            "action":     action,
-            "details":    details,
-            "created_at": datetime.now().isoformat()
-        }).execute()
+        supabase.rpc(
+            "insert_audit_log",
+            {
+                "p_user_id": user_id,
+                "p_email":   email,
+                "p_action":  action,
+                "p_details": details
+            }
+        ).execute()
     except Exception:
         pass
 
 
 def get_audit_logs(supabase, limit: int = 100):
-    """Fetch most recent audit logs for admin view."""
+    """Fetch most recent audit logs — admin only."""
     try:
         return (
             supabase.table("audit_logs")
@@ -120,7 +126,7 @@ def get_user_role(supabase, user_id: str) -> str:
 
 
 def get_all_users(supabase):
-    """Fetch all users from profiles table."""
+    """Fetch all users — admin only via RLS policy."""
     try:
         return (
             supabase.table("profiles")
@@ -138,7 +144,7 @@ def update_user_role(supabase, target_user_id: str, new_role: str):
     Returns (success: bool, message: str)
     """
     try:
-        result = supabase.rpc(
+        supabase.rpc(
             "update_user_role",
             {
                 "target_user_id": target_user_id,
