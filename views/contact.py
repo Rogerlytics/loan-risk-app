@@ -8,6 +8,7 @@ from services.supabase_service import (
     get_user_messages,
     send_message,
     mark_messages_as_read,
+    get_message_count,
     log_action
 )
 from utils.helpers import relative_time, sanitise_text
@@ -28,21 +29,42 @@ def show_contact(supabase):
     user_id    = st.session_state.user["id"]
     user_email = st.session_state.user.get("email", "")
 
+    # ── Initialise smart polling state ──
+    if "last_msg_count" not in st.session_state:
+        st.session_state.last_msg_count = 0
+
     with st.spinner("Loading messages..."):
         mark_messages_as_read(supabase, user_id)
         msgs = get_user_messages(supabase, user_id)
 
-    col1, col2 = st.columns([1, 4])
+    st.session_state.last_msg_count = len(msgs)
+
+    col1, col2, col3 = st.columns([1, 1, 4])
     with col1:
         if st.button("Refresh", use_container_width=True):
             st.rerun()
     with col2:
         auto = st.checkbox(
-            "Auto-refresh (3s)",
-            value=st.session_state.auto_refresh
+            "Auto",
+            value=st.session_state.auto_refresh,
+            help="Auto-refresh when new messages arrive"
         )
         st.session_state.auto_refresh = auto
+    with col3:
+        if st.session_state.auto_refresh:
+            st.markdown(
+                '<div style="color:#22c55e; font-size:13px; '
+                'padding-top:8px;">● Live</div>',
+                unsafe_allow_html=True
+            )
+        else:
+            st.markdown(
+                '<div style="color:#64748B; font-size:13px; '
+                'padding-top:8px;">○ Paused</div>',
+                unsafe_allow_html=True
+            )
 
+    # Quick actions
     st.markdown("**Quick Actions**")
     cols = st.columns(4)
     quick_actions = [
@@ -57,6 +79,7 @@ def show_contact(supabase):
                 st.session_state.draft_message = draft
                 st.rerun()
 
+    # Build chat HTML
     chat_html_parts = ['''<html><head>
     <meta charset="UTF-8">
     <style>
@@ -112,9 +135,17 @@ def show_contact(supabase):
                 </div>
             </div>''')
 
-    chat_html_parts.append('</div></body></html>')
+    # Auto scroll to bottom
+    chat_html_parts.append('''
+    <div id="bottom"></div>
+    <script>
+        document.getElementById("bottom").scrollIntoView();
+    </script>
+    </div></body></html>''')
+
     components.html("".join(chat_html_parts), height=450, scrolling=True)
 
+    # Message input
     st.markdown(
         '<div class="chat-input-container">', unsafe_allow_html=True
     )
@@ -144,12 +175,18 @@ def show_contact(supabase):
                 )
                 st.session_state.draft_message = ""
                 st.success("Message sent!")
-                time.sleep(0.5)
+                time.sleep(0.3)
                 st.rerun()
             except ValueError as e:
                 st.error(str(e))
     st.markdown('</div>', unsafe_allow_html=True)
 
+    # ── Smart polling ──
     if st.session_state.auto_refresh:
-        time.sleep(3)
-        st.rerun()
+        time.sleep(2)
+        current_count = get_message_count(supabase, user_id)
+        if current_count != st.session_state.last_msg_count:
+            st.session_state.last_msg_count = current_count
+            st.rerun()
+        else:
+            st.rerun()
