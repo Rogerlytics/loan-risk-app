@@ -152,6 +152,36 @@ def update_user_role(supabase, target_user_id: str, new_role: str):
         return False, f"Failed to update role: {error_msg}"
 
 
+# ── Smart Polling ─────────────────────────────────
+
+def get_message_count(supabase, user_id: str) -> int:
+    """
+    Lightweight count for user smart polling.
+    Single integer — much cheaper than fetching full messages.
+    """
+    try:
+        result = supabase.rpc(
+            "get_message_count",
+            {"p_user_id": user_id}
+        ).execute()
+        return result.data or 0
+    except Exception:
+        return 0
+
+
+def get_total_message_count(supabase) -> int:
+    """
+    Lightweight total count for admin smart polling.
+    """
+    try:
+        result = supabase.rpc(
+            "get_total_message_count"
+        ).execute()
+        return result.data or 0
+    except Exception:
+        return 0
+
+
 # ── Messages ──────────────────────────────────────
 
 def get_user_messages(supabase, user_id: str):
