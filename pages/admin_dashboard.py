@@ -134,7 +134,7 @@ def show_admin_dashboard(supabase):
                         "User"
                     )
                     st.markdown(
-                        f'<div style="color:#F0F4F8; font-weight:600; '
+                        f'<div style="color:#F0F4F8; font-weight:600;'
                         f'margin-bottom:12px;">'
                         f'Chat with {selected_email}</div>',
                         unsafe_allow_html=True
@@ -331,7 +331,6 @@ def show_admin_dashboard(supabase):
                     "users start chatting."
                 )
 
-        # Simple auto-refresh
         if st.session_state.auto_refresh:
             time.sleep(3)
             st.rerun()
