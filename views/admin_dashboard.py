@@ -12,6 +12,7 @@ from services.supabase_service import (
     get_audit_logs,
     get_all_users,
     update_user_role,
+    get_total_message_count,
     log_action
 )
 from utils.helpers import relative_time
@@ -40,6 +41,10 @@ def show_admin_dashboard(supabase):
         unsafe_allow_html=True
     )
 
+    # ── Initialise smart polling state ──
+    if "admin_last_count" not in st.session_state:
+        st.session_state.admin_last_count = 0
+
     tab1, tab2, tab3 = st.tabs([
         "Conversations", "User Management", "Audit Log"
     ])
@@ -48,20 +53,36 @@ def show_admin_dashboard(supabase):
     # TAB 1 — Conversations
     # ════════════════════════════
     with tab1:
-        col1, col2 = st.columns([1, 4])
+        col1, col2, col3 = st.columns([1, 1, 4])
         with col1:
             if st.button("Refresh", use_container_width=True):
                 st.rerun()
         with col2:
             auto = st.checkbox(
-                "Auto-refresh (3s)",
+                "Auto",
                 value=st.session_state.auto_refresh,
-                key="admin_auto"
+                key="admin_auto",
+                help="Auto-refresh when new messages arrive"
             )
             st.session_state.auto_refresh = auto
+        with col3:
+            if st.session_state.auto_refresh:
+                st.markdown(
+                    '<div style="color:#22c55e; font-size:13px; '
+                    'padding-top:8px;">● Live</div>',
+                    unsafe_allow_html=True
+                )
+            else:
+                st.markdown(
+                    '<div style="color:#64748B; font-size:13px; '
+                    'padding-top:8px;">○ Paused</div>',
+                    unsafe_allow_html=True
+                )
 
         with st.spinner("Loading conversations..."):
             data = get_all_messages(supabase)
+
+        st.session_state.admin_last_count = len(data)
 
         if not data:
             _empty_state(
@@ -144,24 +165,31 @@ def show_admin_dashboard(supabase):
                         <html><head><meta charset="UTF-8"><style>
                         body{margin:0;background:#0e1117;
                             font-family:"Inter",sans-serif;}
-                        .chat-messages{display:flex;flex-direction:column;
-                            padding:20px;overflow-y:auto;height:430px;}
-                        .chat-bubble-row{display:flex;margin-bottom:12px;}
-                        .chat-bubble-row.user{justify-content:flex-end;}
-                        .chat-bubble-row.admin{justify-content:flex-start;}
+                        .chat-messages{display:flex;
+                            flex-direction:column;padding:20px;
+                            overflow-y:auto;height:430px;}
+                        .chat-bubble-row{display:flex;
+                            margin-bottom:12px;}
+                        .chat-bubble-row.user{
+                            justify-content:flex-end;}
+                        .chat-bubble-row.admin{
+                            justify-content:flex-start;}
                         .chat-bubble{max-width:70%;padding:12px 16px;
                             border-radius:18px;font-size:14px;
                             line-height:1.4;word-wrap:break-word;}
-                        .user .chat-bubble{background:#2563eb;color:white;
+                        .user .chat-bubble{background:#2563eb;
+                            color:white;
                             border-bottom-right-radius:4px;}
                         .admin .chat-bubble{background:#1f2a36;
-                            color:#F0F4F8;border-bottom-left-radius:4px;}
-                        .chat-timestamp{font-size:11px;color:#94A3B8;
-                            margin-top:4px;}
+                            color:#F0F4F8;
+                            border-bottom-left-radius:4px;}
+                        .chat-timestamp{font-size:11px;
+                            color:#94A3B8;margin-top:4px;}
                         .reply-badge{background:#0e1117;color:#60A5FA;
                             border-radius:16px;padding:4px 12px;
                             font-size:12px;margin-bottom:8px;
-                            display:inline-block;border:1px solid #2563eb;}
+                            display:inline-block;
+                            border:1px solid #2563eb;}
                         .read-receipt{font-size:11px;color:#94A3B8;
                             margin-left:8px;}
                         </style></head><body>
@@ -173,14 +201,16 @@ def show_admin_dashboard(supabase):
                             )
                             safe_message = msg['message']
                             read_status  = (
-                                "Read" if msg.get('read_by_customer')
+                                "Read"
+                                if msg.get('read_by_customer')
                                 else "Delivered"
                             )
                             chat_html_parts.append(f'''
                             <div class="chat-bubble-row user">
                                 <div style="display:flex;
                                     flex-direction:column;
-                                    align-items:flex-end;max-width:70%;">
+                                    align-items:flex-end;
+                                    max-width:70%;">
                                     <div class="chat-bubble">
                                         {safe_message}</div>
                                     <div style="display:flex;
@@ -200,7 +230,8 @@ def show_admin_dashboard(supabase):
                                 chat_html_parts.append(f'''
                             <div class="chat-bubble-row admin">
                                 <div style="display:flex;
-                                    flex-direction:column;max-width:70%;">
+                                    flex-direction:column;
+                                    max-width:70%;">
                                     <div class="reply-badge">Reply</div>
                                     <div class="chat-bubble">
                                         {safe_reply}</div>
@@ -209,7 +240,15 @@ def show_admin_dashboard(supabase):
                                 </div>
                             </div>''')
 
-                        chat_html_parts.append('</div></body></html>')
+                        # Auto scroll to bottom
+                        chat_html_parts.append('''
+                        <div id="bottom"></div>
+                        <script>
+                            document.getElementById("bottom")
+                                .scrollIntoView();
+                        </script>
+                        </div></body></html>''')
+
                         components.html(
                             "".join(chat_html_parts),
                             height=450, scrolling=True
@@ -295,9 +334,15 @@ def show_admin_dashboard(supabase):
                     "users start chatting."
                 )
 
+        # ── Smart polling for admin ──
         if st.session_state.auto_refresh:
-            time.sleep(3)
-            st.rerun()
+            time.sleep(2)
+            current_count = get_total_message_count(supabase)
+            if current_count != st.session_state.admin_last_count:
+                st.session_state.admin_last_count = current_count
+                st.rerun()
+            else:
+                st.rerun()
 
     # ════════════════════════════
     # TAB 2 — User Management
