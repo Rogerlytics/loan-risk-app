@@ -36,7 +36,8 @@ def show_contact(supabase):
             st.rerun()
     with col2:
         auto = st.checkbox(
-            "Auto-refresh (3s)", value=st.session_state.auto_refresh
+            "Auto-refresh (3s)",
+            value=st.session_state.auto_refresh
         )
         st.session_state.auto_refresh = auto
 
@@ -83,7 +84,8 @@ def show_contact(supabase):
     if not msgs:
         chat_html_parts.append(
             '<div class="empty-state">'
-            'No messages yet. Send a message below to start the conversation.'
+            'No messages yet. Send a message below to '
+            'start the conversation.'
             '</div>'
         )
     else:
@@ -114,7 +116,9 @@ def show_contact(supabase):
     chat_html_parts.append('</div></body></html>')
     components.html("".join(chat_html_parts), height=450, scrolling=True)
 
-    st.markdown('<div class="chat-input-container">', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="chat-input-container">', unsafe_allow_html=True
+    )
     with st.form("chat_form", clear_on_submit=True):
         col_input, col_button = st.columns([5, 1])
         with col_input:
