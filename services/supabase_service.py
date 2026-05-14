@@ -11,10 +11,6 @@ def log_action(
     supabase, user_id: str, email: str,
     action: str, details: str = ""
 ):
-    """
-    Insert audit log via SECURITY DEFINER RPC.
-    Fails silently — never crashes the app.
-    """
     try:
         supabase.rpc(
             "insert_audit_log",
@@ -30,7 +26,6 @@ def log_action(
 
 
 def get_audit_logs(supabase, limit: int = 100):
-    """Fetch most recent audit logs — admin only."""
     try:
         return (
             supabase.table("audit_logs")
@@ -125,7 +120,6 @@ def get_user_role(supabase, user_id: str) -> str:
 
 
 def get_all_users(supabase):
-    """Fetch all users — admin only via RLS policy."""
     try:
         return (
             supabase.table("profiles")
@@ -138,10 +132,6 @@ def get_all_users(supabase):
 
 
 def update_user_role(supabase, target_user_id: str, new_role: str):
-    """
-    Update a user's role via secure RPC function.
-    Returns (success: bool, message: str)
-    """
     try:
         supabase.rpc(
             "update_user_role",
@@ -160,36 +150,6 @@ def update_user_role(supabase, target_user_id: str, new_role: str):
         if "invalid role" in error_msg.lower():
             return False, "Invalid role value."
         return False, f"Failed to update role: {error_msg}"
-
-
-# ── Smart Polling ─────────────────────────────────
-
-def get_message_count(supabase, user_id: str) -> int:
-    """
-    Lightweight count check for smart polling.
-    Much cheaper than fetching full message data.
-    """
-    try:
-        result = supabase.rpc(
-            "get_message_count",
-            {"p_user_id": user_id}
-        ).execute()
-        return result.data or 0
-    except Exception:
-        return 0
-
-
-def get_total_message_count(supabase) -> int:
-    """
-    Lightweight total count for admin smart polling.
-    """
-    try:
-        result = supabase.rpc(
-            "get_total_message_count"
-        ).execute()
-        return result.data or 0
-    except Exception:
-        return 0
 
 
 # ── Messages ──────────────────────────────────────
