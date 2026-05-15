@@ -1,60 +1,88 @@
 # ==============================
-# views/about.py (original)
+# views/about.py
 # ==============================
 import streamlit as st
 
 
 def show_about_page():
-    """Original about page – company mission and features."""
     st.markdown(
-        '<div class="section-heading">About LendAssist Pro</div>',
+        '<div class="page-title">AI Loan Risk Platform</div>',
+        unsafe_allow_html=True
+    )
+    st.markdown(
+        '<div class="page-subtitle">'
+        'Intelligent credit evaluation for smarter lending'
+        '</div>',
         unsafe_allow_html=True
     )
 
-    st.markdown("""
-    <div style="background:linear-gradient(145deg,#111827,#0b1220); 
-                border-radius:16px; padding:24px; margin-bottom:24px;">
-        <div style="font-size:24px; font-weight:700; color:#60A5FA;">Our Mission</div>
-        <p style="color:#F0F4F8; margin-top:12px;">
-            To democratize access to fair credit and provide a trusted car marketplace 
-            for Kenyan consumers. We combine machine learning with transparent 
-            financial insights to help you make better decisions.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        st.markdown("""
-        <div style="background:#0f1e30; border-radius:12px; padding:20px; text-align:center;">
-            <div style="font-size:32px;">🤖</div>
-            <div style="font-weight:700;">AI Risk Engine</div>
-            <div style="font-size:12px; color:#94A3B8;">Real‑time credit scoring</div>
-        </div>
-        """, unsafe_allow_html=True)
-
+    col1, col2, col3 = st.columns([1, 3, 1])
     with col2:
+        st.markdown('<div class="about-card">', unsafe_allow_html=True)
+
+        st.markdown(
+            '<div class="about-heading" style="text-align:center;">'
+            'About This Platform</div>',
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            '<p class="about-text" style="text-align:center;">'
+            'The AI Loan Risk Platform is a state-of-the-art credit '
+            'assessment tool that leverages machine learning to provide '
+            'real-time risk evaluation for vehicle loans. Designed for '
+            'both financial institutions and individual borrowers, it '
+            'delivers transparent, data-driven insights to support '
+            'smarter lending decisions.</p>',
+            unsafe_allow_html=True
+        )
+
+        st.markdown(
+            '<div class="about-heading" style="text-align:center;">'
+            'Key Features</div>',
+            unsafe_allow_html=True
+        )
         st.markdown("""
-        <div style="background:#0f1e30; border-radius:12px; padding:20px; text-align:center;">
-            <div style="font-size:32px;">🚗</div>
-            <div style="font-weight:700;">Car Marketplace</div>
-            <div style="font-size:12px; color:#94A3B8;">Verified listings, valuation tools</div>
-        </div>
+        <ul class="feature-list" style="text-align:center;
+            list-style-position:inside;">
+            <li><strong>Instant Risk Scoring</strong> — Proprietary ML
+                model evaluates applicant profiles in milliseconds.</li>
+            <li><strong>Repayment Calculator</strong> — View monthly,
+                weekly, and daily instalments instantly.</li>
+            <li><strong>Car Marketplace</strong> — Browse, filter and
+                value vehicles directly on the platform.</li>
+            <li><strong>Integrated Support Chat</strong> — Real-time
+                conversation with customer service.</li>
+            <li><strong>Admin Dashboard</strong> — Comprehensive overview
+                of all conversations and system metrics.</li>
+            <li><strong>Secure Authentication</strong> — Role-based access
+                with full audit logging.</li>
+            <li><strong>Premium Dark Interface</strong> — Optimised for
+                long-duration use with minimal eye strain.</li>
+        </ul>
         """, unsafe_allow_html=True)
 
-    with col3:
-        st.markdown("""
-        <div style="background:#0f1e30; border-radius:12px; padding:20px; text-align:center;">
-            <div style="font-size:32px;">💬</div>
-            <div style="font-weight:700;">24/7 Support</div>
-            <div style="font-size:12px; color:#94A3B8;">Instant chat with our team</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            '<div class="about-heading" style="text-align:center;">'
+            'Contact & Support</div>',
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            '<p class="about-text" style="text-align:center;">'
+            'For inquiries, feedback, or technical support, please use '
+            'the <strong>Contact</strong> page within the app. Our team '
+            'typically responds within a few hours during business days.'
+            '</p>',
+            unsafe_allow_html=True
+        )
 
-    st.markdown("---")
-    st.markdown("""
-    <div style="text-align:center; color:#64748B; font-size:12px;">
-        © 2026 LendAssist Pro · Secure · Transparent
-    </div>
-    """, unsafe_allow_html=True)
+        st.markdown(
+            '<div class="about-heading" style="text-align:center;">'
+            'Version</div>',
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            '<p class="about-text" style="text-align:center;">'
+            'v2.1.0 — May 2026</p>',
+            unsafe_allow_html=True
+        )
+        st.markdown('</div>', unsafe_allow_html=True)
