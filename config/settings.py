@@ -3,7 +3,6 @@
 # ==============================
 import streamlit as st
 
-
 # ── Required secrets ────────────────────────────
 REQUIRED_SECRETS = ["SUPABASE_URL", "SUPABASE_KEY"]
 
@@ -135,3 +134,14 @@ def require_role(allowed_roles: list):
         </div>
         """, unsafe_allow_html=True)
         st.stop()
+
+
+# ── Exported constants (read from st.secrets) ─────────────────────────
+# These are used by app.py, supabase_service.py, and other modules
+try:
+    SUPABASE_URL = st.secrets["SUPABASE_URL"]
+    SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+except (KeyError, FileNotFoundError):
+    # Fallback for local development (if you use .env or toml)
+    SUPABASE_URL = None
+    SUPABASE_KEY = None
