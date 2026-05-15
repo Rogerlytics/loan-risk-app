@@ -1,5 +1,5 @@
 # ==============================
-# app.py — Entry point with Car Marketplace
+# app.py — Entry point only
 # ==============================
 import streamlit as st
 import pickle
@@ -10,7 +10,7 @@ from views.about import show_about_page
 from views.loan_analysis import show_loan_analysis
 from views.contact import show_contact
 from views.admin_dashboard import show_admin_dashboard
-from views.cars import show_cars                     # <-- NEW Car Marketplace
+from views.cars import show_cars                      # <-- ADDED
 from services.supabase_service import get_unread_reply_count
 from config.settings import validate_secrets
 
@@ -94,7 +94,7 @@ else:
             unsafe_allow_html=True
         )
 
-        # ---- Menu with Car Marketplace for all users ----
+        # --- Menu with Car Marketplace for all roles ---
         if st.session_state.role == "admin":
             menu = ["Loan Analysis", "Contact", "Car Marketplace", "Admin Dashboard", "About"]
         else:
@@ -165,6 +165,6 @@ else:
         elif page == "Contact":
             show_contact(supabase)
         elif page == "Car Marketplace":
-            show_cars(supabase)          # <-- NEW
+            show_cars(supabase)
         elif page == "Admin Dashboard":
             show_admin_dashboard(supabase)
