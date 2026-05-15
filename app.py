@@ -1,166 +1,160 @@
 # ==============================
-# app.py — Entry point only
+# app.py – Main Entry Point
 # ==============================
 import streamlit as st
-import pickle
-from supabase import create_client, Client
-from styles.theme import apply_theme
-from auth.login import show_login_page, logout
-from views.about import show_about_page
+from supabase import create_client
+from config.settings import SUPABASE_URL, SUPABASE_KEY
+from services.supabase_service import (
+    sign_in, sign_up, sign_out, get_current_user,
+    log_action
+)
 from views.loan_analysis import show_loan_analysis
 from views.contact import show_contact
+from views.about import show_about
+from views.cars import show_cars          # <-- NEW Car Marketplace
 from views.admin_dashboard import show_admin_dashboard
-from services.supabase_service import get_unread_reply_count
-from config.settings import validate_secrets
+from utils.helpers import apply_custom_css
 
-# ── Config ──
+# ---------- Page configuration ----------
 st.set_page_config(
-    page_title="AI Loan Risk System",
+    page_title="LendAssist Pro",
+    page_icon="💼",
     layout="wide",
     initial_sidebar_state="expanded"
 )
-apply_theme()
-validate_secrets()
 
-# ── Supabase ──
-SUPABASE_URL = st.secrets["SUPABASE_URL"]
-SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+# ---------- Apply global CSS ----------
+apply_custom_css()
 
-# ── Restore session on every rerun ──
-if st.session_state.get("access_token") and \
-        st.session_state.get("refresh_token"):
-    try:
-        supabase.auth.set_session(
-            st.session_state.access_token,
-            st.session_state.refresh_token
-        )
-    except Exception:
-        pass
+# ---------- Initialize Supabase client ----------
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# ── Session state defaults ──
-defaults = {
-    "authenticated":              False,
-    "user":                       None,
-    "role":                       None,
-    "access_token":               None,
-    "refresh_token":              None,
-    "seen_notified":              set(),
-    "selected_user_id":           None,
-    "auto_refresh":               False,
-    "draft_message":              "",
-    "risk_result":                None,
-    "repayment_result":           None,
-    "show_signup":                False,
-    "pending_confirmation_email": None
-}
-for key, value in defaults.items():
-    if key not in st.session_state:
-        st.session_state[key] = value
+# ---------- Session state defaults ----------
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+if "user" not in st.session_state:
+    st.session_state.user = None
+if "role" not in st.session_state:
+    st.session_state.role = None
+if "page" not in st.session_state:
+    st.session_state.page = "Login"
+if "auto_refresh" not in st.session_state:
+    st.session_state.auto_refresh = False
+if "selected_user_id" not in st.session_state:
+    st.session_state.selected_user_id = None
+if "draft_message" not in st.session_state:
+    st.session_state.draft_message = ""
 
-# ── ML Model ──
-@st.cache_resource
-def load_model():
-    return pickle.load(open("loan_model.pkl", "rb"))
+# ---------- Helper: logout ----------
+def do_logout():
+    if st.session_state.authenticated:
+        user = st.session_state.user
+        log_action(supabase, user["id"], user["email"], "logout", "User logged out")
+        sign_out()
+        st.session_state.authenticated = False
+        st.session_state.user = None
+        st.session_state.role = None
+        st.session_state.page = "Login"
+        st.rerun()
 
-model = load_model()
-
-# ══════════════════════════════
-# NOT LOGGED IN
-# ══════════════════════════════
-if not st.session_state.authenticated:
-    st.markdown("""
-    <style>
-    [data-testid="stSidebar"] { display: none !important; }
-    [data-testid="collapsedControl"] { display: none !important; }
-    </style>
-    """, unsafe_allow_html=True)
-    show_login_page(supabase)
-
-# ══════════════════════════════
-# LOGGED IN
-# ══════════════════════════════
-else:
+# ---------- Authentication UI (sidebar when logged out) ----------
+def auth_sidebar():
     with st.sidebar:
-        st.markdown(
-            '<p style="font-size:20px; font-weight:800; color:#60A5FA; '
-            'text-shadow:0 2px 4px rgba(0,0,0,0.5); margin-bottom:4px;">'
-            'Navigation</p>',
-            unsafe_allow_html=True
-        )
-        st.markdown(
-            '<hr style="border-color:#1f2a36; margin-top:0;">',
-            unsafe_allow_html=True
-        )
+        st.image("https://via.placeholder.com/150x50?text=Logo", use_container_width=True)
+        st.markdown("### Welcome 👋")
+        
+        tab_login, tab_signup = st.tabs(["Login", "Sign Up"])
+        
+        with tab_login:
+            email = st.text_input("Email", key="login_email")
+            password = st.text_input("Password", type="password", key="login_password")
+            if st.button("Login", use_container_width=True):
+                if email and password:
+                    user = sign_in(supabase, email, password)
+                    if user:
+                        st.session_state.authenticated = True
+                        st.session_state.user = user
+                        st.session_state.role = user.get("role", "user")
+                        log_action(supabase, user["id"], user["email"], "login", "User logged in")
+                        st.success(f"Welcome back, {user.get('email')}!")
+                        st.rerun()
+                    else:
+                        st.error("Invalid credentials. Please try again.")
+                else:
+                    st.warning("Please enter email and password.")
+        
+        with tab_signup:
+            new_email = st.text_input("Email", key="signup_email")
+            new_password = st.text_input("Password", type="password", key="signup_password")
+            confirm_password = st.text_input("Confirm Password", type="password", key="signup_confirm")
+            if st.button("Create Account", use_container_width=True):
+                if new_password != confirm_password:
+                    st.error("Passwords do not match.")
+                elif new_email and new_password:
+                    user = sign_up(supabase, new_email, new_password)
+                    if user:
+                        st.success("Account created! Please log in.")
+                    else:
+                        st.error("Signup failed. Email may already exist.")
+                else:
+                    st.warning("Please fill all fields.")
 
+# ---------- Main app logic ----------
+def main():
+    # Show authentication sidebar if not logged in
+    if not st.session_state.authenticated:
+        auth_sidebar()
+        # Optional: show a hero message in main area
+        st.markdown("""
+        <div style="text-align:center; padding:80px 20px;">
+            <h1 style="color:#60A5FA;">LendAssist Pro</h1>
+            <p style="color:#94A3B8; font-size:18px;">Smart loan analysis · Customer support · Car marketplace</p>
+            <p style="color:#64748B;">👈 Please log in or sign up using the sidebar.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        return
+
+    # ---------- Logged-in user: sidebar navigation ----------
+    with st.sidebar:
+        st.image("https://via.placeholder.com/150x50?text=Logo", use_container_width=True)
+        st.markdown(f"**Logged in as:**  \n{st.session_state.user.get('email')}")
         if st.session_state.role == "admin":
-            menu = ["Loan Analysis", "Contact", "Admin Dashboard", "About"]
+            st.markdown("**Role:** `Admin` 🔧")
         else:
-            menu = ["Loan Analysis", "Contact", "About"]
-
-        page = st.radio("", menu, label_visibility="collapsed")
-
-        st.markdown(
-            '<hr style="border-color:#1f2a36;">',
-            unsafe_allow_html=True
+            st.markdown("**Role:** `Customer` 👤")
+        
+        st.markdown("---")
+        
+        # Navigation choices
+        nav_options = ["Loan Analysis", "Contact", "About", "Car Marketplace"]
+        if st.session_state.role == "admin":
+            nav_options.append("Admin Dashboard")
+        
+        selected_page = st.radio(
+            "Navigation",
+            nav_options,
+            index=nav_options.index(st.session_state.page) if st.session_state.page in nav_options else 0
         )
-
-        if st.session_state.role == "user":
-            unread = get_unread_reply_count(
-                supabase, st.session_state.user["id"]
-            )
-            display_name = st.session_state.user["email"]
-            badge = (
-                f' <span style="background:#ef4444; color:white; '
-                f'border-radius:50%; padding:1px 7px; '
-                f'font-size:11px;">{unread}</span>'
-                if unread > 0 else ""
-            )
-            st.markdown(
-                f'<p style="color:#F0F4F8;">👤 <b>{display_name}</b>'
-                f'{badge}</p>',
-                unsafe_allow_html=True
-            )
-        else:
-            safe_name = st.session_state.user.get(
-                "username", st.session_state.user.get("email")
-            )
-            st.markdown(
-                f'<p style="color:#F0F4F8;">👑 <b>Admin:</b> '
-                f'{safe_name}</p>',
-                unsafe_allow_html=True
-            )
-
-        role_label = (st.session_state.role or "user").upper()
-        st.markdown(
-            f'<p style="color:#94A3B8; font-size:13px;">'
-            f'Role: <b>{role_label}</b></p>',
-            unsafe_allow_html=True
-        )
-        st.markdown(
-            '<hr style="border-color:#1f2a36;">',
-            unsafe_allow_html=True
-        )
-
-        if st.button("Logout", use_container_width=True):
-            logout(supabase)
-
-    # ── Page routing ──
-    if page == "About":
-        show_about_page()
+        st.session_state.page = selected_page
+        
+        st.markdown("---")
+        if st.button("🚪 Logout", use_container_width=True):
+            do_logout()
+    
+    # ---------- Route to selected page ----------
+    if st.session_state.page == "Loan Analysis":
+        show_loan_analysis(supabase)
+    elif st.session_state.page == "Contact":
+        show_contact(supabase)
+    elif st.session_state.page == "About":
+        show_about(supabase)
+    elif st.session_state.page == "Car Marketplace":
+        show_cars(supabase)
+    elif st.session_state.page == "Admin Dashboard" and st.session_state.role == "admin":
+        show_admin_dashboard(supabase)
     else:
-        st.markdown(
-            '<div class="page-title">AI Loan Risk Platform</div>',
-            unsafe_allow_html=True
-        )
-        st.markdown(
-            '<div class="page-subtitle">Real-time credit risk evaluation '
-            'powered by machine learning</div>',
-            unsafe_allow_html=True
-        )
-        if page == "Loan Analysis":
-            show_loan_analysis(model, supabase)
-        elif page == "Contact":
-            show_contact(supabase)
-        elif page == "Admin Dashboard":
-            show_admin_dashboard(supabase)
+        # Fallback (should not happen)
+        st.error("Page not found. Please select a valid option.")
+
+if __name__ == "__main__":
+    main()
