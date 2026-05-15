@@ -33,7 +33,7 @@ def _empty_state(icon: str, title: str, subtitle: str):
 
 
 def _build_chat_html(messages, height=480):
-    """Build a professional chat window HTML string."""
+    """Build a professional chat window HTML string with compact pill labels."""
     chat_rows = ""
     if not messages:
         chat_rows = '''
@@ -73,14 +73,16 @@ def _build_chat_html(messages, height=480):
             if msg.get('reply'):
                 reply_ts   = relative_time(msg.get('replied_at', ''))
                 safe_reply = msg['reply']
-                # Admin reply (left)
+                # Admin reply (left) with compact pill label
                 chat_rows += f'''
             <div style="display:flex; justify-content:flex-start;
                         margin-bottom:4px; padding:0 16px;">
                 <div style="max-width:80%;">
-                    <div style="font-size:11px; color:#60A5FA;
-                                font-weight:600; margin-bottom:3px;
-                                padding-left:4px;">You (Admin)</div>
+                    <div style="display:inline-block; background:#1e3a8a;
+                                color:#60A5FA; font-size:11px;
+                                font-weight:600; padding:2px 10px;
+                                border-radius:999px; margin-bottom:6px;
+                                border:1px solid #2563eb;">You (Admin)</div>
                     <div style="background:#1e293b; color:#F0F4F8;
                                 padding:10px 14px; border-radius:18px
                                 18px 18px 4px; font-size:14px;
