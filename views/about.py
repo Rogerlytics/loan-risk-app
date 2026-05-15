@@ -4,8 +4,8 @@
 import streamlit as st
 
 
-def show_about(supabase=None):
-    """About page – Company information and mission."""
+def show_about_page():
+    """About page – Company information."""
     st.markdown(
         '<div class="section-heading">About LendAssist Pro</div>',
         unsafe_allow_html=True
@@ -35,8 +35,7 @@ def show_about(supabase=None):
                 Loan Analysis
             </div>
             <p style="color:#94A3B8; font-size:14px; margin-top:8px;">
-                Advanced risk assessment and repayment calculators powered by 
-                machine learning models.
+                Advanced risk assessment powered by machine learning.
             </p>
         </div>
         """, unsafe_allow_html=True)
@@ -50,8 +49,7 @@ def show_about(supabase=None):
                 Car Marketplace
             </div>
             <p style="color:#94A3B8; font-size:14px; margin-top:8px;">
-                Buy and sell cars with advanced filters, real-time valuation, 
-                and instant comparison tools.
+                Buy and sell cars with advanced filters and valuation tools.
             </p>
         </div>
         """, unsafe_allow_html=True)
@@ -65,7 +63,7 @@ def show_about(supabase=None):
             © 2026 LendAssist Pro. All rights reserved.
         </div>
         <div style="color:#64748B; font-size:12px;">
-            Secure · Transparent · Trusted by thousands
+            Secure · Transparent · Trusted
         </div>
     </div>
     """, unsafe_allow_html=True)
