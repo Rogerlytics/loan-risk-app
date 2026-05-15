@@ -10,7 +10,7 @@ from views.about import show_about_page
 from views.loan_analysis import show_loan_analysis
 from views.contact import show_contact
 from views.admin_dashboard import show_admin_dashboard
-from views.cars import show_cars                      # <-- ADDED
+from views.car_marketplace import show_car_marketplace
 from services.supabase_service import get_unread_reply_count
 from config.settings import validate_secrets
 
@@ -48,12 +48,15 @@ defaults = {
     "refresh_token":              None,
     "seen_notified":              set(),
     "selected_user_id":           None,
+    "selected_car_id":            None,
     "auto_refresh":               False,
     "draft_message":              "",
     "risk_result":                None,
     "repayment_result":           None,
     "show_signup":                False,
-    "pending_confirmation_email": None
+    "pending_confirmation_email": None,
+    "last_msg_count":             0,
+    "admin_last_count":           0,
 }
 for key, value in defaults.items():
     if key not in st.session_state:
@@ -94,11 +97,21 @@ else:
             unsafe_allow_html=True
         )
 
-        # --- Menu with Car Marketplace for all roles ---
         if st.session_state.role == "admin":
-            menu = ["Loan Analysis", "Contact", "Car Marketplace", "Admin Dashboard", "About"]
+            menu = [
+                "Loan Analysis",
+                "Car Marketplace",
+                "Contact",
+                "Admin Dashboard",
+                "About"
+            ]
         else:
-            menu = ["Loan Analysis", "Contact", "Car Marketplace", "About"]
+            menu = [
+                "Loan Analysis",
+                "Car Marketplace",
+                "Contact",
+                "About"
+            ]
 
         page = st.radio("", menu, label_visibility="collapsed")
 
@@ -150,6 +163,19 @@ else:
     # ── Page routing ──
     if page == "About":
         show_about_page()
+
+    elif page == "Car Marketplace":
+        st.markdown(
+            '<div class="page-title">Car Marketplace</div>',
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            '<div class="page-subtitle">Browse verified vehicle listings '
+            'with AI-powered valuations</div>',
+            unsafe_allow_html=True
+        )
+        show_car_marketplace()
+
     else:
         st.markdown(
             '<div class="page-title">AI Loan Risk Platform</div>',
@@ -164,7 +190,5 @@ else:
             show_loan_analysis(model, supabase)
         elif page == "Contact":
             show_contact(supabase)
-        elif page == "Car Marketplace":
-            show_cars(supabase)
         elif page == "Admin Dashboard":
             show_admin_dashboard(supabase)
