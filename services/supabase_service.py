@@ -2,268 +2,168 @@
 # services/supabase_service.py
 # ==============================
 import streamlit as st
+from supabase import create_client
+from config.settings import SUPABASE_URL, SUPABASE_KEY
 from datetime import datetime
+import bcrypt
+
+# Initialize client
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
-# ── Audit Logging ─────────────────────────────────
-
-def log_action(
-    supabase, user_id: str, email: str,
-    action: str, details: str = ""
-):
+def sign_in(email: str, password: str):
+    """Authenticate user with email and password."""
     try:
-        supabase.rpc(
-            "insert_audit_log",
-            {
-                "p_user_id": user_id,
-                "p_email":   email,
-                "p_action":  action,
-                "p_details": details
-            }
-        ).execute()
-    except Exception:
-        pass
-
-
-def get_audit_logs(supabase, limit: int = 100):
-    try:
-        return (
-            supabase.table("audit_logs")
-            .select("*")
-            .order("created_at", desc=True)
-            .limit(limit)
-            .execute().data
-        )
-    except Exception:
-        return []
-
-
-# ── Auth ──────────────────────────────────────────
-
-def login_user(supabase, email: str, password: str):
-    try:
-        res = supabase.auth.sign_in_with_password({
+        response = supabase.auth.sign_in_with_password({
             "email": email,
             "password": password
         })
-        if res.user:
+        user = response.user
+        if user:
+            # Fetch custom role from 'users' table
+            user_data = supabase.table("users").select("role").eq("id", user.id).execute()
+            role = "user"
+            if user_data.data and len(user_data.data) > 0:
+                role = user_data.data[0].get("role", "user")
             return {
-                "id":            res.user.id,
-                "email":         res.user.email,
-                "access_token":  res.session.access_token,
-                "refresh_token": res.session.refresh_token,
-                "confirmed":     res.user.email_confirmed_at is not None
+                "id": user.id,
+                "email": user.email,
+                "role": role
             }
+        return None
     except Exception as e:
-        error_msg = str(e).lower()
-        if "email not confirmed" in error_msg:
-            return {"error": "email_not_confirmed"}
-        if "invalid login" in error_msg or \
-                "invalid credentials" in error_msg:
-            return {"error": "invalid_credentials"}
-        st.error(f"Login error: {e}")
-    return None
+        st.error(f"Login error: {str(e)}")
+        return None
 
 
-def signup_user(supabase, email: str, password: str):
+def sign_up(email: str, password: str):
+    """Create a new user account."""
     try:
-        res = supabase.auth.sign_up({
+        response = supabase.auth.sign_up({
             "email": email,
             "password": password
         })
-        if res.user:
-            identities = getattr(res.user, "identities", None)
-            if identities is not None and len(identities) == 0:
-                return {"error": "already_registered"}
-            confirmed = res.user.email_confirmed_at is not None
-            return {
-                "id":        res.user.id,
-                "email":     res.user.email,
-                "confirmed": confirmed
-            }
-    except Exception as e:
-        error_msg = str(e).lower()
-        if "already registered" in error_msg or \
-                "already exists" in error_msg or \
-                "user already registered" in error_msg:
-            return {"error": "already_registered"}
-        st.error(f"Signup error: {e}")
-    return None
-
-
-def resend_confirmation_email(supabase, email: str) -> bool:
-    try:
-        supabase.auth.resend({
-            "type":  "signup",
-            "email": email
-        })
-        return True
-    except Exception as e:
-        st.error(f"Failed to resend confirmation: {e}")
-        return False
-
-
-# ── Profiles ──────────────────────────────────────
-
-def get_user_role(supabase, user_id: str) -> str:
-    try:
-        profile = (
-            supabase.table("profiles")
-            .select("role")
-            .eq("id", user_id)
-            .single()
-            .execute()
-        )
-        return profile.data.get("role", "user").lower()
-    except Exception:
-        return "user"
-
-
-def get_all_users(supabase):
-    try:
-        return (
-            supabase.table("profiles")
-            .select("id, email, role")
-            .order("email", desc=False)
-            .execute().data
-        )
-    except Exception:
-        return []
-
-
-def update_user_role(supabase, target_user_id: str, new_role: str):
-    try:
-        supabase.rpc(
-            "update_user_role",
-            {
-                "target_user_id": target_user_id,
-                "new_role":       new_role
-            }
-        ).execute()
-        return True, "Role updated successfully."
-    except Exception as e:
-        error_msg = str(e)
-        if "only admins can change roles" in error_msg.lower():
-            return False, "Permission denied."
-        if "cannot change your own role" in error_msg.lower():
-            return False, "You cannot change your own role."
-        if "invalid role" in error_msg.lower():
-            return False, "Invalid role value."
-        return False, f"Failed to update role: {error_msg}"
-
-
-# ── Smart Polling ─────────────────────────────────
-
-def get_message_count(supabase, user_id: str) -> int:
-    """
-    Lightweight count for user smart polling.
-    Single integer — much cheaper than fetching full messages.
-    """
-    try:
-        result = supabase.rpc(
-            "get_message_count",
-            {"p_user_id": user_id}
-        ).execute()
-        return result.data or 0
-    except Exception:
-        return 0
-
-
-def get_total_message_count(supabase) -> int:
-    """
-    Lightweight total count for admin smart polling.
-    """
-    try:
-        result = supabase.rpc(
-            "get_total_message_count"
-        ).execute()
-        return result.data or 0
-    except Exception:
-        return 0
-
-
-# ── Messages ──────────────────────────────────────
-
-def get_user_messages(supabase, user_id: str):
-    try:
-        return (
-            supabase.table("messages")
-            .select("*")
-            .eq("user_id", user_id)
-            .order("timestamp", desc=False)
-            .execute().data
-        )
-    except Exception:
-        return []
-
-
-def get_all_messages(supabase):
-    try:
-        return (
-            supabase.table("messages")
-            .select("*")
-            .order("timestamp", desc=False)
-            .execute().data
-        )
-    except Exception:
-        return []
-
-
-def send_message(supabase, user_id: str, email: str, message: str):
-    try:
-        return (
-            supabase.table("messages").insert({
-                "user_id":          user_id,
-                "name":             email,
-                "email":            email,
-                "message":          message,
-                "status":           "sent",
-                "timestamp":        datetime.now().isoformat(),
-                "read_by_customer": False,
-                "delivered":        True
+        user = response.user
+        if user:
+            # Insert into 'users' table with default role 'user'
+            supabase.table("users").insert({
+                "id": user.id,
+                "email": email,
+                "role": "user",
+                "created_at": datetime.utcnow().isoformat()
             }).execute()
-        )
+            return {
+                "id": user.id,
+                "email": user.email,
+                "role": "user"
+            }
+        return None
     except Exception as e:
-        st.error(f"Failed to send message: {e}")
+        st.error(f"Signup error: {str(e)}")
         return None
 
 
-def send_reply(supabase, msg_id: str, reply_text: str):
+def sign_out():
+    """Sign out the current user."""
     try:
-        return (
-            supabase.table("messages").update({
-                "reply":      reply_text,
-                "replied_at": datetime.now().isoformat(),
-                "status":     "replied"
-            }).eq("id", msg_id).execute()
-        )
+        supabase.auth.sign_out()
+    except Exception:
+        pass  # ignore if already signed out
+
+
+def get_current_user():
+    """Return currently logged-in user from session."""
+    user = st.session_state.get("user")
+    if user:
+        return user
+    return None
+
+
+def log_action(supabase_client, user_id: str, email: str, action: str, details: str = ""):
+    """Log user action to audit_logs table."""
+    try:
+        supabase_client.table("audit_logs").insert({
+            "user_id": user_id,
+            "email": email,
+            "action": action,
+            "details": details,
+            "created_at": datetime.utcnow().isoformat()
+        }).execute()
     except Exception as e:
-        st.error(f"Failed to send reply: {e}")
-        return None
+        print(f"Failed to log action: {e}")
 
 
-def get_unread_reply_count(supabase, user_id: str) -> int:
+# ---------- Message functions (existing) ----------
+def get_all_messages(supabase_client):
+    """Fetch all messages from the database."""
+    response = supabase_client.table("messages").select("*").order("timestamp").execute()
+    return response.data
+
+
+def get_user_messages(supabase_client, user_id):
+    """Fetch messages for a specific user."""
+    response = supabase_client.table("messages").select("*").eq("user_id", user_id).order("timestamp").execute()
+    return response.data
+
+
+def send_message(supabase_client, user_id, user_email, message):
+    """Send a new message from user to support."""
+    supabase_client.table("messages").insert({
+        "user_id": user_id,
+        "email": user_email,
+        "message": message,
+        "timestamp": datetime.utcnow().isoformat(),
+        "read_by_customer": True,
+        "reply": None,
+        "replied_at": None
+    }).execute()
+
+
+def send_reply(supabase_client, message_id, reply_text):
+    """Send a reply to a specific message."""
+    supabase_client.table("messages").update({
+        "reply": reply_text,
+        "replied_at": datetime.utcnow().isoformat(),
+        "read_by_customer": False
+    }).eq("id", message_id).execute()
+
+
+def mark_messages_as_read(supabase_client, user_id):
+    """Mark all admin replies as read by customer."""
+    supabase_client.table("messages").update({
+        "read_by_customer": True
+    }).eq("user_id", user_id).eq("read_by_customer", False).execute()
+
+
+def get_message_count(supabase_client, user_id):
+    """Get total message count for a user."""
+    response = supabase_client.table("messages").select("id", count="exact").eq("user_id", user_id).execute()
+    return response.count
+
+
+def get_total_message_count(supabase_client):
+    """Get total messages across all users."""
+    response = supabase_client.table("messages").select("id", count="exact").execute()
+    return response.count
+
+
+# ---------- User management ----------
+def get_all_users(supabase_client):
+    """Fetch all users from the 'users' table."""
+    response = supabase_client.table("users").select("*").execute()
+    return response.data
+
+
+def update_user_role(supabase_client, user_id, new_role):
+    """Update user role."""
     try:
-        msgs = (
-            supabase.table("messages")
-            .select("id, reply, read_by_customer")
-            .eq("user_id", user_id)
-            .execute().data
-        )
-        return sum(
-            1 for m in msgs
-            if m.get("reply") and not m.get("read_by_customer", False)
-        )
-    except Exception:
-        return 0
+        supabase_client.table("users").update({"role": new_role}).eq("id", user_id).execute()
+        return True, "Role updated successfully"
+    except Exception as e:
+        return False, str(e)
 
 
-def mark_messages_as_read(supabase, user_id: str):
-    try:
-        supabase.table("messages") \
-            .update({"read_by_customer": True}) \
-            .eq("user_id", user_id) \
-            .eq("read_by_customer", False) \
-            .execute()
-    except Exception:
-        pass
+def get_audit_logs(supabase_client, limit=100):
+    """Fetch recent audit logs."""
+    response = supabase_client.table("audit_logs").select("*").order("created_at", desc=True).limit(limit).execute()
+    return response.data
