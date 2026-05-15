@@ -3,7 +3,7 @@
 # ==============================
 import streamlit as st
 from supabase import create_client
-from config.settings import SUPABASE_URL, SUPABASE_KEY
+from config.settings import SUPABASE_URL, SUPABASE_KEY, validate_secrets
 from services.supabase_service import (
     sign_in, sign_up, sign_out, get_current_user,
     log_action
@@ -11,9 +11,12 @@ from services.supabase_service import (
 from views.loan_analysis import show_loan_analysis
 from views.contact import show_contact
 from views.about import show_about
-from views.cars import show_cars          # <-- NEW Car Marketplace
+from views.cars import show_cars
 from views.admin_dashboard import show_admin_dashboard
 from utils.helpers import apply_custom_css
+
+# ---------- Validate secrets before anything else ----------
+validate_secrets()
 
 # ---------- Page configuration ----------
 st.set_page_config(
@@ -153,7 +156,6 @@ def main():
     elif st.session_state.page == "Admin Dashboard" and st.session_state.role == "admin":
         show_admin_dashboard(supabase)
     else:
-        # Fallback (should not happen)
         st.error("Page not found. Please select a valid option.")
 
 if __name__ == "__main__":
