@@ -53,55 +53,57 @@ def show_admin_dashboard(supabase):
     # TAB 1 — Conversations
     # ════════════════════════════
     with tab1:
-        col1, col2 = st.columns([1, 3])
-        with col1:
-            if st.button("Refresh", use_container_width=True):
-                st.rerun()
-        with col2:
-            if st.session_state.auto_refresh:
-                st.markdown("""
-                <div style="background:#052e16; border:1px solid #22c55e;
-                    border-radius:12px; padding:8px 16px; display:flex;
-                    align-items:center; gap:8px;">
-                    <div style="width:10px; height:10px;
-                        border-radius:50%; background:#22c55e;
-                        box-shadow:0 0 8px #22c55e;
-                        animation:pulse 1.5s infinite;"></div>
-                    <span style="color:#22c55e; font-weight:600;
-                        font-size:14px;">
-                        LIVE — auto-refreshing every 2s</span>
-                </div>
-                <style>
-                @keyframes pulse {
-                    0%  { box-shadow:0 0 0 0 rgba(34,197,94,0.7); }
-                    70% { box-shadow:0 0 0 8px rgba(34,197,94,0); }
-                    100%{ box-shadow:0 0 0 0 rgba(34,197,94,0); }
-                }
-                </style>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown("""
-                <div style="background:#1f2a36; border:1px solid #334155;
-                    border-radius:12px; padding:8px 16px; display:flex;
-                    align-items:center; gap:8px;">
-                    <div style="width:10px; height:10px; border-radius:50%;
-                        background:#64748B;"></div>
-                    <span style="color:#94A3B8; font-size:14px;">
-                        Live updates OFF</span>
-                </div>
-                """, unsafe_allow_html=True)
 
-        btn_label = "Turn OFF Live Updates" \
-            if st.session_state.auto_refresh \
-            else "Turn ON Live Updates"
-        if st.button(
-            btn_label,
-            use_container_width=True,
-            key="admin_live_toggle"
-        ):
-            st.session_state.auto_refresh = \
-                not st.session_state.auto_refresh
-            st.rerun()
+        # ── Single row: dot | Refresh | Toggle ──
+        if st.session_state.auto_refresh:
+            dot_col = "#22c55e"
+            dot_txt = "Live"
+            tog_lbl = "Turn OFF"
+            pulse   = "animation:pulse 1.5s infinite;"
+        else:
+            dot_col = "#64748B"
+            dot_txt = "Off"
+            tog_lbl = "Turn ON"
+            pulse   = ""
+
+        st.markdown(f"""
+        <style>
+        @keyframes pulse {{
+            0%  {{ box-shadow:0 0 0 0 rgba(34,197,94,0.6); }}
+            70% {{ box-shadow:0 0 0 6px rgba(34,197,94,0); }}
+            100%{{ box-shadow:0 0 0 0 rgba(34,197,94,0); }}
+        }}
+        .admin-live-bar {{
+            display:flex; align-items:center; gap:10px;
+            padding:6px 0; margin-bottom:4px;
+        }}
+        .admin-live-dot {{
+            width:10px; height:10px; border-radius:50%;
+            background:{dot_col}; {pulse} flex-shrink:0;
+        }}
+        .admin-live-label {{
+            color:{dot_col}; font-size:13px; font-weight:600;
+        }}
+        </style>
+        <div class="admin-live-bar">
+            <div class="admin-live-dot"></div>
+            <span class="admin-live-label">{dot_txt}</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+        col_r, col_t, col_sp = st.columns([1, 1, 4])
+        with col_r:
+            if st.button(
+                "Refresh", use_container_width=True, key="admin_refresh"
+            ):
+                st.rerun()
+        with col_t:
+            if st.button(
+                tog_lbl, use_container_width=True, key="admin_live_toggle"
+            ):
+                st.session_state.auto_refresh = \
+                    not st.session_state.auto_refresh
+                st.rerun()
 
         with st.spinner("Loading conversations..."):
             data = get_all_messages(supabase)
@@ -187,28 +189,24 @@ def show_admin_dashboard(supabase):
                     else:
                         chat_html_parts = ['''
                         <html><head><meta charset="UTF-8"><style>
+                        *{box-sizing:border-box;}
                         body{margin:0;background:#0e1117;
                             font-family:"Inter",sans-serif;}
-                        .chat-messages{display:flex;
-                            flex-direction:column;padding:20px;
-                            overflow-y:auto;height:430px;}
-                        .chat-bubble-row{display:flex;
-                            margin-bottom:12px;}
-                        .chat-bubble-row.user{
-                            justify-content:flex-end;}
-                        .chat-bubble-row.admin{
-                            justify-content:flex-start;}
+                        .chat-wrap{display:flex;flex-direction:column;
+                            padding:20px;overflow-y:auto;height:430px;
+                            scroll-behavior:smooth;}
+                        .chat-bubble-row{display:flex;margin-bottom:12px;}
+                        .chat-bubble-row.user{justify-content:flex-end;}
+                        .chat-bubble-row.admin{justify-content:flex-start;}
                         .chat-bubble{max-width:70%;padding:12px 16px;
                             border-radius:18px;font-size:14px;
                             line-height:1.4;word-wrap:break-word;}
-                        .user .chat-bubble{background:#2563eb;
-                            color:white;
+                        .user .chat-bubble{background:#2563eb;color:white;
                             border-bottom-right-radius:4px;}
                         .admin .chat-bubble{background:#1f2a36;
-                            color:#F0F4F8;
-                            border-bottom-left-radius:4px;}
-                        .chat-timestamp{font-size:11px;
-                            color:#94A3B8;margin-top:4px;}
+                            color:#F0F4F8;border-bottom-left-radius:4px;}
+                        .chat-timestamp{font-size:11px;color:#94A3B8;
+                            margin-top:4px;}
                         .reply-badge{background:#0e1117;color:#60A5FA;
                             border-radius:16px;padding:4px 12px;
                             font-size:12px;margin-bottom:8px;
@@ -217,7 +215,7 @@ def show_admin_dashboard(supabase):
                         .read-receipt{font-size:11px;color:#94A3B8;
                             margin-left:8px;}
                         </style></head><body>
-                        <div class="chat-messages">''']
+                        <div class="chat-wrap" id="chatWrap">''']
 
                         for msg in user_msgs:
                             timestamp    = relative_time(
@@ -233,8 +231,7 @@ def show_admin_dashboard(supabase):
                             <div class="chat-bubble-row user">
                                 <div style="display:flex;
                                     flex-direction:column;
-                                    align-items:flex-end;
-                                    max-width:70%;">
+                                    align-items:flex-end;max-width:70%;">
                                     <div class="chat-bubble">
                                         {safe_message}</div>
                                     <div style="display:flex;
@@ -254,8 +251,7 @@ def show_admin_dashboard(supabase):
                                 chat_html_parts.append(f'''
                             <div class="chat-bubble-row admin">
                                 <div style="display:flex;
-                                    flex-direction:column;
-                                    max-width:70%;">
+                                    flex-direction:column;max-width:70%;">
                                     <div class="reply-badge">Reply</div>
                                     <div class="chat-bubble">
                                         {safe_reply}</div>
@@ -266,16 +262,17 @@ def show_admin_dashboard(supabase):
 
                         # Auto scroll to bottom
                         chat_html_parts.append('''
-                        <div id="bottom"></div>
+                        <div id="anchor"></div>
+                        </div>
                         <script>
-                            document.getElementById("bottom")
-                                .scrollIntoView();
+                            const w = document.getElementById("chatWrap");
+                            if (w) w.scrollTop = w.scrollHeight;
                         </script>
-                        </div></body></html>''')
+                        </body></html>''')
 
                         components.html(
                             "".join(chat_html_parts),
-                            height=450, scrolling=True
+                            height=450, scrolling=False
                         )
 
                         with st.form(
@@ -358,7 +355,7 @@ def show_admin_dashboard(supabase):
                     "users start chatting."
                 )
 
-        # ── Smart polling for admin ──
+        # ── Smart polling ──
         if st.session_state.auto_refresh:
             time.sleep(2)
             current_count = get_total_message_count(supabase)
