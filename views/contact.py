@@ -137,14 +137,16 @@ def show_contact(supabase):
             if msg.get('reply'):
                 reply_ts   = relative_time(msg.get('replied_at', ''))
                 safe_reply = msg['reply']
-                # Support row (left aligned)
+                # Support row (left aligned) – with compact pill label
                 chat_rows += f'''
             <div style="display:flex; justify-content:flex-start;
                         margin-bottom:4px; padding:0 16px;">
                 <div style="max-width:80%;">
-                    <div style="font-size:11px; color:#60A5FA;
-                                font-weight:600; margin-bottom:3px;
-                                padding-left:4px;">Support</div>
+                    <div style="display:inline-block; background:#1e3a8a;
+                                color:#60A5FA; font-size:11px;
+                                font-weight:600; padding:2px 10px;
+                                border-radius:999px; margin-bottom:6px;
+                                border:1px solid #2563eb;">Support</div>
                     <div style="background:#1e293b; color:#F0F4F8;
                                 padding:10px 14px; border-radius:18px
                                 18px 18px 4px; font-size:14px;
@@ -195,16 +197,6 @@ def show_contact(supabase):
     .chat-messages::-webkit-scrollbar-track {{ background:transparent; }}
     .chat-messages::-webkit-scrollbar-thumb {{
         background:#334155; border-radius:4px;
-    }}
-    .date-divider {{
-        display:flex; align-items:center; gap:10px;
-        padding:4px 16px; margin:4px 0;
-    }}
-    .date-divider hr {{
-        flex:1; border:none; border-top:1px solid #1e293b;
-    }}
-    .date-divider span {{
-        color:#64748B; font-size:11px; white-space:nowrap;
     }}
     </style>
     </head><body>
