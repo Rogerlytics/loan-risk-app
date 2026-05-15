@@ -82,12 +82,10 @@ def require_role(allowed_roles: list):
     """
     Hard route protection — call at the top of any page function.
     Immediately stops the page if the user's role is not in allowed_roles.
-    Works even if someone manually changes the URL or session state.
     """
     role = st.session_state.get("role")
     authenticated = st.session_state.get("authenticated", False)
 
-    # Not logged in at all
     if not authenticated or not role:
         st.markdown("""
         <div style="
@@ -108,7 +106,6 @@ def require_role(allowed_roles: list):
         """, unsafe_allow_html=True)
         st.stop()
 
-    # Logged in but wrong role
     if role not in allowed_roles:
         st.markdown(f"""
         <div style="
@@ -137,11 +134,9 @@ def require_role(allowed_roles: list):
 
 
 # ── Exported constants (read from st.secrets) ─────────────────────────
-# These are used by app.py, supabase_service.py, and other modules
 try:
     SUPABASE_URL = st.secrets["SUPABASE_URL"]
     SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 except (KeyError, FileNotFoundError):
-    # Fallback for local development (if you use .env or toml)
     SUPABASE_URL = None
     SUPABASE_KEY = None
