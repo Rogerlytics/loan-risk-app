@@ -73,7 +73,7 @@ def auth_sidebar():
             password = st.text_input("Password", type="password", key="login_password")
             if st.button("Login", use_container_width=True):
                 if email and password:
-                    user = sign_in(supabase, email, password)
+                    user = sign_in(email, password)
                     if user:
                         st.session_state.authenticated = True
                         st.session_state.user = user
@@ -94,7 +94,7 @@ def auth_sidebar():
                 if new_password != confirm_password:
                     st.error("Passwords do not match.")
                 elif new_email and new_password:
-                    user = sign_up(supabase, new_email, new_password)
+                    user = sign_up(new_email, new_password)
                     if user:
                         st.success("Account created! Please log in.")
                     else:
