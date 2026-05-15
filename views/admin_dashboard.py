@@ -21,8 +21,7 @@ from config.settings import require_role
 
 def _empty_state(icon: str, title: str, subtitle: str):
     st.markdown(f"""
-    <div style="
-        background:linear-gradient(145deg,#111827,#0b1220);
+    <div style="background:linear-gradient(145deg,#111827,#0b1220);
         border:1px dashed #1f2a36; border-radius:16px;
         padding:48px 24px; text-align:center; margin-top:12px;">
         <div style="font-size:40px; margin-bottom:12px;">{icon}</div>
@@ -33,6 +32,107 @@ def _empty_state(icon: str, title: str, subtitle: str):
     """, unsafe_allow_html=True)
 
 
+def _build_chat_html(messages, height=480):
+    """Build a professional chat window HTML string."""
+    chat_rows = ""
+    if not messages:
+        chat_rows = '''
+        <div style="display:flex; flex-direction:column;
+                    align-items:center; justify-content:center;
+                    height:100%; padding:40px;">
+            <div style="font-size:36px; margin-bottom:10px;">📭</div>
+            <div style="color:#94A3B8; font-size:14px;">
+                No messages yet.</div>
+        </div>'''
+    else:
+        for msg in messages:
+            ts           = relative_time(msg.get('timestamp', ''))
+            safe_message = msg['message']
+            read_status  = "✓✓" if msg.get('read_by_customer') else "✓"
+
+            # User message (right)
+            chat_rows += f'''
+            <div style="display:flex; justify-content:flex-end;
+                        margin-bottom:4px; padding:0 16px;">
+                <div style="max-width:80%;">
+                    <div style="background:#2563eb; color:#fff;
+                                padding:10px 14px; border-radius:18px
+                                18px 4px 18px; font-size:14px;
+                                line-height:1.5; word-break:break-word;
+                                white-space:pre-wrap;">
+                        {safe_message}
+                    </div>
+                    <div style="text-align:right; font-size:11px;
+                                color:#64748B; margin-top:3px;
+                                padding-right:4px;">
+                        {ts} {read_status}
+                    </div>
+                </div>
+            </div>'''
+
+            if msg.get('reply'):
+                reply_ts   = relative_time(msg.get('replied_at', ''))
+                safe_reply = msg['reply']
+                # Admin reply (left)
+                chat_rows += f'''
+            <div style="display:flex; justify-content:flex-start;
+                        margin-bottom:4px; padding:0 16px;">
+                <div style="max-width:80%;">
+                    <div style="font-size:11px; color:#60A5FA;
+                                font-weight:600; margin-bottom:3px;
+                                padding-left:4px;">You (Admin)</div>
+                    <div style="background:#1e293b; color:#F0F4F8;
+                                padding:10px 14px; border-radius:18px
+                                18px 18px 4px; font-size:14px;
+                                line-height:1.5; word-break:break-word;
+                                white-space:pre-wrap;
+                                border:1px solid #334155;">
+                        {safe_reply}
+                    </div>
+                    <div style="text-align:left; font-size:11px;
+                                color:#64748B; margin-top:3px;
+                                padding-left:4px;">{reply_ts}</div>
+                </div>
+            </div>'''
+
+    return f"""
+    <!DOCTYPE html><html><head>
+    <meta charset="UTF-8">
+    <style>
+    * {{ box-sizing:border-box; margin:0; padding:0; }}
+    html, body {{ height:100%; background:#0B1220;
+                  font-family:"Inter",-apple-system,sans-serif; }}
+    .chat-container {{
+        display:flex; flex-direction:column; height:{height}px;
+        background:#0B1220; border:1px solid #1e293b;
+        border-radius:16px; overflow:hidden;
+    }}
+    .chat-messages {{
+        flex:1; overflow-y:auto; padding:16px 0;
+        display:flex; flex-direction:column; gap:8px;
+        scroll-behavior:smooth;
+    }}
+    .chat-messages::-webkit-scrollbar {{ width:4px; }}
+    .chat-messages::-webkit-scrollbar-track {{ background:transparent; }}
+    .chat-messages::-webkit-scrollbar-thumb {{
+        background:#334155; border-radius:4px;
+    }}
+    </style>
+    </head><body>
+    <div class="chat-container">
+        <div class="chat-messages" id="chatMessages">
+            {chat_rows}
+            <div id="chatEnd"></div>
+        </div>
+    </div>
+    <script>
+        const el = document.getElementById("chatEnd");
+        if (el) el.scrollIntoView({{ behavior:"smooth" }});
+    </script>
+    </body></html>
+    """
+
+
 def show_admin_dashboard(supabase):
     require_role(["admin"])
 
@@ -41,7 +141,6 @@ def show_admin_dashboard(supabase):
         unsafe_allow_html=True
     )
 
-    # ── Initialise smart polling state ──
     if "admin_last_count" not in st.session_state:
         st.session_state.admin_last_count = 0
 
@@ -54,7 +153,7 @@ def show_admin_dashboard(supabase):
     # ════════════════════════════
     with tab1:
 
-        # ── Single row: dot | Refresh | Toggle ──
+        # ── Control bar ──
         if st.session_state.auto_refresh:
             dot_col = "#22c55e"
             dot_txt = "Live"
@@ -73,34 +172,27 @@ def show_admin_dashboard(supabase):
             70% {{ box-shadow:0 0 0 6px rgba(34,197,94,0); }}
             100%{{ box-shadow:0 0 0 0 rgba(34,197,94,0); }}
         }}
-        .admin-live-bar {{
-            display:flex; align-items:center; gap:10px;
-            padding:6px 0; margin-bottom:4px;
-        }}
-        .admin-live-dot {{
-            width:10px; height:10px; border-radius:50%;
-            background:{dot_col}; {pulse} flex-shrink:0;
-        }}
-        .admin-live-label {{
-            color:{dot_col}; font-size:13px; font-weight:600;
-        }}
+        .admin-live-bar {{ display:flex; align-items:center; gap:10px;
+                           padding:4px 0; margin-bottom:6px; }}
+        .admin-live-dot {{ width:10px; height:10px; border-radius:50%;
+                           background:{dot_col}; {pulse} flex-shrink:0; }}
+        .admin-live-lbl {{ color:{dot_col}; font-size:13px;
+                           font-weight:600; }}
         </style>
         <div class="admin-live-bar">
             <div class="admin-live-dot"></div>
-            <span class="admin-live-label">{dot_txt}</span>
+            <span class="admin-live-lbl">{dot_txt}</span>
         </div>
         """, unsafe_allow_html=True)
 
         col_r, col_t, col_sp = st.columns([1, 1, 4])
         with col_r:
-            if st.button(
-                "Refresh", use_container_width=True, key="admin_refresh"
-            ):
+            if st.button("Refresh", use_container_width=True,
+                         key="admin_refresh"):
                 st.rerun()
         with col_t:
-            if st.button(
-                tog_lbl, use_container_width=True, key="admin_live_toggle"
-            ):
+            if st.button(tog_lbl, use_container_width=True,
+                         key="admin_live_toggle"):
                 st.session_state.auto_refresh = \
                     not st.session_state.auto_refresh
                 st.rerun()
@@ -124,10 +216,13 @@ def show_admin_dashboard(supabase):
 
             col_users, col_chat = st.columns([1, 2])
 
+            # ── User list ──
             with col_users:
                 st.markdown(
                     '<div style="color:#60A5FA; font-weight:600; '
-                    'margin-bottom:12px;">Conversations</div>',
+                    'font-size:13px; margin-bottom:10px; '
+                    'text-transform:uppercase; letter-spacing:0.05em;">'
+                    'Conversations</div>',
                     unsafe_allow_html=True
                 )
                 for usr in user_list:
@@ -140,20 +235,50 @@ def show_admin_dashboard(supabase):
                         if m.get('reply') and
                         not m.get('read_by_customer', False)
                     )
-                    label = usr['email']
-                    if unread > 0:
-                        label += f"  ({unread} unread)"
+                    is_selected = (
+                        st.session_state.selected_user_id == usr['user_id']
+                    )
+                    bg = "#1e3a5f" if is_selected else "#0f1e30"
+                    border = "#2563eb" if is_selected else "#1e293b"
+
+                    unread_badge = (
+                        f'<span style="background:#ef4444; color:white; '
+                        f'border-radius:50%; padding:1px 6px; '
+                        f'font-size:10px; margin-left:6px;">'
+                        f'{unread}</span>'
+                    ) if unread > 0 else ""
+
+                    last_msg = user_msgs[-1]['message'][:30] + "..." \
+                        if user_msgs and len(user_msgs[-1]['message']) > 30 \
+                        else (user_msgs[-1]['message'] if user_msgs else "")
+
+                    st.markdown(f"""
+                    <div style="background:{bg}; border:1px solid {border};
+                        border-radius:12px; padding:10px 14px;
+                        margin-bottom:6px; cursor:pointer;">
+                        <div style="color:#F0F4F8; font-size:13px;
+                                    font-weight:600;">
+                            {usr['email']}{unread_badge}
+                        </div>
+                        <div style="color:#64748B; font-size:12px;
+                                    margin-top:2px; white-space:nowrap;
+                                    overflow:hidden; text-overflow:ellipsis;">
+                            {last_msg}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
                     if st.button(
-                        label,
-                        key=f"user_{usr['user_id']}",
+                        "Open",
+                        key=f"open_{usr['user_id']}",
                         use_container_width=True
                     ):
                         st.session_state.selected_user_id = usr['user_id']
                         st.rerun()
 
+            # ── Chat panel ──
             with col_chat:
-                if st.session_state.selected_user_id is None \
-                        and user_list:
+                if st.session_state.selected_user_id is None and user_list:
                     st.session_state.selected_user_id = \
                         user_list[0]['user_id']
 
@@ -174,12 +299,30 @@ def show_admin_dashboard(supabase):
                          st.session_state.selected_user_id),
                         "User"
                     )
-                    st.markdown(
-                        f'<div style="color:#F0F4F8; font-weight:600; '
-                        f'margin-bottom:12px;">'
-                        f'Chat with {selected_email}</div>',
-                        unsafe_allow_html=True
-                    )
+
+                    # Chat header
+                    st.markdown(f"""
+                    <div style="background:#0f1e30; border:1px solid #1e293b;
+                        border-radius:12px 12px 0 0; padding:12px 16px;
+                        display:flex; align-items:center; gap:10px;
+                        margin-bottom:0;">
+                        <div style="width:36px; height:36px;
+                            border-radius:50%; background:#2563eb;
+                            display:flex; align-items:center;
+                            justify-content:center; font-size:16px;
+                            flex-shrink:0;">👤</div>
+                        <div>
+                            <div style="color:#F0F4F8; font-size:14px;
+                                        font-weight:600;">
+                                {selected_email}
+                            </div>
+                            <div style="color:#64748B; font-size:12px;">
+                                {len(user_msgs)} message
+                                {"s" if len(user_msgs) != 1 else ""}
+                            </div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
 
                     if not user_msgs:
                         _empty_state(
@@ -187,139 +330,57 @@ def show_admin_dashboard(supabase):
                             "This user has not sent any messages yet."
                         )
                     else:
-                        chat_html_parts = ['''
-                        <html><head><meta charset="UTF-8"><style>
-                        *{box-sizing:border-box;}
-                        body{margin:0;background:#0e1117;
-                            font-family:"Inter",sans-serif;}
-                        .chat-wrap{display:flex;flex-direction:column;
-                            padding:20px;overflow-y:auto;height:430px;
-                            scroll-behavior:smooth;}
-                        .chat-bubble-row{display:flex;margin-bottom:12px;}
-                        .chat-bubble-row.user{justify-content:flex-end;}
-                        .chat-bubble-row.admin{justify-content:flex-start;}
-                        .chat-bubble{max-width:70%;padding:12px 16px;
-                            border-radius:18px;font-size:14px;
-                            line-height:1.4;word-wrap:break-word;}
-                        .user .chat-bubble{background:#2563eb;color:white;
-                            border-bottom-right-radius:4px;}
-                        .admin .chat-bubble{background:#1f2a36;
-                            color:#F0F4F8;border-bottom-left-radius:4px;}
-                        .chat-timestamp{font-size:11px;color:#94A3B8;
-                            margin-top:4px;}
-                        .reply-badge{background:#0e1117;color:#60A5FA;
-                            border-radius:16px;padding:4px 12px;
-                            font-size:12px;margin-bottom:8px;
-                            display:inline-block;
-                            border:1px solid #2563eb;}
-                        .read-receipt{font-size:11px;color:#94A3B8;
-                            margin-left:8px;}
-                        </style></head><body>
-                        <div class="chat-wrap" id="chatWrap">''']
-
-                        for msg in user_msgs:
-                            timestamp    = relative_time(
-                                msg.get('timestamp', '')
-                            )
-                            safe_message = msg['message']
-                            read_status  = (
-                                "Read"
-                                if msg.get('read_by_customer')
-                                else "Delivered"
-                            )
-                            chat_html_parts.append(f'''
-                            <div class="chat-bubble-row user">
-                                <div style="display:flex;
-                                    flex-direction:column;
-                                    align-items:flex-end;max-width:70%;">
-                                    <div class="chat-bubble">
-                                        {safe_message}</div>
-                                    <div style="display:flex;
-                                        align-items:center;">
-                                        <div class="chat-timestamp">
-                                            {timestamp}</div>
-                                        <div class="read-receipt">
-                                            {read_status}</div>
-                                    </div>
-                                </div>
-                            </div>''')
-                            if msg.get('reply'):
-                                reply_time = relative_time(
-                                    msg.get('replied_at', '')
-                                )
-                                safe_reply = msg['reply']
-                                chat_html_parts.append(f'''
-                            <div class="chat-bubble-row admin">
-                                <div style="display:flex;
-                                    flex-direction:column;max-width:70%;">
-                                    <div class="reply-badge">Reply</div>
-                                    <div class="chat-bubble">
-                                        {safe_reply}</div>
-                                    <div class="chat-timestamp">
-                                        {reply_time}</div>
-                                </div>
-                            </div>''')
-
-                        # Auto scroll to bottom
-                        chat_html_parts.append('''
-                        <div id="anchor"></div>
-                        </div>
-                        <script>
-                            const w = document.getElementById("chatWrap");
-                            if (w) w.scrollTop = w.scrollHeight;
-                        </script>
-                        </body></html>''')
-
                         components.html(
-                            "".join(chat_html_parts),
+                            _build_chat_html(user_msgs, height=430),
                             height=450, scrolling=False
                         )
 
-                        with st.form(
-                            key=f"reply_form_"
-                                f"{st.session_state.selected_user_id}",
-                            clear_on_submit=True
-                        ):
-                            col_input, col_button = st.columns([5, 1])
-                            with col_input:
-                                reply_text = st.text_input(
-                                    "",
-                                    placeholder="Write a reply...",
-                                    label_visibility="collapsed"
-                                )
-                            with col_button:
-                                submitted = st.form_submit_button("Send")
-
-                            if submitted:
-                                if not reply_text.strip():
-                                    st.warning("Reply cannot be empty.")
-                                else:
-                                    unreplied = [
-                                        m for m in user_msgs
-                                        if not m.get('reply')
-                                    ]
-                                    if unreplied:
-                                        with st.spinner("Sending..."):
-                                            send_reply(
-                                                supabase,
-                                                unreplied[-1]["id"],
-                                                reply_text.strip()
-                                            )
-                                        admin = st.session_state.user
-                                        log_action(
+                    # Reply form
+                    with st.form(
+                        key=f"reply_{st.session_state.selected_user_id}",
+                        clear_on_submit=True
+                    ):
+                        col_i, col_b = st.columns([5, 1])
+                        with col_i:
+                            reply_text = st.text_input(
+                                "",
+                                placeholder="Type a reply...",
+                                label_visibility="collapsed"
+                            )
+                        with col_b:
+                            sub = st.form_submit_button(
+                                "Send", use_container_width=True
+                            )
+                        if sub:
+                            if not reply_text.strip():
+                                st.warning("Reply cannot be empty.")
+                            else:
+                                unreplied = [
+                                    m for m in user_msgs
+                                    if not m.get('reply')
+                                ]
+                                if unreplied:
+                                    with st.spinner("Sending..."):
+                                        send_reply(
                                             supabase,
-                                            admin["id"], admin["email"],
-                                            "admin_reply",
-                                            f"Replied to {selected_email}"
+                                            unreplied[-1]["id"],
+                                            reply_text.strip()
                                         )
-                                        st.success("Reply sent!")
-                                        st.rerun()
-                                    else:
-                                        st.warning(
-                                            "No unreplied messages "
-                                            "for this user."
-                                        )
+                                    admin = st.session_state.user
+                                    log_action(
+                                        supabase,
+                                        admin["id"], admin["email"],
+                                        "admin_reply",
+                                        f"Replied to {selected_email}"
+                                    )
+                                    st.success("Reply sent!")
+                                    st.rerun()
+                                else:
+                                    st.info(
+                                        "All messages have been replied to."
+                                    )
 
+            # Stats
             st.markdown("---")
             col_m1, col_m2, col_m3 = st.columns(3)
             col_m1.metric("Total Messages", len(data))
@@ -355,7 +416,7 @@ def show_admin_dashboard(supabase):
                     "users start chatting."
                 )
 
-        # ── Smart polling ──
+        # Smart polling
         if st.session_state.auto_refresh:
             time.sleep(2)
             current_count = get_total_message_count(supabase)
@@ -385,13 +446,10 @@ def show_admin_dashboard(supabase):
             all_users = get_all_users(supabase)
 
         if not all_users:
-            _empty_state(
-                "👥", "No Users Found",
-                "No users have signed up yet."
-            )
+            _empty_state("👥", "No Users Found",
+                         "No users have signed up yet.")
         else:
             current_admin_id = st.session_state.user["id"]
-
             for usr in all_users:
                 uid     = usr["id"]
                 email   = usr.get("email", "Unknown")
@@ -406,7 +464,6 @@ def show_admin_dashboard(supabase):
                     badge_border = "#0369a144"
 
                 col_email, col_badge, col_action = st.columns([3, 1, 1])
-
                 with col_email:
                     self_label = " (you)" if is_self else ""
                     st.markdown(
@@ -416,19 +473,16 @@ def show_admin_dashboard(supabase):
                         f'{self_label}</span></div>',
                         unsafe_allow_html=True
                     )
-
                 with col_badge:
                     st.markdown(
                         f'<div style="background:{badge_bg}; '
-                        f'color:{badge_fg}; '
-                        f'border:1px solid {badge_border}; '
+                        f'color:{badge_fg}; border:1px solid {badge_border};'
                         f'border-radius:20px; padding:6px 12px; '
                         f'font-size:11px; font-weight:700; '
                         f'text-transform:uppercase; text-align:center; '
                         f'margin-top:4px;">{role}</div>',
                         unsafe_allow_html=True
                     )
-
                 with col_action:
                     if is_self:
                         st.markdown(
@@ -440,16 +494,13 @@ def show_admin_dashboard(supabase):
                     else:
                         new_role  = "user" if role == "admin" else "admin"
                         btn_label = (
-                            "Demote to User"
-                            if role == "admin"
-                            else "Promote to Admin"
+                            "Demote" if role == "admin" else "Promote"
                         )
                         if st.button(
-                            btn_label,
-                            key=f"role_btn_{uid}",
+                            btn_label, key=f"role_{uid}",
                             use_container_width=True
                         ):
-                            with st.spinner("Updating role..."):
+                            with st.spinner("Updating..."):
                                 success, message = update_user_role(
                                     supabase, uid, new_role
                                 )
@@ -462,7 +513,7 @@ def show_admin_dashboard(supabase):
                                     f"{email}: {role} → {new_role}"
                                 )
                                 st.success(
-                                    f"{email} is now {new_role.upper()}."
+                                    f"{email} → {new_role.upper()}"
                                 )
                                 st.rerun()
                             else:
@@ -481,15 +532,12 @@ def show_admin_dashboard(supabase):
             '<div class="section-heading">Audit Log</div>',
             unsafe_allow_html=True
         )
-
         with st.spinner("Loading audit log..."):
             logs = get_audit_logs(supabase, limit=100)
 
         if not logs:
-            _empty_state(
-                "📋", "No Audit Logs Yet",
-                "User actions will be recorded here."
-            )
+            _empty_state("📋", "No Audit Logs Yet",
+                         "User actions will be recorded here.")
         else:
             action_colours = {
                 "login":                ("#dcfce7", "#166534"),
@@ -512,23 +560,23 @@ def show_admin_dashboard(supabase):
                 st.markdown(f"""
                 <div style="background:linear-gradient(
                         145deg,#111827,#0b1220);
-                    border:1px solid #1f2a36;border-radius:12px;
-                    padding:12px 16px;margin-bottom:8px;
-                    display:flex;align-items:center;gap:12px;">
-                    <div style="background:{bg};color:{fg};
-                        border-radius:20px;padding:3px 10px;
-                        font-size:11px;font-weight:700;
-                        text-transform:uppercase;letter-spacing:0.5px;
-                        white-space:nowrap;min-width:140px;
+                    border:1px solid #1f2a36; border-radius:12px;
+                    padding:12px 16px; margin-bottom:8px;
+                    display:flex; align-items:center; gap:12px;">
+                    <div style="background:{bg}; color:{fg};
+                        border-radius:20px; padding:3px 10px;
+                        font-size:11px; font-weight:700;
+                        text-transform:uppercase; letter-spacing:0.5px;
+                        white-space:nowrap; min-width:140px;
                         text-align:center;">
                         {action.replace("_", " ")}</div>
                     <div style="flex:1;">
-                        <div style="color:#F0F4F8;font-size:13px;
+                        <div style="color:#F0F4F8; font-size:13px;
                             font-weight:600;">{email}</div>
-                        <div style="color:#94A3B8;font-size:12px;">
+                        <div style="color:#94A3B8; font-size:12px;">
                             {details}</div>
                     </div>
-                    <div style="color:#64748B;font-size:11px;
+                    <div style="color:#64748B; font-size:11px;
                         white-space:nowrap;">{ts}</div>
                 </div>
                 """, unsafe_allow_html=True)
