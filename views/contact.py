@@ -29,7 +29,6 @@ def show_contact(supabase):
     user_id    = st.session_state.user["id"]
     user_email = st.session_state.user.get("email", "")
 
-    # ── Smart polling state ──
     if "last_msg_count" not in st.session_state:
         st.session_state.last_msg_count = 0
     if "auto_refresh" not in st.session_state:
@@ -41,7 +40,7 @@ def show_contact(supabase):
 
     st.session_state.last_msg_count = len(msgs)
 
-    # ── Single row: dot | Refresh | Toggle ──
+    # ── Control bar ──
     if st.session_state.auto_refresh:
         dot_col = "#22c55e"
         dot_txt = "Live"
@@ -60,17 +59,11 @@ def show_contact(supabase):
         70% {{ box-shadow:0 0 0 6px rgba(34,197,94,0); }}
         100%{{ box-shadow:0 0 0 0 rgba(34,197,94,0); }}
     }}
-    .live-bar {{
-        display:flex; align-items:center; gap:10px;
-        padding:6px 0; margin-bottom:4px;
-    }}
-    .live-dot {{
-        width:10px; height:10px; border-radius:50%;
-        background:{dot_col}; {pulse} flex-shrink:0;
-    }}
-    .live-label {{
-        color:{dot_col}; font-size:13px; font-weight:600;
-    }}
+    .live-bar {{ display:flex; align-items:center; gap:10px;
+                 padding:4px 0; margin-bottom:6px; }}
+    .live-dot  {{ width:10px; height:10px; border-radius:50%;
+                  background:{dot_col}; {pulse} flex-shrink:0; }}
+    .live-label{{ color:{dot_col}; font-size:13px; font-weight:600; }}
     </style>
     <div class="live-bar">
         <div class="live-dot"></div>
@@ -80,21 +73,19 @@ def show_contact(supabase):
 
     col_r, col_t, col_sp = st.columns([1, 1, 4])
     with col_r:
-        if st.button(
-            "Refresh", use_container_width=True, key="contact_refresh"
-        ):
+        if st.button("Refresh", use_container_width=True,
+                     key="contact_refresh"):
             st.rerun()
     with col_t:
-        if st.button(
-            tog_lbl, use_container_width=True, key="contact_live_toggle"
-        ):
+        if st.button(tog_lbl, use_container_width=True,
+                     key="contact_live_toggle"):
             st.session_state.auto_refresh = not st.session_state.auto_refresh
             st.rerun()
 
     # Quick actions
     st.markdown(
         '<div style="color:#94A3B8; font-size:12px; '
-        'margin:12px 0 6px 0;">Quick Actions</div>',
+        'margin:10px 0 6px 0;">Quick Actions</div>',
         unsafe_allow_html=True
     )
     cols = st.columns(4)
@@ -110,86 +101,137 @@ def show_contact(supabase):
                 st.session_state.draft_message = draft
                 st.rerun()
 
-    # Build chat HTML
-    chat_html_parts = ['''<html><head>
-    <meta charset="UTF-8">
-    <style>
-    * { box-sizing:border-box; }
-    body { margin:0; background:#0e1117;
-           font-family:"Inter",sans-serif; color:#F0F4F8; }
-    .chat-wrap { height:450px; overflow-y:auto; padding:20px;
-                 scroll-behavior:smooth; }
-    .chat-bubble-row { display:flex; margin-bottom:12px; }
-    .chat-bubble-row.user  { justify-content:flex-end; }
-    .chat-bubble-row.admin { justify-content:flex-start; }
-    .chat-bubble { max-width:70%; padding:12px 16px;
-                   border-radius:18px; font-size:14px;
-                   line-height:1.4; word-wrap:break-word; }
-    .user  .chat-bubble { background:#2563eb; color:white;
-                          border-bottom-right-radius:4px; }
-    .admin .chat-bubble { background:#1f2a36; color:#F0F4F8;
-                          border-bottom-left-radius:4px; }
-    .chat-timestamp { font-size:11px; color:#94A3B8;
-                      margin-top:4px; text-align:right; }
-    .reply-badge { background:#0e1117; color:#60A5FA;
-                   border-radius:16px; padding:4px 12px;
-                   font-size:12px; margin-bottom:8px;
-                   display:inline-block; border:1px solid #2563eb; }
-    .empty-state { text-align:center; color:#94A3B8;
-                   padding:60px 20px; font-size:14px; }
-    </style></head><body>
-    <div class="chat-wrap" id="chatWrap">''']
-
+    # ── Professional chat window ──
+    chat_rows = ""
     if not msgs:
-        chat_html_parts.append(
-            '<div class="empty-state">'
-            'No messages yet.<br>'
-            'Send a message below to get started.'
-            '</div>'
-        )
+        chat_rows = '''
+        <div style="display:flex; flex-direction:column; align-items:center;
+                    justify-content:center; height:100%; padding:40px 20px;">
+            <div style="font-size:40px; margin-bottom:12px;">💬</div>
+            <div style="color:#F0F4F8; font-size:16px; font-weight:600;
+                        margin-bottom:6px;">No messages yet</div>
+            <div style="color:#64748B; font-size:13px; text-align:center;">
+                Send a message below to start the conversation.</div>
+        </div>'''
     else:
         for msg in msgs:
-            timestamp    = relative_time(msg.get('timestamp', ''))
+            ts           = relative_time(msg.get('timestamp', ''))
             safe_message = msg['message']
-            chat_html_parts.append(f'''
-            <div class="chat-bubble-row user">
-                <div style="display:flex; flex-direction:column;
-                            align-items:flex-end; max-width:70%;">
-                    <div class="chat-bubble">{safe_message}</div>
-                    <div class="chat-timestamp">{timestamp}</div>
+            # Sender row (right aligned)
+            chat_rows += f'''
+            <div style="display:flex; justify-content:flex-end;
+                        margin-bottom:4px; padding:0 16px;">
+                <div style="max-width:80%;">
+                    <div style="background:#2563eb; color:#fff;
+                                padding:10px 14px; border-radius:18px
+                                18px 4px 18px; font-size:14px;
+                                line-height:1.5; word-break:break-word;
+                                white-space:pre-wrap;">
+                        {safe_message}
+                    </div>
+                    <div style="text-align:right; font-size:11px;
+                                color:#64748B; margin-top:3px;
+                                padding-right:4px;">{ts}</div>
                 </div>
-            </div>''')
+            </div>'''
             if msg.get('reply'):
-                reply_time = relative_time(msg.get('replied_at', ''))
+                reply_ts   = relative_time(msg.get('replied_at', ''))
                 safe_reply = msg['reply']
-                chat_html_parts.append(f'''
-            <div class="chat-bubble-row admin">
-                <div style="display:flex; flex-direction:column;
-                            max-width:70%;">
-                    <div class="reply-badge">Support</div>
-                    <div class="chat-bubble">{safe_reply}</div>
-                    <div class="chat-timestamp">{reply_time}</div>
+                # Support row (left aligned)
+                chat_rows += f'''
+            <div style="display:flex; justify-content:flex-start;
+                        margin-bottom:4px; padding:0 16px;">
+                <div style="max-width:80%;">
+                    <div style="font-size:11px; color:#60A5FA;
+                                font-weight:600; margin-bottom:3px;
+                                padding-left:4px;">Support</div>
+                    <div style="background:#1e293b; color:#F0F4F8;
+                                padding:10px 14px; border-radius:18px
+                                18px 18px 4px; font-size:14px;
+                                line-height:1.5; word-break:break-word;
+                                white-space:pre-wrap; border:1px solid #334155;">
+                        {safe_reply}
+                    </div>
+                    <div style="text-align:left; font-size:11px;
+                                color:#64748B; margin-top:3px;
+                                padding-left:4px;">{reply_ts}</div>
                 </div>
-            </div>''')
+            </div>'''
 
-    # Auto scroll to bottom
-    chat_html_parts.append('''
-    <div id="anchor"></div>
+    chat_html = f"""
+    <!DOCTYPE html><html><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <style>
+    * {{ box-sizing:border-box; margin:0; padding:0; }}
+    html, body {{ height:100%; background:#0B1220;
+                  font-family:"Inter",-apple-system,sans-serif; }}
+    .chat-container {{
+        display:flex; flex-direction:column;
+        height:500px; background:#0B1220;
+        border:1px solid #1e293b; border-radius:16px;
+        overflow:hidden;
+    }}
+    .chat-header {{
+        padding:12px 16px;
+        background:#0f1e30;
+        border-bottom:1px solid #1e293b;
+        display:flex; align-items:center; gap:10px;
+    }}
+    .chat-avatar {{
+        width:36px; height:36px; border-radius:50%;
+        background:#2563eb; display:flex; align-items:center;
+        justify-content:center; font-size:16px; flex-shrink:0;
+    }}
+    .chat-header-info {{ flex:1; }}
+    .chat-header-name {{ color:#F0F4F8; font-size:14px; font-weight:600; }}
+    .chat-header-status {{ color:#22c55e; font-size:12px; }}
+    .chat-messages {{
+        flex:1; overflow-y:auto; padding:16px 0;
+        display:flex; flex-direction:column; gap:8px;
+        scroll-behavior:smooth;
+    }}
+    .chat-messages::-webkit-scrollbar {{ width:4px; }}
+    .chat-messages::-webkit-scrollbar-track {{ background:transparent; }}
+    .chat-messages::-webkit-scrollbar-thumb {{
+        background:#334155; border-radius:4px;
+    }}
+    .date-divider {{
+        display:flex; align-items:center; gap:10px;
+        padding:4px 16px; margin:4px 0;
+    }}
+    .date-divider hr {{
+        flex:1; border:none; border-top:1px solid #1e293b;
+    }}
+    .date-divider span {{
+        color:#64748B; font-size:11px; white-space:nowrap;
+    }}
+    </style>
+    </head><body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="chat-avatar">🎧</div>
+            <div class="chat-header-info">
+                <div class="chat-header-name">Support Team</div>
+                <div class="chat-header-status">● Online</div>
+            </div>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            {chat_rows}
+            <div id="chatEnd"></div>
+        </div>
     </div>
     <script>
-        const wrap = document.getElementById("chatWrap");
-        if (wrap) wrap.scrollTop = wrap.scrollHeight;
+        const el = document.getElementById("chatEnd");
+        if (el) el.scrollIntoView({{ behavior:"smooth" }});
     </script>
-    </body></html>''')
+    </body></html>
+    """
 
-    components.html(
-        "".join(chat_html_parts), height=460, scrolling=False
-    )
+    components.html(chat_html, height=520, scrolling=False)
 
     # Message input
-    st.markdown(
-        '<div class="chat-input-container">', unsafe_allow_html=True
-    )
+    st.markdown('<div class="chat-input-container">', unsafe_allow_html=True)
     with st.form("chat_form", clear_on_submit=True):
         col_input, col_button = st.columns([5, 1])
         with col_input:
