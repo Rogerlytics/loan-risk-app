@@ -80,7 +80,7 @@ def get_current_user():
 
 
 def log_action(supabase_client, user_id: str, email: str, action: str, details: str = ""):
-    """Log user action to audit_logs table."""
+    """Log user action – fails silently if no permission or table missing."""
     try:
         supabase_client.table("audit_logs").insert({
             "user_id": user_id,
@@ -90,10 +90,11 @@ def log_action(supabase_client, user_id: str, email: str, action: str, details: 
             "created_at": datetime.utcnow().isoformat()
         }).execute()
     except Exception as e:
+        # Silently ignore permission errors (e.g., if RLS denies insert)
         print(f"Failed to log action: {e}")
 
 
-# ---------- Message functions (existing) ----------
+# ---------- Message functions ----------
 def get_all_messages(supabase_client):
     """Fetch all messages from the database."""
     response = supabase_client.table("messages").select("*").order("timestamp").execute()
@@ -164,6 +165,11 @@ def update_user_role(supabase_client, user_id, new_role):
 
 
 def get_audit_logs(supabase_client, limit=100):
-    """Fetch recent audit logs."""
-    response = supabase_client.table("audit_logs").select("*").order("created_at", desc=True).limit(limit).execute()
-    return response.data
+    """Fetch recent audit logs – returns empty list if permission denied or table missing."""
+    try:
+        response = supabase_client.table("audit_logs").select("*").order("created_at", desc=True).limit(limit).execute()
+        return response.data
+    except Exception as e:
+        # Permission denied or table doesn't exist – return empty list gracefully
+        print(f"Could not fetch audit logs: {e}")
+        return []
