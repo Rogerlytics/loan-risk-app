@@ -1,88 +1,246 @@
 # ==============================
-# views/loan_analysis.py (original)
+# views/loan_analysis.py
 # ==============================
 import streamlit as st
 import pandas as pd
-import numpy as np
-from utils.helpers import format_currency, sanitise_number
+from utils.helpers import (
+    explain_risk_with_citations,
+    suggest_improvements,
+    sanitise_number
+)
 from services.supabase_service import log_action
 
 
 def show_loan_analysis(model, supabase):
-    """Original loan analysis page – uses ML model and clean design."""
     st.markdown(
-        '<div class="section-heading">📊 Loan Risk Assessment</div>',
+        '<div class="section-heading">Loan Input Details</div>',
         unsafe_allow_html=True
     )
 
+    st.markdown('<div class="card">', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
-
     with col1:
-        income = st.number_input("💰 Monthly Income (KSh)", min_value=0, value=50000, step=10000)
-        loan_amount = st.number_input("🏦 Loan Amount (KSh)", min_value=0, value=200000, step=50000)
-        credit_score = st.slider("📈 Credit Score", 300, 850, 650, help="Higher is better")
-
+        age = st.number_input("Age", 0, 100, 30, key="age")
+        income = st.number_input(
+            "Monthly Income (KES)", 0, 1_000_000, 50_000,
+            step=1_000, key="income"
+        )
+        loan_amount = st.number_input(
+            "Loan Amount (KES)", 0, 1_000_000, 200_000,
+            step=1_000, key="loan_amount"
+        )
+        interest_rate = st.number_input(
+            "Interest Rate (%)", 0.0, 100.0, 12.5,
+            step=0.1, key="interest_rate"
+        )
+        loan_term = st.selectbox(
+            "Loan Term (months)", [12, 24, 36, 48, 60],
+            key="loan_term"
+        )
     with col2:
-        existing_debt = st.number_input("💳 Existing Monthly Debt (KSh)", min_value=0, value=20000, step=5000)
-        loan_term = st.selectbox("⏱️ Loan Term (months)", [6, 12, 18, 24, 36, 48, 60], index=3)
-        purpose = st.selectbox("🎯 Loan Purpose", ["Business", "Education", "Medical", "Home Improvement", "Debt Consolidation"])
+        car_value = st.number_input(
+            "Car Value (KES)", 0, 1_000_000, 400_000,
+            step=1_000, key="car_value"
+        )
+        car_age = st.slider(
+            "Car Age (years)", 0, 50, 5, key="car_age"
+        )
+        mileage = st.number_input(
+            "Mileage (km)", 0, 500_000, 80_000,
+            step=1_000, key="mileage"
+        )
+        previous_loans = st.number_input(
+            "Previous Loans", 0, 10, 1, key="previous_loans"
+        )
+        previous_defaults = st.number_input(
+            "Previous Defaults", 0, 10, 0, key="previous_defaults"
+        )
+    employment_type = st.selectbox(
+        "Employment Type",
+        ["salaried", "self-employed", "informal"],
+        key="employment_type"
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    if st.button("🔍 Analyze Risk", use_container_width=True):
-        # Prepare features for ML model (adjust to your model's expectations)
-        try:
-            # Example: model expects [income, loan_amount, credit_score, existing_debt, loan_term]
-            features = np.array([[income, loan_amount, credit_score, existing_debt, loan_term]])
-            risk_score = model.predict(features)[0] * 100  # assume model outputs 0-1
-        except:
-            # Fallback simple rule
-            risk_score = 100 - min(100, (loan_amount / income) * 50 + (existing_debt / income) * 30)
-            st.info("Using rule‑based calculation (model not compatible)")
+    # Key metrics
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-heading">Key Financial Metrics</div>',
+        unsafe_allow_html=True
+    )
+    k1, k2, k3 = st.columns(3)
+    k1.metric("Loan",   f"KES {loan_amount:,}")
+    k2.metric("Income", f"KES {income:,}")
+    k3.metric("Rate",   f"{interest_rate}%")
+    st.markdown('</div>', unsafe_allow_html=True)
 
-        # Risk level
-        if risk_score >= 70:
-            level = "🟢 Low Risk"
-            color = "green"
-        elif risk_score >= 40:
-            level = "🟠 Medium Risk"
-            color = "orange"
+    col_btn1, col_btn2 = st.columns(2)
+
+    # ── Repayment Calculator ──
+    with col_btn1:
+        if st.button("Calculate Repayment", use_container_width=True):
+            try:
+                sanitise_number(loan_amount,   1,   1_000_000, "Loan Amount")
+                sanitise_number(interest_rate, 0.1, 100.0,     "Interest Rate")
+                sanitise_number(loan_term,     1,   60,        "Loan Term")
+                with st.spinner("Calculating repayment..."):
+                    r = interest_rate / 100 / 12
+                    monthly = (
+                        loan_amount / loan_term if r == 0
+                        else loan_amount * r * (1 + r) ** loan_term
+                             / ((1 + r) ** loan_term - 1)
+                    )
+                    st.session_state.repayment_result = {
+                        "monthly": monthly,
+                        "weekly":  monthly / 4.33,
+                        "daily":   monthly / 30
+                    }
+                user = st.session_state.user
+                log_action(
+                    supabase, user["id"], user["email"],
+                    "repayment_calculated",
+                    f"Loan: KES {loan_amount:,} | "
+                    f"Rate: {interest_rate}% | "
+                    f"Term: {loan_term} months"
+                )
+            except ValueError as e:
+                st.error(str(e))
+                st.session_state.repayment_result = None
+
+    # ── Risk Checker ──
+    with col_btn2:
+        if st.button("Check Loan Risk", use_container_width=True):
+            try:
+                sanitise_number(age,        18, 100,       "Age")
+                sanitise_number(income,      1, 1_000_000, "Monthly Income")
+                sanitise_number(loan_amount, 1, 1_000_000, "Loan Amount")
+                sanitise_number(car_value,   1, 1_000_000, "Car Value")
+                with st.spinner("Running AI risk assessment..."):
+                    emp = {
+                        "salaried": 0, "self-employed": 1, "informal": 2
+                    }[employment_type]
+                    df = pd.DataFrame({
+                        'age':               [age],
+                        'monthly_income':    [income],
+                        'loan_amount':       [loan_amount],
+                        'interest_rate':     [interest_rate],
+                        'loan_term':         [loan_term],
+                        'car_value':         [car_value],
+                        'car_age':           [car_age],
+                        'mileage':           [mileage],
+                        'previous_loans':    [previous_loans],
+                        'previous_defaults': [previous_defaults],
+                        'employment_type':   [emp]
+                    })
+                    df['loan_to_value_ratio']  = loan_amount / car_value
+                    df['income_to_loan_ratio'] = income / loan_amount
+                    try:
+                        X    = df[model.feature_names_in_]
+                        pred = model.predict(X)[0]
+                        prob = model.predict_proba(X)[0][1] * 100
+                        reasons, citations = explain_risk_with_citations(df)
+                        suggestions = suggest_improvements(df)
+                        st.session_state.risk_result = {
+                            "prob":        prob,
+                            "pred":        pred,
+                            "reasons":     reasons,
+                            "citations":   citations,
+                            "suggestions": suggestions
+                        }
+                        risk_label = "High Risk" if pred == 1 else "Low Risk"
+                        user = st.session_state.user
+                        log_action(
+                            supabase, user["id"], user["email"],
+                            "risk_check",
+                            f"Score: {prob:.1f}% | Result: {risk_label} | "
+                            f"Loan: KES {loan_amount:,}"
+                        )
+                    except Exception:
+                        st.error(
+                            "Model features mismatch. Please check your inputs."
+                        )
+                        st.session_state.risk_result = None
+            except ValueError as e:
+                st.error(str(e))
+                st.session_state.risk_result = None
+
+    # ── Results ──
+    col_left, col_right = st.columns(2)
+
+    with col_left:
+        if st.session_state.repayment_result:
+            res = st.session_state.repayment_result
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="section-heading">Repayment Breakdown</div>',
+                unsafe_allow_html=True
+            )
+            st.write(f"**Monthly:** KES {res['monthly']:,.2f}")
+            st.write(f"**Weekly:**  KES {res['weekly']:,.2f}")
+            st.write(f"**Daily:**   KES {res['daily']:,.2f}")
+            st.markdown('</div>', unsafe_allow_html=True)
         else:
-            level = "🔴 High Risk"
-            color = "red"
+            st.markdown("""
+            <div style="background:linear-gradient(145deg,#111827,#0b1220);
+                border:1px dashed #1f2a36; border-radius:16px;
+                padding:40px 20px; text-align:center; margin-top:8px;">
+                <div style="font-size:32px; margin-bottom:10px;">💰</div>
+                <div style="color:#F0F4F8; font-weight:600;
+                            margin-bottom:6px;">No Repayment Calculated</div>
+                <div style="color:#94A3B8; font-size:13px;">Fill in the
+                    loan details and click
+                    <b style="color:#60A5FA;">Calculate Repayment</b>.
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
-        st.markdown(f"### Risk Score: **{risk_score:.1f}** / 100")
-        st.markdown(f"<h3 style='color:{color}'>{level}</h3>", unsafe_allow_html=True)
-
-        # Monthly payment calculation
-        annual_rate = 0.12  # 12% interest for medium/low risk, 18% for high
-        if risk_score < 40:
-            annual_rate = 0.18
-        monthly_rate = annual_rate / 12
-        payment = (loan_amount * monthly_rate * (1 + monthly_rate) ** loan_term) / ((1 + monthly_rate) ** loan_term - 1)
-
-        col_m1, col_m2 = st.columns(2)
-        col_m1.metric("Estimated Monthly Payment", format_currency(payment))
-        col_m2.metric("Total Interest", format_currency(payment * loan_term - loan_amount))
-
-        # Repayment schedule
-        st.markdown("### 📅 Repayment Schedule")
-        balance = loan_amount
-        schedule = []
-        for month in range(1, loan_term + 1):
-            interest = balance * monthly_rate
-            principal = payment - interest
-            balance -= principal
-            schedule.append({
-                "Month": month,
-                "Payment": format_currency(payment),
-                "Principal": format_currency(principal),
-                "Interest": format_currency(interest),
-                "Balance": format_currency(max(0, balance))
-            })
-        st.dataframe(pd.DataFrame(schedule), use_container_width=True, hide_index=True)
-
-        # Log action
-        user = st.session_state.user
-        log_action(supabase, user["id"], user["email"], "loan_analysis",
-                   f"Amount: {loan_amount}, Term: {loan_term}, Risk: {risk_score:.1f}")
-
-    st.caption("Powered by machine learning. Estimates are for guidance only.")
+    with col_right:
+        if st.session_state.risk_result:
+            res = st.session_state.risk_result
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="section-heading">AI Risk Decision</div>',
+                unsafe_allow_html=True
+            )
+            st.write(f"**Risk Score:** {res['prob']:.2f}%")
+            st.progress(int(res['prob']))
+            if res['pred'] == 1:
+                st.error(
+                    "High Risk — this application is likely to default."
+                )
+            else:
+                st.success(
+                    "Low Risk — this application meets credit criteria."
+                )
+            st.markdown(
+                '<div class="section-heading">Risk Factors</div>',
+                unsafe_allow_html=True
+            )
+            for i, r in enumerate(res['reasons']):
+                src = res['citations'][i]
+                st.write(
+                    f"• {r}  `[{src['source']}]`  "
+                    f"Confidence: {src['confidence']}"
+                )
+            if res['suggestions']:
+                st.markdown(
+                    '<div class="section-heading">Recommendations</div>',
+                    unsafe_allow_html=True
+                )
+                for s in res['suggestions']:
+                    st.info(s)
+            st.markdown('</div>', unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div style="background:linear-gradient(145deg,#111827,#0b1220);
+                border:1px dashed #1f2a36; border-radius:16px;
+                padding:40px 20px; text-align:center; margin-top:8px;">
+                <div style="font-size:32px; margin-bottom:10px;">🤖</div>
+                <div style="color:#F0F4F8; font-weight:600;
+                            margin-bottom:6px;">No Risk Assessment Yet</div>
+                <div style="color:#94A3B8; font-size:13px;">Fill in the
+                    loan details and click
+                    <b style="color:#60A5FA;">Check Loan Risk</b>.
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
