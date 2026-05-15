@@ -3,6 +3,7 @@
 # ==============================
 import streamlit as st
 import pandas as pd
+import numpy as np
 from utils.helpers import (
     explain_risk_with_citations,
     suggest_improvements,
@@ -12,8 +13,8 @@ from utils.helpers import (
 )
 
 
-def show_loan_analysis(supabase=None):
-    """Loan analysis page – accepts supabase client for compatibility."""
+def show_loan_analysis(model, supabase):
+    """Loan analysis page using ML model and supabase for logging."""
     st.markdown(
         '<div class="section-heading">📊 Loan Risk Analysis</div>',
         unsafe_allow_html=True
@@ -23,7 +24,7 @@ def show_loan_analysis(supabase=None):
     <div style="background:#0f1e30; border-radius:16px; padding:20px; margin-bottom:24px;">
         <p style="color:#94A3B8; font-size:14px;">
             Enter the applicant's details to get a risk assessment, improvement suggestions,
-            and a repayment plan.
+            and a repayment plan powered by machine learning.
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -41,8 +42,20 @@ def show_loan_analysis(supabase=None):
         purpose = st.selectbox("Loan Purpose", ["Business", "Education", "Medical", "Home Improvement", "Debt Consolidation", "Other"])
     
     if st.button("Analyze Risk", use_container_width=True):
-        # Calculate risk score
-        risk_score = calculate_risk_score(income, loan_amount, credit_score, existing_debt)
+        # Prepare features for ML model (adjust based on your model's expected inputs)
+        # Example: model expects [income, loan_amount, credit_score, existing_debt, term, purpose_encoded]
+        # For now, we use a fallback risk score calculation if model fails
+        try:
+            # If model is a scikit-learn pipeline or classifier
+            # You need to adjust feature names/encoding based on your trained model
+            # Here's a generic attempt:
+            features = np.array([[income, loan_amount, credit_score, existing_debt, loan_term, 0]])  # placeholder
+            prediction = model.predict(features)[0]  # assume binary 0/1 or risk score
+            risk_score = prediction * 100 if isinstance(prediction, (int, float)) else 50
+        except Exception as e:
+            # Fallback to rule-based risk score
+            risk_score = calculate_risk_score(income, loan_amount, credit_score, existing_debt)
+            st.warning(f"Using rule-based risk calculation (ML model error: {str(e)})")
         
         # Display results
         st.markdown("---")
@@ -85,7 +98,19 @@ def show_loan_analysis(supabase=None):
         
         df_schedule = pd.DataFrame(schedule)
         st.dataframe(df_schedule, use_container_width=True, hide_index=True)
+        
+        # Log action to supabase
+        user = st.session_state.get("user")
+        if user:
+            from services.supabase_service import log_action
+            log_action(
+                supabase,
+                user["id"],
+                user["email"],
+                "risk_check",
+                f"Risk score: {risk_score:.1f}, Loan amount: {loan_amount}, Term: {loan_term}"
+            )
     
     # Footer note
     st.markdown("---")
-    st.caption("Risk assessment is based on financial rules of thumb. Always consult a professional.")
+    st.caption("Risk assessment uses machine learning combined with financial rules. Always consult a professional.")
