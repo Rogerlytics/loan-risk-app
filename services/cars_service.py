@@ -1,222 +1,231 @@
+# ==============================
 # services/cars_service.py
-"""
-Car marketplace data service - mock implementation
-Replace the mock data with your actual database calls when ready.
-"""
-import pandas as pd
+# Real Supabase implementation
+# ==============================
+import streamlit as st
 from datetime import datetime
-import random
 
-# ============================================================
-# 1. MOCK DATA GENERATION (realistic Kenya market data)
-# ============================================================
 
-def _generate_mock_cars():
-    """Generate a rich set of mock car listings."""
-    cars = []
-    
-    makes_models = {
-        "Toyota": ["Fielder", "Axio", "Rav4", "Harrier", "Prado", "Hilux", "Vitz", "Premio", "Allion", "Corolla"],
-        "Honda": ["Fit", "Vezel", "Accord", "CR-V", "Civic", "Grace", "Stepwgn"],
-        "Nissan": ["Note", "X-Trail", "Dualis", "Wingroad", "Sunny", "Qashqai", "Navara"],
-        "Mazda": ["Atenza", "Axela", "CX-5", "Demio", "BT-50", "Premacy"],
-        "Subaru": ["Impreza", "Forester", "Outback", "Legacy", "XV", "Levorg"],
-        "Volkswagen": ["Polo", "Golf", "Tiguan", "Passat", "Touareg", "Caddy"],
-        "Mercedes": ["C-Class", "E-Class", "GLA", "GLE", "S-Class", "A-Class"],
-        "BMW": ["X3", "X5", "3 Series", "5 Series", "1 Series", "X1"],
-        "Isuzu": ["D-Max", "MU-X", "NPR", "FRR"],
-        "Mitsubishi": ["Outlander", "Pajero", "L200", "ASX", "Lancer"],
-        "Hyundai": ["i10", "i20", "Tucson", "Santa Fe", "Grand i10", "Elantra"],
-        "Kia": ["Sportage", "Seltos", "Picanto", "Sorento", "Cerato"],
-        "Ford": ["Ranger", "Everest", "Focus", "Fiesta", "EcoSport"],
-        "Suzuki": ["Swift", "Jimny", "Vitara", "Celerio", "Ertiga"],
-        "Audi": ["Q5", "A4", "A6", "Q7", "A3"],
-    }
-    
-    body_types = ["Sedan", "SUV", "Hatchback", "Pickup", "Wagon", "MPV", "Coupe", "Convertible"]
-    fuel_types = ["Petrol", "Diesel", "Hybrid", "Electric"]
-    transmissions = ["Automatic", "Manual", "CVT"]
-    conditions = ["Excellent", "Very Good", "Good", "Fair"]
-    colors = ["White", "Black", "Silver", "Blue", "Red", "Grey", "Green", "Brown", "Gold", "Orange"]
-    locations = ["Nairobi", "Mombasa", "Kisumu", "Nakuru", "Eldoret", "Thika", "Malindi", "Naivasha"]
-    sellers = ["Private Seller", "Dealership", "Certified Pre-owned"]
-    
-    current_year = datetime.now().year
-    
-    for i in range(1, 51):  # 50 cars for rich demo
-        make = random.choice(list(makes_models.keys()))
-        model = random.choice(makes_models[make])
-        
-        year = random.randint(2015, current_year)
-        price = random.choice([
-            random.randint(400000, 800000),   # budget
-            random.randint(800000, 1500000),  # mid-range
-            random.randint(1500000, 3000000), # premium
-            random.randint(3000000, 7000000)  # luxury
-        ])
-        
-        mileage = random.randint(10000, 200000)
-        if year >= 2022:
-            mileage = random.randint(5000, 40000)
-        elif year >= 2020:
-            mileage = random.randint(20000, 80000)
-        elif year >= 2017:
-            mileage = random.randint(50000, 150000)
-        else:
-            mileage = random.randint(80000, 250000)
-        
-        car = {
-            "id": i,
-            "make": make,
-            "model": model,
-            "year": year,
-            "price": price,
-            "mileage": mileage,
-            "fuel_type": random.choice(fuel_types),
-            "transmission": random.choice(transmissions),
-            "body_type": random.choice(body_types),
-            "color": random.choice(colors),
-            "engine_size": random.choice(["1.3L", "1.5L", "1.8L", "2.0L", "2.5L", "3.0L"]),
-            "condition": random.choice(conditions),
-            "location": random.choice(locations),
-            "seller_type": random.choice(sellers),
-            "description": f"This {year} {make} {model} is in {random.choice(conditions)} condition with only {mileage:,} km. "
-                          f"Features include {random.choice(['Air conditioning', 'Bluetooth', 'Reverse camera', 'Alloy wheels', 'Sunroof', 'Leather seats', 'Navigation', 'Keyless entry'])}, "
-                          f"{random.choice(['ABS brakes', 'Airbags', 'ESP', 'Traction control'])} and much more.",
-            "image_url": f"https://picsum.photos/id/{100 + i}/400/250",  # placeholder images
-            "views": random.randint(10, 500),
-            "featured": random.choice([True, False]),
-            "created_at": datetime.now().isoformat(),
-        }
-        cars.append(car)
-    
-    # Mark some as featured
-    for car in cars:
-        car["featured"] = car["id"] in [3, 7, 12, 18, 24, 31, 39, 45]
-    
-    return cars
+# ── Read Operations ───────────────────────────────
 
-# Global cache for cars
-_CARS_CACHE = None
+def get_all_cars(supabase):
+    """Fetch all car listings from Supabase."""
+    try:
+        result = (
+            supabase.table("cars")
+            .select("*")
+            .order("created_at", desc=True)
+            .execute()
+        )
+        return result.data or []
+    except Exception as e:
+        st.error(f"Failed to load cars: {e}")
+        return []
 
-def get_all_cars():
-    """Return all car listings (cached)."""
-    global _CARS_CACHE
-    if _CARS_CACHE is None:
-        _CARS_CACHE = _generate_mock_cars()
-    return _CARS_CACHE
 
-def get_car_by_id(car_id):
-    """Return a single car by its ID."""
-    cars = get_all_cars()
-    for car in cars:
-        if car["id"] == car_id:
-            return car
-    return None
+def get_car_by_id(supabase, car_id: str):
+    """Return a single car by its UUID."""
+    try:
+        result = (
+            supabase.table("cars")
+            .select("*")
+            .eq("id", car_id)
+            .single()
+            .execute()
+        )
+        return result.data
+    except Exception:
+        return None
 
-def get_featured_cars(limit=6):
+
+def get_featured_cars(supabase, limit: int = 3):
     """Return featured car listings."""
-    cars = get_all_cars()
-    featured = [c for c in cars if c.get("featured", False)]
-    return featured[:limit]
+    try:
+        result = (
+            supabase.table("cars")
+            .select("*")
+            .eq("featured", True)
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return result.data or []
+    except Exception:
+        return []
 
-def get_filtered_cars(filters):
-    """
-    Filter cars based on search criteria.
-    Filters dict can contain: make, min_price, max_price, min_year, max_year,
-    fuel_type, transmission, body_type, min_mileage, max_mileage, search_term
-    """
-    cars = get_all_cars()
-    
-    if not filters:
+
+def get_filtered_cars(supabase, filters: dict):
+    """Filter cars based on search criteria."""
+    try:
+        query = supabase.table("cars").select("*")
+
+        if filters.get("make") and filters["make"] != "All":
+            query = query.eq("make", filters["make"])
+        if filters.get("fuel_type") and filters["fuel_type"] != "All":
+            query = query.eq("fuel_type", filters["fuel_type"])
+        if filters.get("transmission") and filters["transmission"] != "All":
+            query = query.eq("transmission", filters["transmission"])
+        if filters.get("body_type") and filters["body_type"] != "All":
+            query = query.eq("body_type", filters["body_type"])
+        if filters.get("min_price"):
+            query = query.gte("price", filters["min_price"])
+        if filters.get("max_price"):
+            query = query.lte("price", filters["max_price"])
+        if filters.get("min_year"):
+            query = query.gte("year", filters["min_year"])
+        if filters.get("max_year"):
+            query = query.lte("year", filters["max_year"])
+        if filters.get("max_mileage"):
+            query = query.lte("mileage", filters["max_mileage"])
+
+        result = query.order("created_at", desc=True).execute()
+        cars   = result.data or []
+
+        # Text search (client-side for simplicity)
+        if filters.get("search_term"):
+            term = filters["search_term"].lower()
+            cars = [
+                c for c in cars
+                if term in c.get("make", "").lower()
+                or term in c.get("model", "").lower()
+            ]
+
         return cars
-    
-    filtered = cars.copy()
-    
-    # Text search (make/model)
-    if filters.get("search_term"):
-        term = filters["search_term"].lower()
-        filtered = [c for c in filtered 
-                   if term in c["make"].lower() or term in c["model"].lower()]
-    
-    # Make filter
-    if filters.get("make"):
-        filtered = [c for c in filtered if c["make"] == filters["make"]]
-    
-    # Price range
-    if filters.get("min_price"):
-        filtered = [c for c in filtered if c["price"] >= filters["min_price"]]
-    if filters.get("max_price"):
-        filtered = [c for c in filtered if c["price"] <= filters["max_price"]]
-    
-    # Year range
-    if filters.get("min_year"):
-        filtered = [c for c in filtered if c["year"] >= filters["min_year"]]
-    if filters.get("max_year"):
-        filtered = [c for c in filtered if c["year"] <= filters["max_year"]]
-    
-    # Mileage range
-    if filters.get("min_mileage"):
-        filtered = [c for c in filtered if c["mileage"] >= filters["min_mileage"]]
-    if filters.get("max_mileage"):
-        filtered = [c for c in filtered if c["mileage"] <= filters["max_mileage"]]
-    
-    # Fuel type
-    if filters.get("fuel_type"):
-        filtered = [c for c in filtered if c["fuel_type"] == filters["fuel_type"]]
-    
-    # Transmission
-    if filters.get("transmission"):
-        filtered = [c for c in filtered if c["transmission"] == filters["transmission"]]
-    
-    # Body type
-    if filters.get("body_type"):
-        filtered = [c for c in filtered if c["body_type"] == filters["body_type"]]
-    
-    return filtered
+    except Exception as e:
+        st.error(f"Failed to filter cars: {e}")
+        return []
 
-def get_unique_makes():
+
+def get_unique_makes(supabase):
     """Return sorted list of unique car makes."""
-    cars = get_all_cars()
-    makes = sorted(set(c["make"] for c in cars))
-    return makes
+    try:
+        result = supabase.table("cars").select("make").execute()
+        makes  = sorted(set(c["make"] for c in result.data or []))
+        return makes
+    except Exception:
+        return []
 
-def get_price_range():
+
+def get_price_range(supabase):
     """Return min and max price across all cars."""
-    cars = get_all_cars()
-    prices = [c["price"] for c in cars]
-    return min(prices), max(prices)
+    try:
+        result = supabase.table("cars").select("price").execute()
+        prices = [c["price"] for c in result.data or []]
+        if not prices:
+            return 0, 10_000_000
+        return min(prices), max(prices)
+    except Exception:
+        return 0, 10_000_000
 
-def get_year_range():
+
+def get_year_range(supabase):
     """Return min and max year across all cars."""
-    cars = get_all_cars()
-    years = [c["year"] for c in cars]
-    return min(years), max(years)
+    try:
+        result = supabase.table("cars").select("year").execute()
+        years  = [c["year"] for c in result.data or []]
+        if not years:
+            return 2010, datetime.now().year
+        return min(years), max(years)
+    except Exception:
+        return 2010, datetime.now().year
 
-def estimate_value(car):
-    """Simple valuation calculator based on year, mileage, and condition."""
-    base_price = car["price"]
+
+# ── Write Operations ──────────────────────────────
+
+def upload_car_image(supabase, file_bytes: bytes,
+                     filename: str) -> str:
+    """
+    Upload image to Supabase Storage.
+    Returns the public URL or empty string on failure.
+    """
+    try:
+        # Make filename unique using timestamp
+        ext       = filename.rsplit(".", 1)[-1].lower()
+        ts        = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_name = f"car_{ts}.{ext}"
+
+        supabase.storage.from_("car-images").upload(
+            safe_name,
+            file_bytes,
+            {"content-type": f"image/{ext}"}
+        )
+
+        # Get public URL
+        url_data = supabase.storage.from_(
+            "car-images"
+        ).get_public_url(safe_name)
+
+        return url_data
+    except Exception as e:
+        st.error(f"Image upload failed: {e}")
+        return ""
+
+
+def insert_car(supabase, car_data: dict) -> bool:
+    """Insert a new car listing. Returns True on success."""
+    try:
+        supabase.table("cars").insert(car_data).execute()
+        return True
+    except Exception as e:
+        st.error(f"Failed to save car: {e}")
+        return False
+
+
+def update_car(supabase, car_id: str, car_data: dict) -> bool:
+    """Update an existing car listing."""
+    try:
+        supabase.table("cars").update(car_data).eq(
+            "id", car_id
+        ).execute()
+        return True
+    except Exception as e:
+        st.error(f"Failed to update car: {e}")
+        return False
+
+
+def delete_car(supabase, car_id: str) -> bool:
+    """Delete a car listing."""
+    try:
+        supabase.table("cars").delete().eq("id", car_id).execute()
+        return True
+    except Exception as e:
+        st.error(f"Failed to delete car: {e}")
+        return False
+
+
+def increment_views(supabase, car_id: str):
+    """Increment view count for a car."""
+    try:
+        car = supabase.table("cars").select(
+            "views"
+        ).eq("id", car_id).single().execute()
+        current = car.data.get("views", 0) if car.data else 0
+        supabase.table("cars").update(
+            {"views": current + 1}
+        ).eq("id", car_id).execute()
+    except Exception:
+        pass
+
+
+# ── Valuation ─────────────────────────────────────
+
+def estimate_value(car: dict) -> int:
+    """AI valuation based on age, mileage and condition."""
+    base_price  = car.get("price", 0)
     current_year = datetime.now().year
-    age = current_year - car["year"]
-    
-    # Depreciation: ~15% per year
-    depreciation = 1 - (0.15 * age)
-    if depreciation < 0.3:
-        depreciation = 0.3
-    
-    # Mileage adjustment: lose 1% per 5,000 km over 30,000
-    mileage_over = max(0, (car["mileage"] - 30000) / 5000)
-    mileage_penalty = 1 - (mileage_over * 0.01)
-    if mileage_penalty < 0.6:
-        mileage_penalty = 0.6
-    
-    # Condition multiplier
+    age         = current_year - car.get("year", current_year)
+
+    depreciation = max(0.3, 1 - (0.15 * age))
+
+    mileage_over   = max(0, (car.get("mileage", 0) - 30_000) / 5_000)
+    mileage_penalty = max(0.6, 1 - (mileage_over * 0.01))
+
     condition_multiplier = {
         "Excellent": 1.05,
         "Very Good": 1.00,
-        "Good": 0.95,
-        "Fair": 0.85
-    }.get(car["condition"], 0.95)
-    
-    estimated = base_price * depreciation * mileage_penalty * condition_multiplier
-    return int(estimated)
+        "Good":      0.95,
+        "Fair":      0.85
+    }.get(car.get("condition", "Good"), 0.95)
+
+    return int(base_price * depreciation * mileage_penalty
+               * condition_multiplier)
