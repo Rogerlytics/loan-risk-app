@@ -11,6 +11,7 @@ from views.loan_analysis import show_loan_analysis
 from views.contact import show_contact
 from views.admin_dashboard import show_admin_dashboard
 from views.car_marketplace import show_car_marketplace
+from views.car_upload import show_car_management
 from services.supabase_service import get_unread_reply_count
 from config.settings import validate_secrets
 
@@ -49,6 +50,8 @@ defaults = {
     "seen_notified":              set(),
     "selected_user_id":           None,
     "selected_car_id":            None,
+    "editing_car_id":             None,
+    "confirm_delete_id":          None,
     "auto_refresh":               False,
     "draft_message":              "",
     "risk_result":                None,
@@ -101,6 +104,7 @@ else:
             menu = [
                 "Loan Analysis",
                 "Car Marketplace",
+                "Car Management",
                 "Contact",
                 "Admin Dashboard",
                 "About"
@@ -174,7 +178,19 @@ else:
             'with AI-powered valuations</div>',
             unsafe_allow_html=True
         )
-        show_car_marketplace()
+        show_car_marketplace(supabase)
+
+    elif page == "Car Management":
+        st.markdown(
+            '<div class="page-title">Car Management</div>',
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            '<div class="page-subtitle">Add, edit and manage '
+            'car listings</div>',
+            unsafe_allow_html=True
+        )
+        show_car_management(supabase)
 
     else:
         st.markdown(
