@@ -14,13 +14,15 @@ from services.cars_service import (
 )
 
 
-def _car_card(car):
+def _car_card(car, key_prefix="grid"):
     """Render a single car listing card."""
     badge = ""
     if car.get("featured"):
-        badge = '<span style="background:#1d4ed8; color:#bfdbfe; ' \
-                'font-size:10px; font-weight:700; padding:2px 8px; ' \
-                'border-radius:20px; margin-left:8px;">FEATURED</span>'
+        badge = (
+            '<span style="background:#1d4ed8; color:#bfdbfe; '
+            'font-size:10px; font-weight:700; padding:2px 8px; '
+            'border-radius:20px; margin-left:8px;">FEATURED</span>'
+        )
 
     condition_colour = {
         "Excellent": "#22c55e",
@@ -32,19 +34,14 @@ def _car_card(car):
     st.markdown(f"""
     <div style="background:linear-gradient(145deg,#111827,#0b1220);
         border:1px solid #1e293b; border-radius:16px;
-        overflow:hidden; margin-bottom:16px;
-        transition:border-color 0.2s;"
-        onmouseover="this.style.borderColor='#2563eb'"
-        onmouseout="this.style.borderColor='#1e293b'">
-        <img src="{car['image_url']}" alt="{car['make']} {car['model']}"
+        overflow:hidden; margin-bottom:4px;">
+        <img src="{car['image_url']}"
+             alt="{car['make']} {car['model']}"
              style="width:100%; height:180px; object-fit:cover;">
         <div style="padding:16px;">
-            <div style="display:flex; align-items:center;
-                        justify-content:space-between; margin-bottom:6px;">
-                <div style="font-size:16px; font-weight:700;
-                            color:#F0F4F8;">
-                    {car['year']} {car['make']} {car['model']}{badge}
-                </div>
+            <div style="font-size:15px; font-weight:700;
+                        color:#F0F4F8; margin-bottom:4px;">
+                {car['year']} {car['make']} {car['model']}{badge}
             </div>
             <div style="font-size:22px; font-weight:800;
                         color:#3B82F6; margin-bottom:10px;">
@@ -87,9 +84,10 @@ def _car_card(car):
     </div>
     """, unsafe_allow_html=True)
 
+    # key_prefix ensures featured and grid cards never clash
     if st.button(
         "View Details",
-        key=f"view_{car['id']}",
+        key=f"{key_prefix}_view_{car['id']}",
         use_container_width=True
     ):
         st.session_state.selected_car_id = car['id']
@@ -119,16 +117,18 @@ def _car_detail(car):
     with col_img:
         st.image(car['image_url'], use_column_width=True)
 
-        # Estimated value
         estimated = estimate_value(car)
         diff      = estimated - car['price']
-        diff_txt  = f"KES {abs(diff):,} {'below' if diff < 0 else 'above'} market"
-        diff_col  = "#22c55e" if diff >= 0 else "#ef4444"
+        diff_txt  = (
+            f"KES {abs(diff):,} "
+            f"{'below' if diff < 0 else 'above'} market"
+        )
+        diff_col = "#22c55e" if diff >= 0 else "#ef4444"
 
         st.markdown(f"""
         <div style="background:linear-gradient(145deg,#111827,#0b1220);
-            border:1px solid #1e293b; border-radius:12px; padding:16px;
-            margin-top:12px;">
+            border:1px solid #1e293b; border-radius:12px;
+            padding:16px; margin-top:12px;">
             <div style="color:#94A3B8; font-size:12px; margin-bottom:8px;
                         text-transform:uppercase; letter-spacing:0.05em;">
                 AI Valuation
@@ -173,14 +173,12 @@ def _car_detail(car):
             """, unsafe_allow_html=True)
 
         st.markdown("</div>", unsafe_allow_html=True)
-
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # Contact seller button
         if st.button(
             "Contact Seller",
             use_container_width=True,
-            key="contact_seller"
+            key="contact_seller_btn"
         ):
             st.session_state.draft_message = (
                 f"Hi, I'm interested in the {car['year']} "
@@ -188,14 +186,13 @@ def _car_detail(car):
                 f"KES {car['price']:,}. Is it still available?"
             )
             st.success(
-                "Message drafted! Go to Contact page to send it."
+                "Message drafted! Go to the Contact page to send it."
             )
 
-    # Description
     st.markdown(f"""
     <div style="background:linear-gradient(145deg,#111827,#0b1220);
-        border:1px solid #1e293b; border-radius:12px; padding:20px;
-        margin-top:16px;">
+        border:1px solid #1e293b; border-radius:12px;
+        padding:20px; margin-top:16px;">
         <div style="color:#60A5FA; font-size:14px; font-weight:700;
                     margin-bottom:10px; text-transform:uppercase;
                     letter-spacing:0.05em;">Description</div>
@@ -213,7 +210,6 @@ def show_car_marketplace():
         unsafe_allow_html=True
     )
 
-    # Initialise selected car state
     if "selected_car_id" not in st.session_state:
         st.session_state.selected_car_id = None
 
@@ -237,7 +233,8 @@ def show_car_marketplace():
         cols = st.columns(3)
         for i, car in enumerate(featured):
             with cols[i]:
-                _car_card(car)
+                # key_prefix="featured" — avoids clash with grid below
+                _car_card(car, key_prefix="featured")
         st.markdown(
             '<hr style="border-color:#1e293b; margin:20px 0;">',
             unsafe_allow_html=True
@@ -249,10 +246,14 @@ def show_car_marketplace():
 
         with fc1:
             search_term = st.text_input(
-                "Search by make/model", placeholder="e.g. Toyota Harrier"
+                "Search by make/model",
+                placeholder="e.g. Toyota Harrier",
+                key="mp_search"
             )
             makes = ["All"] + get_unique_makes()
-            selected_make = st.selectbox("Make", makes)
+            selected_make = st.selectbox(
+                "Make", makes, key="mp_make"
+            )
 
         with fc2:
             min_price, max_price = get_price_range()
@@ -262,7 +263,8 @@ def show_car_marketplace():
                 max_value=max_price,
                 value=(min_price, max_price),
                 step=50_000,
-                format="KES %d"
+                format="KES %d",
+                key="mp_price"
             )
 
         with fc3:
@@ -271,25 +273,29 @@ def show_car_marketplace():
                 "Year",
                 min_value=min_year,
                 max_value=max_year,
-                value=(min_year, max_year)
+                value=(min_year, max_year),
+                key="mp_year"
             )
 
         fc4, fc5, fc6 = st.columns(3)
         with fc4:
             fuel_type = st.selectbox(
                 "Fuel Type",
-                ["All", "Petrol", "Diesel", "Hybrid", "Electric"]
+                ["All", "Petrol", "Diesel", "Hybrid", "Electric"],
+                key="mp_fuel"
             )
         with fc5:
             transmission = st.selectbox(
                 "Transmission",
-                ["All", "Automatic", "Manual", "CVT"]
+                ["All", "Automatic", "Manual", "CVT"],
+                key="mp_trans"
             )
         with fc6:
             body_type = st.selectbox(
                 "Body Type",
                 ["All", "Sedan", "SUV", "Hatchback", "Pickup",
-                 "Wagon", "MPV", "Coupe"]
+                 "Wagon", "MPV", "Coupe"],
+                key="mp_body"
             )
 
     # Build filters dict
@@ -333,8 +339,8 @@ def show_car_marketplace():
         """, unsafe_allow_html=True)
         return
 
-    # ── Grid ──
+    # ── Grid — key_prefix="grid" avoids clash with featured ──
     cols = st.columns(3)
     for i, car in enumerate(cars):
         with cols[i % 3]:
-            _car_card(car)
+            _car_card(car, key_prefix="grid")
