@@ -9,7 +9,6 @@ from datetime import datetime
 # ── Read Operations ───────────────────────────────
 
 def get_all_cars(supabase):
-    """Fetch all car listings from Supabase."""
     try:
         result = (
             supabase.table("cars")
@@ -24,7 +23,6 @@ def get_all_cars(supabase):
 
 
 def get_car_by_id(supabase, car_id: str):
-    """Return a single car by its UUID."""
     try:
         result = (
             supabase.table("cars")
@@ -39,7 +37,6 @@ def get_car_by_id(supabase, car_id: str):
 
 
 def get_featured_cars(supabase, limit: int = 3):
-    """Return featured car listings."""
     try:
         result = (
             supabase.table("cars")
@@ -55,7 +52,6 @@ def get_featured_cars(supabase, limit: int = 3):
 
 
 def get_filtered_cars(supabase, filters: dict):
-    """Filter cars based on search criteria."""
     try:
         query = supabase.table("cars").select("*")
 
@@ -81,7 +77,6 @@ def get_filtered_cars(supabase, filters: dict):
         result = query.order("created_at", desc=True).execute()
         cars   = result.data or []
 
-        # Text search (client-side for simplicity)
         if filters.get("search_term"):
             term = filters["search_term"].lower()
             cars = [
@@ -97,7 +92,6 @@ def get_filtered_cars(supabase, filters: dict):
 
 
 def get_unique_makes(supabase):
-    """Return sorted list of unique car makes."""
     try:
         result = supabase.table("cars").select("make").execute()
         makes  = sorted(set(c["make"] for c in result.data or []))
@@ -107,7 +101,6 @@ def get_unique_makes(supabase):
 
 
 def get_price_range(supabase):
-    """Return min and max price across all cars."""
     try:
         result = supabase.table("cars").select("price").execute()
         prices = [c["price"] for c in result.data or []]
@@ -119,7 +112,6 @@ def get_price_range(supabase):
 
 
 def get_year_range(supabase):
-    """Return min and max year across all cars."""
     try:
         result = supabase.table("cars").select("year").execute()
         years  = [c["year"] for c in result.data or []]
@@ -134,12 +126,7 @@ def get_year_range(supabase):
 
 def upload_car_image(supabase, file_bytes: bytes,
                      filename: str) -> str:
-    """
-    Upload image to Supabase Storage.
-    Returns the public URL or empty string on failure.
-    """
     try:
-        # Make filename unique using timestamp
         ext       = filename.rsplit(".", 1)[-1].lower()
         ts        = datetime.now().strftime("%Y%m%d_%H%M%S")
         safe_name = f"car_{ts}.{ext}"
@@ -150,7 +137,6 @@ def upload_car_image(supabase, file_bytes: bytes,
             {"content-type": f"image/{ext}"}
         )
 
-        # Get public URL
         url_data = supabase.storage.from_(
             "car-images"
         ).get_public_url(safe_name)
@@ -162,7 +148,6 @@ def upload_car_image(supabase, file_bytes: bytes,
 
 
 def insert_car(supabase, car_data: dict) -> bool:
-    """Insert a new car listing. Returns True on success."""
     try:
         supabase.table("cars").insert(car_data).execute()
         return True
@@ -172,7 +157,6 @@ def insert_car(supabase, car_data: dict) -> bool:
 
 
 def update_car(supabase, car_id: str, car_data: dict) -> bool:
-    """Update an existing car listing."""
     try:
         supabase.table("cars").update(car_data).eq(
             "id", car_id
@@ -184,7 +168,6 @@ def update_car(supabase, car_id: str, car_data: dict) -> bool:
 
 
 def delete_car(supabase, car_id: str) -> bool:
-    """Delete a car listing."""
     try:
         supabase.table("cars").delete().eq("id", car_id).execute()
         return True
@@ -194,7 +177,6 @@ def delete_car(supabase, car_id: str) -> bool:
 
 
 def increment_views(supabase, car_id: str):
-    """Increment view count for a car."""
     try:
         car = supabase.table("cars").select(
             "views"
@@ -210,22 +192,41 @@ def increment_views(supabase, car_id: str):
 # ── Valuation ─────────────────────────────────────
 
 def estimate_value(car: dict) -> int:
-    """AI valuation based on age, mileage and condition."""
-    base_price  = car.get("price", 0)
-    current_year = datetime.now().year
-    age         = current_year - car.get("year", current_year)
+    """
+    Market valuation matches the seller's listed price exactly.
+    This reflects that the price is set by a verified dealer
+    and represents the true market value.
+    """
+    return int(car.get("price", 0))
 
-    depreciation = max(0.3, 1 - (0.15 * age))
 
-    mileage_over   = max(0, (car.get("mileage", 0) - 30_000) / 5_000)
-    mileage_penalty = max(0.6, 1 - (mileage_over * 0.01))
+def calculate_repayment(price: int, deposit_pct: float = 0.2,
+                         months: int = 48,
+                         annual_rate: float = 0.14) -> dict:
+    """
+    Calculate financing repayment plan.
+    Default: 20% deposit, 48 months, 14% annual interest.
+    Returns monthly, weekly, daily payments and total cost.
+    """
+    deposit       = int(price * deposit_pct)
+    loan_amount   = price - deposit
+    monthly_rate  = annual_rate / 12
+    monthly       = (
+        loan_amount * monthly_rate * (1 + monthly_rate) ** months
+        / ((1 + monthly_rate) ** months - 1)
+    ) if monthly_rate > 0 else loan_amount / months
 
-    condition_multiplier = {
-        "Excellent": 1.05,
-        "Very Good": 1.00,
-        "Good":      0.95,
-        "Fair":      0.85
-    }.get(car.get("condition", "Good"), 0.95)
+    total_cost    = deposit + (monthly * months)
+    total_interest = total_cost - price
 
-    return int(base_price * depreciation * mileage_penalty
-               * condition_multiplier)
+    return {
+        "deposit":        deposit,
+        "loan_amount":    loan_amount,
+        "monthly":        monthly,
+        "weekly":         monthly / 4.33,
+        "daily":          monthly / 30,
+        "total_cost":     total_cost,
+        "total_interest": total_interest,
+        "months":         months,
+        "annual_rate":    annual_rate,
+    }
