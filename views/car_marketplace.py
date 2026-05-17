@@ -17,13 +17,12 @@ from services.cars_service import (
 
 
 def _car_card(car, supabase, key_prefix="grid"):
-    """Render a single car listing card."""
     badge = ""
     if car.get("featured"):
         badge = (
-            '<span style="background:#1d4ed8; color:#bfdbfe; '
-            'font-size:10px; font-weight:700; padding:2px 8px; '
-            'border-radius:20px; margin-left:6px;">FEATURED</span>'
+            '<span style="background:#1d4ed8;color:#bfdbfe;'
+            'font-size:10px;font-weight:700;padding:2px 8px;'
+            'border-radius:20px;margin-left:6px;">FEATURED</span>'
         )
 
     condition_colour = {
@@ -36,47 +35,47 @@ def _car_card(car, supabase, key_prefix="grid"):
     img_html = (
         f'<img src="{car["image_url"]}" '
         f'alt="{car["make"]} {car["model"]}" '
-        f'style="width:100%; height:200px; object-fit:cover;">'
+        f'style="width:100%;height:200px;object-fit:cover;">'
         if car.get("image_url") else
-        '<div style="width:100%; height:200px; background:#0f1e30; '
-        'display:flex; align-items:center; justify-content:center; '
-        'font-size:48px; color:#334155;">🚗</div>'
+        '<div style="width:100%;height:200px;background:#0f1e30;'
+        'display:flex;align-items:center;justify-content:center;'
+        'font-size:48px;color:#334155;">🚗</div>'
     )
 
     st.markdown(f"""
     <div style="background:linear-gradient(145deg,#111827,#0b1220);
-        border:1px solid #1e293b; border-radius:16px;
-        overflow:hidden; margin-bottom:4px;">
+        border:1px solid #1e293b;border-radius:16px;
+        overflow:hidden;margin-bottom:4px;">
         {img_html}
         <div style="padding:14px;">
-            <div style="font-size:15px; font-weight:700;
-                        color:#F0F4F8; margin-bottom:4px;">
+            <div style="font-size:15px;font-weight:700;
+                        color:#F0F4F8;margin-bottom:4px;">
                 {car['year']} {car['make']} {car['model']}{badge}
             </div>
-            <div style="font-size:22px; font-weight:800;
-                        color:#3B82F6; margin-bottom:10px;">
+            <div style="font-size:22px;font-weight:800;
+                        color:#3B82F6;margin-bottom:10px;">
                 KES {car['price']:,}
             </div>
-            <div style="display:flex; flex-wrap:wrap; gap:5px;
+            <div style="display:flex;flex-wrap:wrap;gap:5px;
                         margin-bottom:10px;">
-                <span style="background:#0f1e30; color:#94A3B8;
-                    font-size:11px; padding:3px 8px; border-radius:20px;
+                <span style="background:#0f1e30;color:#94A3B8;
+                    font-size:11px;padding:3px 8px;border-radius:20px;
                     border:1px solid #1e293b;">{car['transmission']}</span>
-                <span style="background:#0f1e30; color:#94A3B8;
-                    font-size:11px; padding:3px 8px; border-radius:20px;
+                <span style="background:#0f1e30;color:#94A3B8;
+                    font-size:11px;padding:3px 8px;border-radius:20px;
                     border:1px solid #1e293b;">{car['fuel_type']}</span>
-                <span style="background:#0f1e30; color:#94A3B8;
-                    font-size:11px; padding:3px 8px; border-radius:20px;
+                <span style="background:#0f1e30;color:#94A3B8;
+                    font-size:11px;padding:3px 8px;border-radius:20px;
                     border:1px solid #1e293b;">{car['mileage']:,} km</span>
-                <span style="background:#0f1e30; color:#94A3B8;
-                    font-size:11px; padding:3px 8px; border-radius:20px;
+                <span style="background:#0f1e30;color:#94A3B8;
+                    font-size:11px;padding:3px 8px;border-radius:20px;
                     border:1px solid #1e293b;">{car['engine_size']}</span>
             </div>
-            <div style="display:flex; align-items:center;
+            <div style="display:flex;align-items:center;
                         justify-content:space-between;">
-                <span style="color:{condition_colour}; font-size:12px;
+                <span style="color:{condition_colour};font-size:12px;
                              font-weight:600;">● {car['condition']}</span>
-                <span style="color:#64748B; font-size:12px;">
+                <span style="color:#64748B;font-size:12px;">
                     📍 {car['location']}</span>
             </div>
         </div>
@@ -94,150 +93,122 @@ def _car_card(car, supabase, key_prefix="grid"):
 
 
 def _financing_panel(car: dict):
-    """
-    Creative financing & dealer trust panel shown below valuation.
-    """
-    price    = car.get("price", 0)
-    repay    = calculate_repayment(price)
-    seller   = car.get("seller_type", "Dealership")
-    location = car.get("location", "Nairobi")
+    price  = car.get("price", 0)
+    repay  = calculate_repayment(price)
+    seller = car.get("seller_type", "Dealership")
+    loc    = car.get("location", "Nairobi")
+
+    dep     = f"KES {repay['deposit']:,}"
+    monthly = f"KES {repay['monthly']:,.0f}"
+    daily   = f"KES {repay['daily']:,.0f}"
 
     st.markdown(f"""
     <div style="margin-top:14px;">
-
-        <!-- ── Financing Available Banner ── -->
         <div style="
-            background: linear-gradient(135deg, #0c2d6b 0%, #1e3a8a 50%, #1d4ed8 100%);
-            border: 1px solid #3b82f6;
-            border-radius: 16px;
-            padding: 20px 22px;
-            margin-bottom: 12px;
-            position: relative;
-            overflow: hidden;
-        ">
-            <!-- Decorative glow -->
-            <div style="position:absolute; top:-30px; right:-30px;
-                width:120px; height:120px; border-radius:50%;
-                background:rgba(96,165,250,0.08);"></div>
-
-            <div style="display:flex; align-items:center; gap:10px;
-                        margin-bottom:14px;">
+            background:linear-gradient(135deg,#0c2d6b 0%,#1e3a8a 50%,#1d4ed8 100%);
+            border:1px solid #3b82f6;
+            border-radius:16px;
+            padding:20px 22px;
+            margin-bottom:12px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
                 <div style="background:rgba(96,165,250,0.2);
-                    border:1px solid #60a5fa; border-radius:10px;
-                    padding:6px 10px; font-size:20px;">💳</div>
+                    border:1px solid #60a5fa;border-radius:10px;
+                    padding:6px 10px;font-size:20px;">💳</div>
                 <div>
-                    <div style="color:#93c5fd; font-size:11px;
-                        font-weight:700; text-transform:uppercase;
-                        letter-spacing:0.1em;">Flexible Financing</div>
-                    <div style="color:#F0F4F8; font-size:16px;
-                        font-weight:800;">Drive Away Today</div>
+                    <div style="color:#93c5fd;font-size:11px;font-weight:700;
+                        text-transform:uppercase;letter-spacing:0.1em;">
+                        Flexible Financing
+                    </div>
+                    <div style="color:#F0F4F8;font-size:16px;font-weight:800;">
+                        Drive Away Today
+                    </div>
                 </div>
-                <div style="margin-left:auto; background:#22c55e;
-                    color:white; font-size:11px; font-weight:700;
-                    padding:4px 10px; border-radius:20px;">
-                    AVAILABLE
-                </div>
+                <div style="margin-left:auto;background:#22c55e;color:white;
+                    font-size:11px;font-weight:700;padding:4px 10px;
+                    border-radius:20px;">AVAILABLE</div>
             </div>
-
-            <!-- Repayment highlights -->
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr;
-                        gap:10px; margin-bottom:14px;">
-                <div style="background:rgba(0,0,0,0.25);
-                    border-radius:10px; padding:12px; text-align:center;">
-                    <div style="color:#93c5fd; font-size:10px;
-                        text-transform:uppercase; margin-bottom:4px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;
+                        gap:10px;margin-bottom:14px;">
+                <div style="background:rgba(0,0,0,0.25);border-radius:10px;
+                    padding:12px;text-align:center;">
+                    <div style="color:#93c5fd;font-size:10px;
+                        text-transform:uppercase;margin-bottom:4px;">
                         Deposit (20%)
                     </div>
-                    <div style="color:#F0F4F8; font-size:16px;
-                        font-weight:800;">
-                        KES {repay['deposit']:,}
+                    <div style="color:#F0F4F8;font-size:16px;font-weight:800;">
+                        {dep}
                     </div>
                 </div>
-                <div style="background:rgba(0,0,0,0.25);
-                    border-radius:10px; padding:12px; text-align:center;
+                <div style="background:rgba(0,0,0,0.25);border-radius:10px;
+                    padding:12px;text-align:center;
                     border:1px solid rgba(96,165,250,0.3);">
-                    <div style="color:#93c5fd; font-size:10px;
-                        text-transform:uppercase; margin-bottom:4px;">
+                    <div style="color:#93c5fd;font-size:10px;
+                        text-transform:uppercase;margin-bottom:4px;">
                         Monthly (48m)
                     </div>
-                    <div style="color:#60a5fa; font-size:16px;
-                        font-weight:800;">
-                        KES {repay['monthly']:,.0f}
+                    <div style="color:#60a5fa;font-size:16px;font-weight:800;">
+                        {monthly}
                     </div>
                 </div>
-                <div style="background:rgba(0,0,0,0.25);
-                    border-radius:10px; padding:12px; text-align:center;">
-                    <div style="color:#93c5fd; font-size:10px;
-                        text-transform:uppercase; margin-bottom:4px;">
-                        Daily
-                    </div>
-                    <div style="color:#F0F4F8; font-size:16px;
-                        font-weight:800;">
-                        KES {repay['daily']:,.0f}
+                <div style="background:rgba(0,0,0,0.25);border-radius:10px;
+                    padding:12px;text-align:center;">
+                    <div style="color:#93c5fd;font-size:10px;
+                        text-transform:uppercase;margin-bottom:4px;">Daily</div>
+                    <div style="color:#F0F4F8;font-size:16px;font-weight:800;">
+                        {daily}
                     </div>
                 </div>
             </div>
-
-            <!-- Fine print -->
-            <div style="color:rgba(147,197,253,0.7); font-size:11px;
-                        line-height:1.5;">
-                *Indicative figures based on 20% deposit, 48-month term
-                at 14% p.a. Final rates subject to credit approval.
-                Contact seller for personalised financing options.
+            <div style="color:rgba(147,197,253,0.7);font-size:11px;line-height:1.5;">
+                Indicative figures based on 20% deposit over 48 months.
+                Interest rate not included — final rates subject to credit approval.
+                Contact seller for a personalised financing quote.
             </div>
         </div>
-
-        <!-- ── Dealer Trust Badge ── -->
         <div style="
-            background: linear-gradient(135deg, #0a1f10 0%, #052e16 100%);
-            border: 1px solid #16a34a;
-            border-radius: 16px;
-            padding: 18px 22px;
-        ">
-            <div style="display:flex; align-items:flex-start; gap:14px;">
+            background:linear-gradient(135deg,#0a1f10 0%,#052e16 100%);
+            border:1px solid #16a34a;
+            border-radius:16px;
+            padding:18px 22px;">
+            <div style="display:flex;align-items:flex-start;gap:14px;">
                 <div style="background:rgba(34,197,94,0.15);
-                    border:1px solid #22c55e; border-radius:12px;
-                    padding:10px 12px; font-size:26px; flex-shrink:0;">
-                    🏆
-                </div>
+                    border:1px solid #22c55e;border-radius:12px;
+                    padding:10px 12px;font-size:26px;flex-shrink:0;">🏆</div>
                 <div style="flex:1;">
-                    <div style="color:#86efac; font-size:11px;
-                        font-weight:700; text-transform:uppercase;
-                        letter-spacing:0.1em; margin-bottom:4px;">
-                        Verified {seller}
+                    <div style="color:#86efac;font-size:11px;font-weight:700;
+                        text-transform:uppercase;letter-spacing:0.1em;
+                        margin-bottom:4px;">Verified {seller}</div>
+                    <div style="color:#F0F4F8;font-size:15px;font-weight:700;
+                        margin-bottom:8px;">
+                        Sold by a Reputable Dealer in {loc}
                     </div>
-                    <div style="color:#F0F4F8; font-size:15px;
-                        font-weight:700; margin-bottom:8px;">
-                        Sold by a Reputable Dealer in {location}
-                    </div>
-                    <div style="display:flex; flex-wrap:wrap; gap:8px;
+                    <div style="display:flex;flex-wrap:wrap;gap:8px;
                                 margin-bottom:8px;">
                         <span style="background:rgba(34,197,94,0.1);
-                            color:#86efac; font-size:11px; padding:3px 10px;
-                            border-radius:20px; border:1px solid #16a34a;">
+                            color:#86efac;font-size:11px;padding:3px 10px;
+                            border-radius:20px;border:1px solid #16a34a;">
                             ✓ Verified Listing
                         </span>
                         <span style="background:rgba(34,197,94,0.1);
-                            color:#86efac; font-size:11px; padding:3px 10px;
-                            border-radius:20px; border:1px solid #16a34a;">
+                            color:#86efac;font-size:11px;padding:3px 10px;
+                            border-radius:20px;border:1px solid #16a34a;">
                             ✓ Genuine Mileage
                         </span>
                         <span style="background:rgba(34,197,94,0.1);
-                            color:#86efac; font-size:11px; padding:3px 10px;
-                            border-radius:20px; border:1px solid #16a34a;">
+                            color:#86efac;font-size:11px;padding:3px 10px;
+                            border-radius:20px;border:1px solid #16a34a;">
                             ✓ Clean History
                         </span>
                         <span style="background:rgba(34,197,94,0.1);
-                            color:#86efac; font-size:11px; padding:3px 10px;
-                            border-radius:20px; border:1px solid #16a34a;">
+                            color:#86efac;font-size:11px;padding:3px 10px;
+                            border-radius:20px;border:1px solid #16a34a;">
                             ✓ Financing Assisted
                         </span>
                     </div>
-                    <div style="color:#86efac; font-size:12px;
-                                line-height:1.5;">
-                        This vehicle is registered with a trusted dealership
-                        partner. Our dealers undergo thorough vetting to
-                        ensure every listing meets our quality standards.
+                    <div style="color:#86efac;font-size:12px;line-height:1.6;">
+                        This vehicle is registered with a trusted dealership partner.
+                        Our dealers are thoroughly vetted to ensure every listing
+                        meets our quality standards.
                         <b style="color:#4ade80;">Contact the seller</b>
                         below for a test drive, inspection report, or
                         tailored financing quote.
@@ -245,24 +216,22 @@ def _financing_panel(car: dict):
                 </div>
             </div>
         </div>
-
     </div>
     """, unsafe_allow_html=True)
 
 
 def _car_detail(car, supabase):
-    """Render full car detail view."""
     if st.button("← Back to Listings", key="back_to_listings"):
         st.session_state.selected_car_id = None
         st.rerun()
 
     st.markdown(f"""
     <div style="margin-bottom:20px;">
-        <div style="font-size:28px; font-weight:800; color:#F0F4F8;
+        <div style="font-size:28px;font-weight:800;color:#F0F4F8;
                     margin-bottom:4px;">
             {car['year']} {car['make']} {car['model']}
         </div>
-        <div style="color:#94A3B8; font-size:14px;">
+        <div style="color:#94A3B8;font-size:14px;">
             {car.get('body_type','')} · {car.get('seller_type','')}
             · {car.get('location','')}
         </div>
@@ -273,47 +242,41 @@ def _car_detail(car, supabase):
 
     with col_img:
         if car.get("image_url"):
-            st.image(car["image_url"], use_column_width=True)
+            st.image(car["image_url"], use_container_width=True)
         else:
             st.markdown("""
-            <div style="background:#0f1e30; border:1px solid #1e293b;
-                border-radius:12px; height:300px; display:flex;
-                align-items:center; justify-content:center;
-                font-size:64px; color:#334155;">🚗</div>
+            <div style="background:#0f1e30;border:1px solid #1e293b;
+                border-radius:12px;height:300px;display:flex;
+                align-items:center;justify-content:center;
+                font-size:64px;color:#334155;">🚗</div>
             """, unsafe_allow_html=True)
 
-        # ── AI Valuation (matches listing price) ──
         price     = car.get("price", 0)
         estimated = estimate_value(car)
 
         st.markdown(f"""
-        <div style="
-            background: linear-gradient(145deg,#111827,#0b1220);
-            border: 1px solid #1e293b;
-            border-radius: 14px;
-            padding: 18px 20px;
-            margin-top: 12px;
-        ">
-            <div style="display:flex; align-items:center; gap:8px;
+        <div style="background:linear-gradient(145deg,#111827,#0b1220);
+            border:1px solid #1e293b;border-radius:14px;
+            padding:18px 20px;margin-top:12px;">
+            <div style="display:flex;align-items:center;gap:8px;
                         margin-bottom:10px;">
                 <span style="font-size:18px;">🤖</span>
-                <div style="color:#94A3B8; font-size:11px;
-                    text-transform:uppercase; letter-spacing:0.1em;
+                <div style="color:#94A3B8;font-size:11px;
+                    text-transform:uppercase;letter-spacing:0.1em;
                     font-weight:700;">AI Market Valuation</div>
             </div>
-            <div style="display:flex; align-items:baseline;
-                        gap:12px; margin-bottom:8px;">
-                <div style="font-size:28px; font-weight:800;
-                            color:#3B82F6;">
+            <div style="display:flex;align-items:baseline;
+                        gap:12px;margin-bottom:8px;">
+                <div style="font-size:28px;font-weight:800;color:#3B82F6;">
                     KES {estimated:,}
                 </div>
-                <div style="background:#052e16; color:#22c55e;
-                    font-size:11px; font-weight:700; padding:3px 10px;
-                    border-radius:20px; border:1px solid #16a34a;">
+                <div style="background:#052e16;color:#22c55e;
+                    font-size:11px;font-weight:700;padding:3px 10px;
+                    border-radius:20px;border:1px solid #16a34a;">
                     FAIR PRICE
                 </div>
             </div>
-            <div style="color:#64748B; font-size:12px; line-height:1.5;">
+            <div style="color:#64748B;font-size:12px;line-height:1.5;">
                 Our AI model has evaluated this vehicle against current
                 market data, mileage, condition, and comparable listings.
                 The asking price is consistent with market value.
@@ -321,14 +284,13 @@ def _car_detail(car, supabase):
         </div>
         """, unsafe_allow_html=True)
 
-        # ── Financing & Dealer panel ──
         _financing_panel(car)
 
     with col_info:
         st.markdown(f"""
         <div style="background:linear-gradient(145deg,#111827,#0b1220);
-            border:1px solid #1e293b; border-radius:12px; padding:20px;">
-            <div style="font-size:30px; font-weight:800; color:#3B82F6;
+            border:1px solid #1e293b;border-radius:12px;padding:20px;">
+            <div style="font-size:30px;font-weight:800;color:#3B82F6;
                         margin-bottom:16px;">KES {price:,}</div>
         """, unsafe_allow_html=True)
 
@@ -347,10 +309,10 @@ def _car_detail(car, supabase):
 
         for label, value in specs:
             st.markdown(f"""
-            <div style="display:flex; justify-content:space-between;
-                        padding:8px 0; border-bottom:1px solid #1e293b;">
-                <span style="color:#64748B; font-size:13px;">{label}</span>
-                <span style="color:#F0F4F8; font-size:13px;
+            <div style="display:flex;justify-content:space-between;
+                        padding:8px 0;border-bottom:1px solid #1e293b;">
+                <span style="color:#64748B;font-size:13px;">{label}</span>
+                <span style="color:#F0F4F8;font-size:13px;
                              font-weight:600;">{value}</span>
             </div>
             """, unsafe_allow_html=True)
@@ -358,7 +320,6 @@ def _car_detail(car, supabase):
         st.markdown("</div>", unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # Contact seller button
         if st.button(
             "📞 Contact Seller",
             use_container_width=True,
@@ -376,66 +337,56 @@ def _car_detail(car, supabase):
                 "Go to the Contact page to send it."
             )
 
-        # Quick financing summary in sidebar column
         repay = calculate_repayment(price)
         st.markdown(f"""
         <div style="background:linear-gradient(145deg,#0c1a30,#0a1525);
-            border:1px solid #1e3a5f; border-radius:12px;
-            padding:16px; margin-top:12px;">
-            <div style="color:#60a5fa; font-size:11px; font-weight:700;
-                text-transform:uppercase; letter-spacing:0.08em;
+            border:1px solid #1e3a5f;border-radius:12px;
+            padding:16px;margin-top:12px;">
+            <div style="color:#60a5fa;font-size:11px;font-weight:700;
+                text-transform:uppercase;letter-spacing:0.08em;
                 margin-bottom:12px;">Quick Finance Summary</div>
-            <div style="display:flex; justify-content:space-between;
-                        padding:6px 0; border-bottom:1px solid #1e293b;">
-                <span style="color:#64748B; font-size:12px;">
-                    Deposit (20%)
-                </span>
-                <span style="color:#F0F4F8; font-size:12px;
-                             font-weight:700;">
-                    KES {repay['deposit']:,}
-                </span>
+            <div style="display:flex;justify-content:space-between;
+                        padding:6px 0;border-bottom:1px solid #1e293b;">
+                <span style="color:#64748B;font-size:12px;">Deposit (20%)</span>
+                <span style="color:#F0F4F8;font-size:12px;font-weight:700;">
+                    KES {repay['deposit']:,}</span>
             </div>
-            <div style="display:flex; justify-content:space-between;
-                        padding:6px 0; border-bottom:1px solid #1e293b;">
-                <span style="color:#64748B; font-size:12px;">
-                    Monthly (48m)
-                </span>
-                <span style="color:#60a5fa; font-size:12px;
-                             font-weight:700;">
-                    KES {repay['monthly']:,.0f}
-                </span>
+            <div style="display:flex;justify-content:space-between;
+                        padding:6px 0;border-bottom:1px solid #1e293b;">
+                <span style="color:#64748B;font-size:12px;">Monthly (48m)</span>
+                <span style="color:#60a5fa;font-size:12px;font-weight:700;">
+                    KES {repay['monthly']:,.0f}</span>
             </div>
-            <div style="display:flex; justify-content:space-between;
-                        padding:6px 0; border-bottom:1px solid #1e293b;">
-                <span style="color:#64748B; font-size:12px;">
-                    Weekly
-                </span>
-                <span style="color:#F0F4F8; font-size:12px;
-                             font-weight:700;">
-                    KES {repay['weekly']:,.0f}
-                </span>
+            <div style="display:flex;justify-content:space-between;
+                        padding:6px 0;border-bottom:1px solid #1e293b;">
+                <span style="color:#64748B;font-size:12px;">Weekly</span>
+                <span style="color:#F0F4F8;font-size:12px;font-weight:700;">
+                    KES {repay['weekly']:,.0f}</span>
             </div>
-            <div style="display:flex; justify-content:space-between;
-                        padding:6px 0;">
-                <span style="color:#64748B; font-size:12px;">
-                    Interest Rate
-                </span>
-                <span style="color:#F0F4F8; font-size:12px;
-                             font-weight:700;">14% p.a.</span>
+            <div style="display:flex;justify-content:space-between;
+                        padding:8px 0;">
+                <span style="color:#64748B;font-size:12px;">Interest Rate</span>
+                <span style="background:#1c1f26;color:#f59e0b;font-size:11px;
+                    font-weight:600;padding:2px 8px;border-radius:20px;
+                    border:1px solid #92400e;">Not Included</span>
+            </div>
+            <div style="color:#475569;font-size:10px;margin-top:8px;
+                        line-height:1.4;">
+                Contact seller for applicable interest rate
+                based on your credit profile.
             </div>
         </div>
         """, unsafe_allow_html=True)
 
-    # Description
     if car.get("description"):
         st.markdown(f"""
         <div style="background:linear-gradient(145deg,#111827,#0b1220);
-            border:1px solid #1e293b; border-radius:12px;
-            padding:20px; margin-top:16px;">
-            <div style="color:#60A5FA; font-size:13px; font-weight:700;
-                        margin-bottom:10px; text-transform:uppercase;
+            border:1px solid #1e293b;border-radius:12px;
+            padding:20px;margin-top:16px;">
+            <div style="color:#60A5FA;font-size:13px;font-weight:700;
+                        margin-bottom:10px;text-transform:uppercase;
                         letter-spacing:0.05em;">Description</div>
-            <div style="color:#E2E8F0; font-size:14px; line-height:1.7;">
+            <div style="color:#E2E8F0;font-size:14px;line-height:1.7;">
                 {car['description']}
             </div>
         </div>
@@ -443,12 +394,9 @@ def _car_detail(car, supabase):
 
 
 def show_car_marketplace(supabase):
-    """Main car marketplace page."""
-
     if "selected_car_id" not in st.session_state:
         st.session_state.selected_car_id = None
 
-    # ── Detail view ──
     if st.session_state.selected_car_id:
         car = get_car_by_id(supabase, st.session_state.selected_car_id)
         if car:
@@ -458,23 +406,18 @@ def show_car_marketplace(supabase):
             st.session_state.selected_car_id = None
         return
 
-    # ── Filters — always visible top row ──
     st.markdown(
         '<div class="section-heading">Find Your Car</div>',
         unsafe_allow_html=True
     )
 
     f1, f2, f3, f4, f5 = st.columns(5)
-
     with f1:
         search_term = st.text_input(
-            "Search",
-            placeholder="Make or model...",
-            key="mp_search",
-            label_visibility="collapsed"
+            "Search", placeholder="Make or model...",
+            key="mp_search", label_visibility="collapsed"
         )
         st.caption("Search")
-
     with f2:
         makes         = ["All Makes"] + get_unique_makes(supabase)
         selected_make = st.selectbox(
@@ -482,36 +425,29 @@ def show_car_marketplace(supabase):
             label_visibility="collapsed"
         )
         st.caption("Make")
-
     with f3:
         fuel_type = st.selectbox(
             "Fuel",
             ["All Fuel", "Petrol", "Diesel", "Hybrid", "Electric"],
-            key="mp_fuel",
-            label_visibility="collapsed"
+            key="mp_fuel", label_visibility="collapsed"
         )
         st.caption("Fuel Type")
-
     with f4:
         transmission = st.selectbox(
             "Transmission",
             ["All Trans.", "Automatic", "Manual", "CVT"],
-            key="mp_trans",
-            label_visibility="collapsed"
+            key="mp_trans", label_visibility="collapsed"
         )
         st.caption("Transmission")
-
     with f5:
         body_type = st.selectbox(
             "Body",
             ["All Types", "Sedan", "SUV", "Hatchback",
              "Pickup", "Wagon", "MPV", "Coupe"],
-            key="mp_body",
-            label_visibility="collapsed"
+            key="mp_body", label_visibility="collapsed"
         )
         st.caption("Body Type")
 
-    # Price and year
     p1, p2 = st.columns(2)
     with p1:
         min_price, max_price = get_price_range(supabase)
@@ -519,12 +455,9 @@ def show_car_marketplace(supabase):
             min_price, max_price = 0, 10_000_000
         price_range = st.slider(
             "Price Range (KES)",
-            min_value=min_price,
-            max_value=max_price,
+            min_value=min_price, max_value=max_price,
             value=(min_price, max_price),
-            step=50_000,
-            format="KES %d",
-            key="mp_price"
+            step=50_000, format="KES %d", key="mp_price"
         )
     with p2:
         min_year, max_year = get_year_range(supabase)
@@ -532,42 +465,31 @@ def show_car_marketplace(supabase):
             min_year -= 1
         year_range = st.slider(
             "Year Range",
-            min_value=min_year,
-            max_value=max_year,
-            value=(min_year, max_year),
-            key="mp_year"
+            min_value=min_year, max_value=max_year,
+            value=(min_year, max_year), key="mp_year"
         )
 
     st.markdown(
-        '<hr style="border-color:#1e293b; margin:12px 0 16px 0;">',
+        '<hr style="border-color:#1e293b;margin:12px 0 16px 0;">',
         unsafe_allow_html=True
     )
 
-    # Build filters
     filters = {
-        "min_price": price_range[0],
-        "max_price": price_range[1],
-        "min_year":  year_range[0],
-        "max_year":  year_range[1],
+        "min_price": price_range[0], "max_price": price_range[1],
+        "min_year":  year_range[0],  "max_year":  year_range[1],
     }
-    if search_term:
-        filters["search_term"] = search_term
-    if selected_make != "All Makes":
-        filters["make"] = selected_make
-    if fuel_type != "All Fuel":
-        filters["fuel_type"] = fuel_type
-    if transmission != "All Trans.":
-        filters["transmission"] = transmission
-    if body_type != "All Types":
-        filters["body_type"] = body_type
+    if search_term:                        filters["search_term"] = search_term
+    if selected_make != "All Makes":       filters["make"]        = selected_make
+    if fuel_type     != "All Fuel":        filters["fuel_type"]   = fuel_type
+    if transmission  != "All Trans.":      filters["transmission"]= transmission
+    if body_type     != "All Types":       filters["body_type"]   = body_type
 
-    # ── Featured section ──
     featured = get_featured_cars(supabase, limit=3)
     if featured and not any(filters.get(k) for k in [
         "search_term", "make", "fuel_type", "transmission", "body_type"
     ]):
         st.markdown("""
-        <div style="color:#F0F4F8; font-size:16px; font-weight:700;
+        <div style="color:#F0F4F8;font-size:16px;font-weight:700;
                     margin-bottom:12px;">⭐ Featured</div>
         """, unsafe_allow_html=True)
         cols = st.columns(3)
@@ -575,15 +497,14 @@ def show_car_marketplace(supabase):
             with cols[i]:
                 _car_card(car, supabase, key_prefix="featured")
         st.markdown(
-            '<hr style="border-color:#1e293b; margin:16px 0;">',
+            '<hr style="border-color:#1e293b;margin:16px 0;">',
             unsafe_allow_html=True
         )
 
-    # ── All listings ──
     cars = get_filtered_cars(supabase, filters)
 
     st.markdown(f"""
-    <div style="color:#94A3B8; font-size:13px; margin-bottom:16px;">
+    <div style="color:#94A3B8;font-size:13px;margin-bottom:16px;">
         Showing <b style="color:#F0F4F8;">{len(cars)}</b>
         vehicle{"s" if len(cars) != 1 else ""}
     </div>
@@ -592,12 +513,12 @@ def show_car_marketplace(supabase):
     if not cars:
         st.markdown("""
         <div style="background:linear-gradient(145deg,#111827,#0b1220);
-            border:1px dashed #1e293b; border-radius:16px;
-            padding:48px; text-align:center; margin-top:20px;">
-            <div style="font-size:40px; margin-bottom:12px;">🔍</div>
-            <div style="color:#F0F4F8; font-size:18px; font-weight:600;
+            border:1px dashed #1e293b;border-radius:16px;
+            padding:48px;text-align:center;margin-top:20px;">
+            <div style="font-size:40px;margin-bottom:12px;">🔍</div>
+            <div style="color:#F0F4F8;font-size:18px;font-weight:600;
                         margin-bottom:8px;">No cars found</div>
-            <div style="color:#94A3B8; font-size:14px;">
+            <div style="color:#94A3B8;font-size:14px;">
                 Try adjusting your filters.</div>
         </div>
         """, unsafe_allow_html=True)
