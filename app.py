@@ -117,7 +117,8 @@ else:
                 "About"
             ]
 
-        page = st.radio("", menu, label_visibility="collapsed")
+        # REPLACED: Added a proper label "Navigation Menu"
+        page = st.radio("Navigation Menu", menu, label_visibility="collapsed")
 
         st.markdown(
             '<hr style="border-color:#1f2a36;">',
