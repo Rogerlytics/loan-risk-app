@@ -59,11 +59,11 @@ def show_contact(supabase):
         70% {{ box-shadow:0 0 0 6px rgba(34,197,94,0); }}
         100%{{ box-shadow:0 0 0 0 rgba(34,197,94,0); }}
     }}
-    .live-bar {{ display:flex; align-items:center; gap:10px;
-                 padding:4px 0; margin-bottom:6px; }}
-    .live-dot  {{ width:10px; height:10px; border-radius:50%;
-                  background:{dot_col}; {pulse} flex-shrink:0; }}
-    .live-label{{ color:{dot_col}; font-size:13px; font-weight:600; }}
+    .live-bar {{ display:flex;align-items:center;gap:10px;
+                 padding:4px 0;margin-bottom:6px; }}
+    .live-dot  {{ width:10px;height:10px;border-radius:50%;
+                  background:{dot_col};{pulse}flex-shrink:0; }}
+    .live-label{{ color:{dot_col};font-size:13px;font-weight:600; }}
     </style>
     <div class="live-bar">
         <div class="live-dot"></div>
@@ -84,7 +84,7 @@ def show_contact(supabase):
 
     # Quick actions
     st.markdown(
-        '<div style="color:#94A3B8; font-size:12px; '
+        '<div style="color:#94A3B8;font-size:12px;'
         'margin:10px 0 6px 0;">Quick Actions</div>',
         unsafe_allow_html=True
     )
@@ -101,109 +101,99 @@ def show_contact(supabase):
                 st.session_state.draft_message = draft
                 st.rerun()
 
-    # ── Professional chat window ──
+    # ── Chat window CSS — key fix: text-align:left, width fills bubble ──
+    chat_css = """
+    * { box-sizing:border-box; margin:0; padding:0; }
+    html,body { height:100%; background:#0B1220;
+                font-family:"Inter",-apple-system,sans-serif; }
+    .chat-container { display:flex; flex-direction:column;
+        height:500px; background:#0B1220;
+        border:1px solid #1e293b; border-radius:16px;
+        overflow:hidden; }
+    .chat-header { padding:12px 16px; background:#0f1e30;
+        border-bottom:1px solid #1e293b;
+        display:flex; align-items:center; gap:10px; }
+    .chat-avatar { width:36px; height:36px; border-radius:50%;
+        background:#2563eb; display:flex; align-items:center;
+        justify-content:center; font-size:16px; flex-shrink:0; }
+    .chat-header-name { color:#F0F4F8; font-size:14px; font-weight:600; }
+    .chat-header-status { color:#22c55e; font-size:12px; }
+    .chat-messages { flex:1; overflow-y:auto; padding:16px;
+        display:flex; flex-direction:column; gap:10px;
+        scroll-behavior:smooth; }
+    .chat-messages::-webkit-scrollbar { width:4px; }
+    .chat-messages::-webkit-scrollbar-track { background:transparent; }
+    .chat-messages::-webkit-scrollbar-thumb { background:#334155;
+        border-radius:4px; }
+    .row-user  { display:flex; justify-content:flex-end; }
+    .row-admin { display:flex; justify-content:flex-start; }
+    .bubble-wrap { display:flex; flex-direction:column;
+                   max-width:78%; }
+    .row-user  .bubble-wrap { align-items:flex-end; }
+    .row-admin .bubble-wrap { align-items:flex-start; }
+    .bubble { padding:10px 14px; border-radius:18px;
+              font-size:14px; line-height:1.55;
+              word-break:break-word; word-wrap:break-word;
+              white-space:pre-wrap;
+              text-align:left;
+              width:100%; }
+    .bubble-user  { background:#2563eb; color:#fff;
+                    border-bottom-right-radius:4px; }
+    .bubble-admin { background:#1e293b; color:#F0F4F8;
+                    border-bottom-left-radius:4px;
+                    border:1px solid #334155; }
+    .meta { font-size:11px; color:#64748B;
+            margin-top:3px; padding:0 4px; }
+    .support-label { font-size:11px; color:#60A5FA;
+        font-weight:600; margin-bottom:3px; padding:0 4px; }
+    .empty-state { display:flex; flex-direction:column;
+        align-items:center; justify-content:center;
+        height:100%; color:#64748B; font-size:14px;
+        text-align:center; padding:20px; }
+    """
+
     chat_rows = ""
     if not msgs:
-        chat_rows = '''
-        <div style="display:flex; flex-direction:column; align-items:center;
-                    justify-content:center; height:100%; padding:40px 20px;">
-            <div style="font-size:40px; margin-bottom:12px;">💬</div>
-            <div style="color:#F0F4F8; font-size:16px; font-weight:600;
+        chat_rows = """
+        <div class="empty-state">
+            <div style="font-size:36px;margin-bottom:10px;">💬</div>
+            <div style="color:#F0F4F8;font-size:15px;font-weight:600;
                         margin-bottom:6px;">No messages yet</div>
-            <div style="color:#64748B; font-size:13px; text-align:center;">
-                Send a message below to start the conversation.</div>
-        </div>'''
+            <div>Send a message below to get started.</div>
+        </div>"""
     else:
         for msg in msgs:
             ts           = relative_time(msg.get('timestamp', ''))
             safe_message = msg['message']
-            # Sender row (right aligned)
-            chat_rows += f'''
-            <div style="display:flex; justify-content:flex-end;
-                        margin-bottom:4px; padding:0 16px;">
-                <div style="max-width:80%;">
-                    <div style="background:#2563eb; color:#fff;
-                                padding:10px 14px; border-radius:18px
-                                18px 4px 18px; font-size:14px;
-                                line-height:1.5; word-break:break-word;
-                                white-space:pre-wrap;">
-                        {safe_message}
-                    </div>
-                    <div style="text-align:right; font-size:11px;
-                                color:#64748B; margin-top:3px;
-                                padding-right:4px;">{ts}</div>
+            chat_rows += f"""
+            <div class="row-user">
+                <div class="bubble-wrap">
+                    <div class="bubble bubble-user">{safe_message}</div>
+                    <div class="meta" style="text-align:right;">{ts}</div>
                 </div>
-            </div>'''
+            </div>"""
             if msg.get('reply'):
                 reply_ts   = relative_time(msg.get('replied_at', ''))
                 safe_reply = msg['reply']
-                # Support row (left aligned) – with compact pill label
-                chat_rows += f'''
-            <div style="display:flex; justify-content:flex-start;
-                        margin-bottom:4px; padding:0 16px;">
-                <div style="max-width:80%;">
-                    <div style="display:inline-block; background:#1e3a8a;
-                                color:#60A5FA; font-size:11px;
-                                font-weight:600; padding:2px 10px;
-                                border-radius:999px; margin-bottom:6px;
-                                border:1px solid #2563eb;">Support</div>
-                    <div style="background:#1e293b; color:#F0F4F8;
-                                padding:10px 14px; border-radius:18px
-                                18px 18px 4px; font-size:14px;
-                                line-height:1.5; word-break:break-word;
-                                white-space:pre-wrap; border:1px solid #334155;">
-                        {safe_reply}
-                    </div>
-                    <div style="text-align:left; font-size:11px;
-                                color:#64748B; margin-top:3px;
-                                padding-left:4px;">{reply_ts}</div>
+                chat_rows += f"""
+            <div class="row-admin">
+                <div class="bubble-wrap">
+                    <div class="support-label">Support</div>
+                    <div class="bubble bubble-admin">{safe_reply}</div>
+                    <div class="meta">{reply_ts}</div>
                 </div>
-            </div>'''
+            </div>"""
 
     chat_html = f"""
     <!DOCTYPE html><html><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <style>
-    * {{ box-sizing:border-box; margin:0; padding:0; }}
-    html, body {{ height:100%; background:#0B1220;
-                  font-family:"Inter",-apple-system,sans-serif; }}
-    .chat-container {{
-        display:flex; flex-direction:column;
-        height:500px; background:#0B1220;
-        border:1px solid #1e293b; border-radius:16px;
-        overflow:hidden;
-    }}
-    .chat-header {{
-        padding:12px 16px;
-        background:#0f1e30;
-        border-bottom:1px solid #1e293b;
-        display:flex; align-items:center; gap:10px;
-    }}
-    .chat-avatar {{
-        width:36px; height:36px; border-radius:50%;
-        background:#2563eb; display:flex; align-items:center;
-        justify-content:center; font-size:16px; flex-shrink:0;
-    }}
-    .chat-header-info {{ flex:1; }}
-    .chat-header-name {{ color:#F0F4F8; font-size:14px; font-weight:600; }}
-    .chat-header-status {{ color:#22c55e; font-size:12px; }}
-    .chat-messages {{
-        flex:1; overflow-y:auto; padding:16px 0;
-        display:flex; flex-direction:column; gap:8px;
-        scroll-behavior:smooth;
-    }}
-    .chat-messages::-webkit-scrollbar {{ width:4px; }}
-    .chat-messages::-webkit-scrollbar-track {{ background:transparent; }}
-    .chat-messages::-webkit-scrollbar-thumb {{
-        background:#334155; border-radius:4px;
-    }}
-    </style>
+    <style>{chat_css}</style>
     </head><body>
     <div class="chat-container">
         <div class="chat-header">
             <div class="chat-avatar">🎧</div>
-            <div class="chat-header-info">
+            <div>
                 <div class="chat-header-name">Support Team</div>
                 <div class="chat-header-status">● Online</div>
             </div>
@@ -222,8 +212,9 @@ def show_contact(supabase):
 
     components.html(chat_html, height=520, scrolling=False)
 
-    # Message input
-    st.markdown('<div class="chat-input-container">', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="chat-input-container">', unsafe_allow_html=True
+    )
     with st.form("chat_form", clear_on_submit=True):
         col_input, col_button = st.columns([5, 1])
         with col_input:
@@ -256,7 +247,6 @@ def show_contact(supabase):
                 st.error(str(e))
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # ── Smart polling ──
     if st.session_state.auto_refresh:
         time.sleep(2)
         current_count = get_message_count(supabase, user_id)
