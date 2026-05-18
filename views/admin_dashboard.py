@@ -19,113 +19,91 @@ from utils.helpers import relative_time
 from config.settings import require_role
 
 
-def _empty_state(icon: str, title: str, subtitle: str):
-    st.markdown(f"""
-    <div style="background:linear-gradient(145deg,#111827,#0b1220);
-        border:1px dashed #1f2a36; border-radius:16px;
-        padding:48px 24px; text-align:center; margin-top:12px;">
-        <div style="font-size:40px; margin-bottom:12px;">{icon}</div>
-        <div style="color:#F0F4F8; font-size:18px; font-weight:600;
-                    margin-bottom:8px;">{title}</div>
-        <div style="color:#94A3B8; font-size:14px;">{subtitle}</div>
-    </div>
-    """, unsafe_allow_html=True)
+# ── Shared chat CSS — text-align:left, bubbles fill width ──
+CHAT_CSS = """
+* { box-sizing:border-box; margin:0; padding:0; }
+html,body { height:100%; background:#0e1117;
+            font-family:"Inter",-apple-system,sans-serif; }
+.chat-messages { overflow-y:auto; padding:16px;
+    display:flex; flex-direction:column; gap:10px;
+    scroll-behavior:smooth; height:100%; }
+.chat-messages::-webkit-scrollbar { width:4px; }
+.chat-messages::-webkit-scrollbar-track { background:transparent; }
+.chat-messages::-webkit-scrollbar-thumb { background:#334155;
+    border-radius:4px; }
+.row-user  { display:flex; justify-content:flex-end; }
+.row-admin { display:flex; justify-content:flex-start; }
+.bubble-wrap { display:flex; flex-direction:column; max-width:78%; }
+.row-user  .bubble-wrap { align-items:flex-end; }
+.row-admin .bubble-wrap { align-items:flex-start; }
+.bubble { padding:10px 14px; border-radius:18px;
+          font-size:14px; line-height:1.55;
+          word-break:break-word; word-wrap:break-word;
+          white-space:pre-wrap;
+          text-align:left;
+          width:100%; }
+.bubble-user  { background:#2563eb; color:#fff;
+                border-bottom-right-radius:4px; }
+.bubble-admin { background:#1e293b; color:#F0F4F8;
+                border-bottom-left-radius:4px;
+                border:1px solid #334155; }
+.meta { font-size:11px; color:#64748B;
+        margin-top:3px; padding:0 4px; }
+.admin-label { font-size:11px; color:#60A5FA; font-weight:600;
+    margin-bottom:3px; padding:0 4px; }
+.receipt { font-size:11px; color:#64748B; margin-left:6px; }
+.empty-state { display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    height:200px; color:#64748B; text-align:center; }
+"""
 
 
-def _build_chat_html(messages, height=480):
-    """Build a professional chat window HTML string with compact pill labels."""
-    chat_rows = ""
+def _build_chat_html(messages, height=440):
+    rows = ""
     if not messages:
-        chat_rows = '''
-        <div style="display:flex; flex-direction:column;
-                    align-items:center; justify-content:center;
-                    height:100%; padding:40px;">
-            <div style="font-size:36px; margin-bottom:10px;">📭</div>
-            <div style="color:#94A3B8; font-size:14px;">
-                No messages yet.</div>
-        </div>'''
+        rows = """
+        <div class="empty-state">
+            <div style="font-size:32px;margin-bottom:8px;">📭</div>
+            <div>No messages yet.</div>
+        </div>"""
     else:
         for msg in messages:
             ts           = relative_time(msg.get('timestamp', ''))
             safe_message = msg['message']
-            read_status  = "✓✓" if msg.get('read_by_customer') else "✓"
-
-            # User message (right)
-            chat_rows += f'''
-            <div style="display:flex; justify-content:flex-end;
-                        margin-bottom:4px; padding:0 16px;">
-                <div style="max-width:80%;">
-                    <div style="background:#2563eb; color:#fff;
-                                padding:10px 14px; border-radius:18px
-                                18px 4px 18px; font-size:14px;
-                                line-height:1.5; word-break:break-word;
-                                white-space:pre-wrap;">
-                        {safe_message}
-                    </div>
-                    <div style="text-align:right; font-size:11px;
-                                color:#64748B; margin-top:3px;
-                                padding-right:4px;">
-                        {ts} {read_status}
+            receipt      = "✓✓" if msg.get('read_by_customer') else "✓"
+            rows += f"""
+            <div class="row-user">
+                <div class="bubble-wrap">
+                    <div class="bubble bubble-user">{safe_message}</div>
+                    <div class="meta" style="text-align:right;">
+                        {ts}
+                        <span class="receipt">{receipt}</span>
                     </div>
                 </div>
-            </div>'''
-
+            </div>"""
             if msg.get('reply'):
                 reply_ts   = relative_time(msg.get('replied_at', ''))
                 safe_reply = msg['reply']
-                # Admin reply (left) with compact pill label
-                chat_rows += f'''
-            <div style="display:flex; justify-content:flex-start;
-                        margin-bottom:4px; padding:0 16px;">
-                <div style="max-width:80%;">
-                    <div style="display:inline-block; background:#1e3a8a;
-                                color:#60A5FA; font-size:11px;
-                                font-weight:600; padding:2px 10px;
-                                border-radius:999px; margin-bottom:6px;
-                                border:1px solid #2563eb;">You (Admin)</div>
-                    <div style="background:#1e293b; color:#F0F4F8;
-                                padding:10px 14px; border-radius:18px
-                                18px 18px 4px; font-size:14px;
-                                line-height:1.5; word-break:break-word;
-                                white-space:pre-wrap;
-                                border:1px solid #334155;">
-                        {safe_reply}
-                    </div>
-                    <div style="text-align:left; font-size:11px;
-                                color:#64748B; margin-top:3px;
-                                padding-left:4px;">{reply_ts}</div>
+                rows += f"""
+            <div class="row-admin">
+                <div class="bubble-wrap">
+                    <div class="admin-label">You (Admin)</div>
+                    <div class="bubble bubble-admin">{safe_reply}</div>
+                    <div class="meta">{reply_ts}</div>
                 </div>
-            </div>'''
+            </div>"""
 
     return f"""
     <!DOCTYPE html><html><head>
     <meta charset="UTF-8">
     <style>
-    * {{ box-sizing:border-box; margin:0; padding:0; }}
-    html, body {{ height:100%; background:#0B1220;
-                  font-family:"Inter",-apple-system,sans-serif; }}
-    .chat-container {{
-        display:flex; flex-direction:column; height:{height}px;
-        background:#0B1220; border:1px solid #1e293b;
-        border-radius:16px; overflow:hidden;
-    }}
-    .chat-messages {{
-        flex:1; overflow-y:auto; padding:16px 0;
-        display:flex; flex-direction:column; gap:8px;
-        scroll-behavior:smooth;
-    }}
-    .chat-messages::-webkit-scrollbar {{ width:4px; }}
-    .chat-messages::-webkit-scrollbar-track {{ background:transparent; }}
-    .chat-messages::-webkit-scrollbar-thumb {{
-        background:#334155; border-radius:4px;
-    }}
+    {CHAT_CSS}
+    body {{ height:{height}px; overflow:hidden; }}
     </style>
     </head><body>
-    <div class="chat-container">
-        <div class="chat-messages" id="chatMessages">
-            {chat_rows}
-            <div id="chatEnd"></div>
-        </div>
+    <div class="chat-messages" id="chatMessages">
+        {rows}
+        <div id="chatEnd"></div>
     </div>
     <script>
         const el = document.getElementById("chatEnd");
@@ -133,6 +111,19 @@ def _build_chat_html(messages, height=480):
     </script>
     </body></html>
     """
+
+
+def _empty_state(icon, title, subtitle):
+    st.markdown(f"""
+    <div style="background:linear-gradient(145deg,#111827,#0b1220);
+        border:1px dashed #1f2a36;border-radius:16px;
+        padding:48px 24px;text-align:center;margin-top:12px;">
+        <div style="font-size:40px;margin-bottom:12px;">{icon}</div>
+        <div style="color:#F0F4F8;font-size:18px;font-weight:600;
+                    margin-bottom:8px;">{title}</div>
+        <div style="color:#94A3B8;font-size:14px;">{subtitle}</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 def show_admin_dashboard(supabase):
@@ -154,8 +145,6 @@ def show_admin_dashboard(supabase):
     # TAB 1 — Conversations
     # ════════════════════════════
     with tab1:
-
-        # ── Control bar ──
         if st.session_state.auto_refresh:
             dot_col = "#22c55e"
             dot_txt = "Live"
@@ -174,12 +163,11 @@ def show_admin_dashboard(supabase):
             70% {{ box-shadow:0 0 0 6px rgba(34,197,94,0); }}
             100%{{ box-shadow:0 0 0 0 rgba(34,197,94,0); }}
         }}
-        .admin-live-bar {{ display:flex; align-items:center; gap:10px;
-                           padding:4px 0; margin-bottom:6px; }}
-        .admin-live-dot {{ width:10px; height:10px; border-radius:50%;
-                           background:{dot_col}; {pulse} flex-shrink:0; }}
-        .admin-live-lbl {{ color:{dot_col}; font-size:13px;
-                           font-weight:600; }}
+        .admin-live-bar {{ display:flex;align-items:center;gap:10px;
+                           padding:4px 0;margin-bottom:6px; }}
+        .admin-live-dot {{ width:10px;height:10px;border-radius:50%;
+                           background:{dot_col};{pulse}flex-shrink:0; }}
+        .admin-live-lbl {{ color:{dot_col};font-size:13px;font-weight:600; }}
         </style>
         <div class="admin-live-bar">
             <div class="admin-live-dot"></div>
@@ -205,10 +193,8 @@ def show_admin_dashboard(supabase):
         st.session_state.admin_last_count = len(data)
 
         if not data:
-            _empty_state(
-                "💬", "No Conversations Yet",
-                "When users send messages they will appear here."
-            )
+            _empty_state("💬", "No Conversations Yet",
+                         "When users send messages they will appear here.")
         else:
             users_df     = pd.DataFrame(data)
             unique_users = users_df[
@@ -218,12 +204,11 @@ def show_admin_dashboard(supabase):
 
             col_users, col_chat = st.columns([1, 2])
 
-            # ── User list ──
             with col_users:
                 st.markdown(
-                    '<div style="color:#60A5FA; font-weight:600; '
-                    'font-size:13px; margin-bottom:10px; '
-                    'text-transform:uppercase; letter-spacing:0.05em;">'
+                    '<div style="color:#60A5FA;font-weight:600;'
+                    'font-size:13px;margin-bottom:10px;'
+                    'text-transform:uppercase;letter-spacing:0.05em;">'
                     'Conversations</div>',
                     unsafe_allow_html=True
                 )
@@ -240,31 +225,32 @@ def show_admin_dashboard(supabase):
                     is_selected = (
                         st.session_state.selected_user_id == usr['user_id']
                     )
-                    bg = "#1e3a5f" if is_selected else "#0f1e30"
+                    bg     = "#1e3a5f" if is_selected else "#0f1e30"
                     border = "#2563eb" if is_selected else "#1e293b"
 
                     unread_badge = (
-                        f'<span style="background:#ef4444; color:white; '
-                        f'border-radius:50%; padding:1px 6px; '
-                        f'font-size:10px; margin-left:6px;">'
+                        f'<span style="background:#ef4444;color:white;'
+                        f'border-radius:50%;padding:1px 6px;'
+                        f'font-size:10px;margin-left:6px;">'
                         f'{unread}</span>'
                     ) if unread > 0 else ""
 
-                    last_msg = user_msgs[-1]['message'][:30] + "..." \
-                        if user_msgs and len(user_msgs[-1]['message']) > 30 \
-                        else (user_msgs[-1]['message'] if user_msgs else "")
+                    last_msg = ""
+                    if user_msgs:
+                        raw = user_msgs[-1]['message']
+                        last_msg = raw[:32] + "..." if len(raw) > 32 else raw
 
                     st.markdown(f"""
-                    <div style="background:{bg}; border:1px solid {border};
-                        border-radius:12px; padding:10px 14px;
-                        margin-bottom:6px; cursor:pointer;">
-                        <div style="color:#F0F4F8; font-size:13px;
+                    <div style="background:{bg};border:1px solid {border};
+                        border-radius:12px;padding:10px 14px;
+                        margin-bottom:6px;">
+                        <div style="color:#F0F4F8;font-size:13px;
                                     font-weight:600;">
                             {usr['email']}{unread_badge}
                         </div>
-                        <div style="color:#64748B; font-size:12px;
-                                    margin-top:2px; white-space:nowrap;
-                                    overflow:hidden; text-overflow:ellipsis;">
+                        <div style="color:#64748B;font-size:12px;
+                            margin-top:2px;white-space:nowrap;
+                            overflow:hidden;text-overflow:ellipsis;">
                             {last_msg}
                         </div>
                     </div>
@@ -278,17 +264,14 @@ def show_admin_dashboard(supabase):
                         st.session_state.selected_user_id = usr['user_id']
                         st.rerun()
 
-            # ── Chat panel ──
             with col_chat:
                 if st.session_state.selected_user_id is None and user_list:
                     st.session_state.selected_user_id = \
                         user_list[0]['user_id']
 
                 if not st.session_state.selected_user_id:
-                    _empty_state(
-                        "👈", "No Conversation Selected",
-                        "Select a user from the left."
-                    )
+                    _empty_state("👈", "No Conversation Selected",
+                                 "Select a user from the left.")
                 else:
                     user_msgs = [
                         m for m in data
@@ -302,23 +285,19 @@ def show_admin_dashboard(supabase):
                         "User"
                     )
 
-                    # Chat header
                     st.markdown(f"""
-                    <div style="background:#0f1e30; border:1px solid #1e293b;
-                        border-radius:12px 12px 0 0; padding:12px 16px;
-                        display:flex; align-items:center; gap:10px;
-                        margin-bottom:0;">
-                        <div style="width:36px; height:36px;
-                            border-radius:50%; background:#2563eb;
-                            display:flex; align-items:center;
-                            justify-content:center; font-size:16px;
-                            flex-shrink:0;">👤</div>
+                    <div style="background:#0f1e30;border:1px solid #1e293b;
+                        border-radius:12px 12px 0 0;padding:12px 16px;
+                        display:flex;align-items:center;gap:10px;">
+                        <div style="width:36px;height:36px;border-radius:50%;
+                            background:#2563eb;display:flex;
+                            align-items:center;justify-content:center;
+                            font-size:16px;flex-shrink:0;">👤</div>
                         <div>
-                            <div style="color:#F0F4F8; font-size:14px;
+                            <div style="color:#F0F4F8;font-size:14px;
                                         font-weight:600;">
-                                {selected_email}
-                            </div>
-                            <div style="color:#64748B; font-size:12px;">
+                                {selected_email}</div>
+                            <div style="color:#64748B;font-size:12px;">
                                 {len(user_msgs)} message
                                 {"s" if len(user_msgs) != 1 else ""}
                             </div>
@@ -327,17 +306,14 @@ def show_admin_dashboard(supabase):
                     """, unsafe_allow_html=True)
 
                     if not user_msgs:
-                        _empty_state(
-                            "📭", "No Messages Yet",
-                            "This user has not sent any messages yet."
-                        )
+                        _empty_state("📭", "No Messages Yet",
+                                     "This user has not sent any messages.")
                     else:
                         components.html(
-                            _build_chat_html(user_msgs, height=430),
-                            height=450, scrolling=False
+                            _build_chat_html(user_msgs, height=440),
+                            height=460, scrolling=False
                         )
 
-                    # Reply form
                     with st.form(
                         key=f"reply_{st.session_state.selected_user_id}",
                         clear_on_submit=True
@@ -345,7 +321,7 @@ def show_admin_dashboard(supabase):
                         col_i, col_b = st.columns([5, 1])
                         with col_i:
                             reply_text = st.text_input(
-                                "",
+                                "Reply",
                                 placeholder="Type a reply...",
                                 label_visibility="collapsed"
                             )
@@ -382,7 +358,6 @@ def show_admin_dashboard(supabase):
                                         "All messages have been replied to."
                                     )
 
-            # Stats
             st.markdown("---")
             col_m1, col_m2, col_m3 = st.columns(3)
             col_m1.metric("Total Messages", len(data))
@@ -412,13 +387,9 @@ def show_admin_dashboard(supabase):
                 )
                 st.plotly_chart(fig, use_container_width=True)
             else:
-                _empty_state(
-                    "📈", "No Chart Data Yet",
-                    "Message activity will appear here once "
-                    "users start chatting."
-                )
+                _empty_state("📈", "No Chart Data Yet",
+                             "Message activity will appear here.")
 
-        # Smart polling
         if st.session_state.auto_refresh:
             time.sleep(2)
             current_count = get_total_message_count(supabase)
@@ -437,10 +408,9 @@ def show_admin_dashboard(supabase):
             unsafe_allow_html=True
         )
         st.markdown(
-            '<div style="color:#94A3B8; font-size:13px; '
-            'margin-bottom:20px;">Promote users to admin or demote '
-            'admins back to user. You cannot change your own role.'
-            '</div>',
+            '<div style="color:#94A3B8;font-size:13px;margin-bottom:20px;">'
+            'Promote users to admin or demote admins back to user. '
+            'You cannot change your own role.</div>',
             unsafe_allow_html=True
         )
 
@@ -469,27 +439,27 @@ def show_admin_dashboard(supabase):
                 with col_email:
                     self_label = " (you)" if is_self else ""
                     st.markdown(
-                        f'<div style="color:#F0F4F8; font-size:14px; '
+                        f'<div style="color:#F0F4F8;font-size:14px;'
                         f'padding-top:8px;">{email}'
-                        f'<span style="color:#64748B; font-size:12px;">'
+                        f'<span style="color:#64748B;font-size:12px;">'
                         f'{self_label}</span></div>',
                         unsafe_allow_html=True
                     )
                 with col_badge:
                     st.markdown(
-                        f'<div style="background:{badge_bg}; '
-                        f'color:{badge_fg}; border:1px solid {badge_border};'
-                        f'border-radius:20px; padding:6px 12px; '
-                        f'font-size:11px; font-weight:700; '
-                        f'text-transform:uppercase; text-align:center; '
+                        f'<div style="background:{badge_bg};'
+                        f'color:{badge_fg};border:1px solid {badge_border};'
+                        f'border-radius:20px;padding:6px 12px;'
+                        f'font-size:11px;font-weight:700;'
+                        f'text-transform:uppercase;text-align:center;'
                         f'margin-top:4px;">{role}</div>',
                         unsafe_allow_html=True
                     )
                 with col_action:
                     if is_self:
                         st.markdown(
-                            '<div style="color:#64748B; font-size:12px; '
-                            'padding-top:10px; text-align:center;">'
+                            '<div style="color:#64748B;font-size:12px;'
+                            'padding-top:10px;text-align:center;">'
                             'Your account</div>',
                             unsafe_allow_html=True
                         )
@@ -522,7 +492,7 @@ def show_admin_dashboard(supabase):
                                 st.error(message)
 
                 st.markdown(
-                    '<hr style="border-color:#1f2a36; margin:8px 0;">',
+                    '<hr style="border-color:#1f2a36;margin:8px 0;">',
                     unsafe_allow_html=True
                 )
 
@@ -562,23 +532,23 @@ def show_admin_dashboard(supabase):
                 st.markdown(f"""
                 <div style="background:linear-gradient(
                         145deg,#111827,#0b1220);
-                    border:1px solid #1f2a36; border-radius:12px;
-                    padding:12px 16px; margin-bottom:8px;
-                    display:flex; align-items:center; gap:12px;">
-                    <div style="background:{bg}; color:{fg};
-                        border-radius:20px; padding:3px 10px;
-                        font-size:11px; font-weight:700;
-                        text-transform:uppercase; letter-spacing:0.5px;
-                        white-space:nowrap; min-width:140px;
+                    border:1px solid #1f2a36;border-radius:12px;
+                    padding:12px 16px;margin-bottom:8px;
+                    display:flex;align-items:center;gap:12px;">
+                    <div style="background:{bg};color:{fg};
+                        border-radius:20px;padding:3px 10px;
+                        font-size:11px;font-weight:700;
+                        text-transform:uppercase;letter-spacing:0.5px;
+                        white-space:nowrap;min-width:140px;
                         text-align:center;">
                         {action.replace("_", " ")}</div>
                     <div style="flex:1;">
-                        <div style="color:#F0F4F8; font-size:13px;
+                        <div style="color:#F0F4F8;font-size:13px;
                             font-weight:600;">{email}</div>
-                        <div style="color:#94A3B8; font-size:12px;">
+                        <div style="color:#94A3B8;font-size:12px;">
                             {details}</div>
                     </div>
-                    <div style="color:#64748B; font-size:11px;
+                    <div style="color:#64748B;font-size:11px;
                         white-space:nowrap;">{ts}</div>
                 </div>
                 """, unsafe_allow_html=True)
