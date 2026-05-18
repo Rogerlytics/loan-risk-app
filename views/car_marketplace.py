@@ -110,7 +110,8 @@ def _financing_panel(car: dict):
             border-radius:16px;
             padding:20px 22px;
             margin-bottom:12px;">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;gap:10px;
+                        margin-bottom:14px;">
                 <div style="background:rgba(96,165,250,0.2);
                     border:1px solid #60a5fa;border-radius:10px;
                     padding:6px 10px;font-size:20px;">💳</div>
@@ -133,36 +134,33 @@ def _financing_panel(car: dict):
                     padding:12px;text-align:center;">
                     <div style="color:#93c5fd;font-size:10px;
                         text-transform:uppercase;margin-bottom:4px;">
-                        Deposit (20%)
-                    </div>
-                    <div style="color:#F0F4F8;font-size:16px;font-weight:800;">
-                        {dep}
-                    </div>
+                        Deposit (20%)</div>
+                    <div style="color:#F0F4F8;font-size:15px;
+                        font-weight:800;">{dep}</div>
                 </div>
                 <div style="background:rgba(0,0,0,0.25);border-radius:10px;
                     padding:12px;text-align:center;
                     border:1px solid rgba(96,165,250,0.3);">
                     <div style="color:#93c5fd;font-size:10px;
                         text-transform:uppercase;margin-bottom:4px;">
-                        Monthly (48m)
-                    </div>
-                    <div style="color:#60a5fa;font-size:16px;font-weight:800;">
-                        {monthly}
-                    </div>
+                        Monthly (48m)</div>
+                    <div style="color:#60a5fa;font-size:15px;
+                        font-weight:800;">{monthly}</div>
                 </div>
                 <div style="background:rgba(0,0,0,0.25);border-radius:10px;
                     padding:12px;text-align:center;">
                     <div style="color:#93c5fd;font-size:10px;
-                        text-transform:uppercase;margin-bottom:4px;">Daily</div>
-                    <div style="color:#F0F4F8;font-size:16px;font-weight:800;">
-                        {daily}
-                    </div>
+                        text-transform:uppercase;margin-bottom:4px;">
+                        Daily</div>
+                    <div style="color:#F0F4F8;font-size:15px;
+                        font-weight:800;">{daily}</div>
                 </div>
             </div>
-            <div style="color:rgba(147,197,253,0.7);font-size:11px;line-height:1.5;">
+            <div style="color:rgba(147,197,253,0.7);font-size:11px;
+                        line-height:1.5;">
                 Indicative figures based on 20% deposit over 48 months.
-                Interest rate not included — final rates subject to credit approval.
-                Contact seller for a personalised financing quote.
+                Interest rate not included — final rates subject to
+                credit approval. Contact seller for a personalised quote.
             </div>
         </div>
         <div style="
@@ -180,35 +178,30 @@ def _financing_panel(car: dict):
                         margin-bottom:4px;">Verified {seller}</div>
                     <div style="color:#F0F4F8;font-size:15px;font-weight:700;
                         margin-bottom:8px;">
-                        Sold by a Reputable Dealer in {loc}
-                    </div>
+                        Sold by a Reputable Dealer in {loc}</div>
                     <div style="display:flex;flex-wrap:wrap;gap:8px;
                                 margin-bottom:8px;">
                         <span style="background:rgba(34,197,94,0.1);
                             color:#86efac;font-size:11px;padding:3px 10px;
                             border-radius:20px;border:1px solid #16a34a;">
-                            ✓ Verified Listing
-                        </span>
+                            ✓ Verified Listing</span>
                         <span style="background:rgba(34,197,94,0.1);
                             color:#86efac;font-size:11px;padding:3px 10px;
                             border-radius:20px;border:1px solid #16a34a;">
-                            ✓ Genuine Mileage
-                        </span>
+                            ✓ Genuine Mileage</span>
                         <span style="background:rgba(34,197,94,0.1);
                             color:#86efac;font-size:11px;padding:3px 10px;
                             border-radius:20px;border:1px solid #16a34a;">
-                            ✓ Clean History
-                        </span>
+                            ✓ Clean History</span>
                         <span style="background:rgba(34,197,94,0.1);
                             color:#86efac;font-size:11px;padding:3px 10px;
                             border-radius:20px;border:1px solid #16a34a;">
-                            ✓ Financing Assisted
-                        </span>
+                            ✓ Financing Assisted</span>
                     </div>
                     <div style="color:#86efac;font-size:12px;line-height:1.6;">
-                        This vehicle is registered with a trusted dealership partner.
-                        Our dealers are thoroughly vetted to ensure every listing
-                        meets our quality standards.
+                        This vehicle is registered with a trusted dealership
+                        partner. Our dealers are thoroughly vetted to ensure
+                        every listing meets our quality standards.
                         <b style="color:#4ade80;">Contact the seller</b>
                         below for a test drive, inspection report, or
                         tailored financing quote.
@@ -284,6 +277,22 @@ def _car_detail(car, supabase):
         </div>
         """, unsafe_allow_html=True)
 
+        # ── Description moved here — below AI valuation ──
+        if car.get("description"):
+            st.markdown(f"""
+            <div style="background:linear-gradient(145deg,#111827,#0b1220);
+                border:1px solid #1e293b;border-radius:12px;
+                padding:18px 20px;margin-top:12px;">
+                <div style="color:#60A5FA;font-size:12px;font-weight:700;
+                    text-transform:uppercase;letter-spacing:0.06em;
+                    margin-bottom:10px;">About This Vehicle</div>
+                <div style="color:#CBD5E1;font-size:14px;line-height:1.75;
+                            text-align:left;">
+                    {car['description']}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
         _financing_panel(car)
 
     with col_info:
@@ -329,12 +338,10 @@ def _car_detail(car, supabase):
                 f"Hi, I'm interested in the {car['year']} "
                 f"{car['make']} {car['model']} listed at "
                 f"KES {price:,}. Is it still available? "
-                f"I'd also like to know more about the "
-                f"financing options available."
+                f"I'd also like to know about the financing options."
             )
             st.success(
-                "Message drafted with financing inquiry! "
-                "Go to the Contact page to send it."
+                "Message drafted! Go to the Contact page to send it."
             )
 
         repay = calculate_repayment(price)
@@ -347,13 +354,15 @@ def _car_detail(car, supabase):
                 margin-bottom:12px;">Quick Finance Summary</div>
             <div style="display:flex;justify-content:space-between;
                         padding:6px 0;border-bottom:1px solid #1e293b;">
-                <span style="color:#64748B;font-size:12px;">Deposit (20%)</span>
+                <span style="color:#64748B;font-size:12px;">
+                    Deposit (20%)</span>
                 <span style="color:#F0F4F8;font-size:12px;font-weight:700;">
                     KES {repay['deposit']:,}</span>
             </div>
             <div style="display:flex;justify-content:space-between;
                         padding:6px 0;border-bottom:1px solid #1e293b;">
-                <span style="color:#64748B;font-size:12px;">Monthly (48m)</span>
+                <span style="color:#64748B;font-size:12px;">
+                    Monthly (48m)</span>
                 <span style="color:#60a5fa;font-size:12px;font-weight:700;">
                     KES {repay['monthly']:,.0f}</span>
             </div>
@@ -364,30 +373,18 @@ def _car_detail(car, supabase):
                     KES {repay['weekly']:,.0f}</span>
             </div>
             <div style="display:flex;justify-content:space-between;
-                        padding:8px 0;">
-                <span style="color:#64748B;font-size:12px;">Interest Rate</span>
-                <span style="background:#1c1f26;color:#f59e0b;font-size:11px;
-                    font-weight:600;padding:2px 8px;border-radius:20px;
-                    border:1px solid #92400e;">Not Included</span>
+                        align-items:center;padding:8px 0;">
+                <span style="color:#64748B;font-size:12px;">
+                    Interest Rate</span>
+                <span style="background:#1c1f26;color:#f59e0b;
+                    font-size:11px;font-weight:600;padding:2px 8px;
+                    border-radius:20px;border:1px solid #92400e;">
+                    Not Included</span>
             </div>
-            <div style="color:#475569;font-size:10px;margin-top:8px;
+            <div style="color:#475569;font-size:10px;margin-top:6px;
                         line-height:1.4;">
-                Contact seller for applicable interest rate
-                based on your credit profile.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    if car.get("description"):
-        st.markdown(f"""
-        <div style="background:linear-gradient(145deg,#111827,#0b1220);
-            border:1px solid #1e293b;border-radius:12px;
-            padding:20px;margin-top:16px;">
-            <div style="color:#60A5FA;font-size:13px;font-weight:700;
-                        margin-bottom:10px;text-transform:uppercase;
-                        letter-spacing:0.05em;">Description</div>
-            <div style="color:#E2E8F0;font-size:14px;line-height:1.7;">
-                {car['description']}
+                Contact seller for applicable rate based on
+                your credit profile.
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -478,11 +475,11 @@ def show_car_marketplace(supabase):
         "min_price": price_range[0], "max_price": price_range[1],
         "min_year":  year_range[0],  "max_year":  year_range[1],
     }
-    if search_term:                        filters["search_term"] = search_term
-    if selected_make != "All Makes":       filters["make"]        = selected_make
-    if fuel_type     != "All Fuel":        filters["fuel_type"]   = fuel_type
-    if transmission  != "All Trans.":      filters["transmission"]= transmission
-    if body_type     != "All Types":       filters["body_type"]   = body_type
+    if search_term:               filters["search_term"]  = search_term
+    if selected_make != "All Makes": filters["make"]      = selected_make
+    if fuel_type  != "All Fuel":  filters["fuel_type"]    = fuel_type
+    if transmission != "All Trans.": filters["transmission"] = transmission
+    if body_type  != "All Types": filters["body_type"]    = body_type
 
     featured = get_featured_cars(supabase, limit=3)
     if featured and not any(filters.get(k) for k in [
