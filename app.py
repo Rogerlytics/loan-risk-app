@@ -75,8 +75,8 @@ model = load_model()
 
 # ══════════════════════════════
 # GOOGLE OAUTH CALLBACK
-# Must run before anything else.
-# Checks if user just returned from Google authentication.
+# Runs before anything renders.
+# Detects ?google_at= or ?code= in URL after Google redirect.
 # ══════════════════════════════
 if not st.session_state.authenticated:
     if handle_google_callback(supabase):
