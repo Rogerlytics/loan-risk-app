@@ -5,7 +5,7 @@ import streamlit as st
 import pickle
 from supabase import create_client, Client
 from styles.theme import apply_theme
-from auth.login import show_login_page, logout
+from auth.login import show_login_page, logout, handle_google_callback
 from views.about import show_about_page
 from views.loan_analysis import show_loan_analysis
 from views.contact import show_contact
@@ -47,6 +47,7 @@ defaults = {
     "role":                       None,
     "access_token":               None,
     "refresh_token":              None,
+    "google_oauth_url":           None,
     "seen_notified":              set(),
     "selected_user_id":           None,
     "selected_car_id":            None,
@@ -73,6 +74,15 @@ def load_model():
 model = load_model()
 
 # ══════════════════════════════
+# GOOGLE OAUTH CALLBACK
+# Must run before anything else.
+# Checks if user just returned from Google authentication.
+# ══════════════════════════════
+if not st.session_state.authenticated:
+    if handle_google_callback(supabase):
+        st.rerun()
+
+# ══════════════════════════════
 # NOT LOGGED IN
 # ══════════════════════════════
 if not st.session_state.authenticated:
@@ -90,13 +100,13 @@ if not st.session_state.authenticated:
 else:
     with st.sidebar:
         st.markdown(
-            '<p style="font-size:20px; font-weight:800; color:#60A5FA; '
-            'text-shadow:0 2px 4px rgba(0,0,0,0.5); margin-bottom:4px;">'
+            '<p style="font-size:20px;font-weight:800;color:#60A5FA;'
+            'text-shadow:0 2px 4px rgba(0,0,0,0.5);margin-bottom:4px;">'
             'Navigation</p>',
             unsafe_allow_html=True
         )
         st.markdown(
-            '<hr style="border-color:#1f2a36; margin-top:0;">',
+            '<hr style="border-color:#1f2a36;margin-top:0;">',
             unsafe_allow_html=True
         )
 
@@ -117,8 +127,9 @@ else:
                 "About"
             ]
 
-        # REPLACED: Added a proper label "Navigation Menu"
-        page = st.radio("Navigation Menu", menu, label_visibility="collapsed")
+        page = st.radio(
+            "Navigation Menu", menu, label_visibility="collapsed"
+        )
 
         st.markdown(
             '<hr style="border-color:#1f2a36;">',
@@ -131,8 +142,8 @@ else:
             )
             display_name = st.session_state.user["email"]
             badge = (
-                f' <span style="background:#ef4444; color:white; '
-                f'border-radius:50%; padding:1px 7px; '
+                f' <span style="background:#ef4444;color:white;'
+                f'border-radius:50%;padding:1px 7px;'
                 f'font-size:11px;">{unread}</span>'
                 if unread > 0 else ""
             )
@@ -153,7 +164,7 @@ else:
 
         role_label = (st.session_state.role or "user").upper()
         st.markdown(
-            f'<p style="color:#94A3B8; font-size:13px;">'
+            f'<p style="color:#94A3B8;font-size:13px;">'
             f'Role: <b>{role_label}</b></p>',
             unsafe_allow_html=True
         )
