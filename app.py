@@ -1,3 +1,4 @@
+```python
 # ==============================
 # app.py
 # ==============================
@@ -9,10 +10,7 @@ from supabase import create_client, Client
 
 from styles.theme import apply_theme
 
-from auth.login import (
-    show_login_page,
-    logout
-)
+from auth.login import show_login_page, logout
 
 from views.about import show_about_page
 from views.loan_analysis import show_loan_analysis
@@ -99,7 +97,7 @@ model = load_model()
 
 
 # ─────────────────────────────
-# RESTORE GOOGLE SESSION
+# RESTORE SESSION
 # ─────────────────────────────
 try:
 
@@ -336,3 +334,4 @@ else:
         elif page == "Admin Dashboard":
 
             show_admin_dashboard(supabase)
+```
