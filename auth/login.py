@@ -33,34 +33,33 @@ def logout(supabase):
 def _get_google_oauth_url(supabase) -> str:
     """
     Generate Google OAuth URL via Supabase.
-    Uses PKCE flow — tokens returned as ?code= query param,
-    no hash relay or components.html needed.
+    Kept minimal — no extra query_params that might break the URL.
     """
     try:
-        app_url = st.secrets.get("APP_URL", "http://localhost:8501")
+        app_url = st.secrets.get("APP_URL", "")
+        if not app_url:
+            return ""
         resp = supabase.auth.sign_in_with_oauth({
             "provider": "google",
             "options": {
-                "redirect_to":    app_url,
-                "scopes":         "email profile",
-                "query_params":   {"access_type": "offline",
-                                   "prompt": "select_account"}
+                "redirect_to": app_url,
+                "skip_browser_redirect": True
             }
         })
-        return getattr(resp, "url", "") or ""
-    except Exception:
-        return ""
+        url = getattr(resp, "url", "") or ""
+        return url
+    except Exception as e:
+        return f"ERROR:{e}"
 
 
 def handle_google_callback(supabase) -> bool:
     """
-    Called on every page load before rendering.
-    Handles both PKCE (?code=) and implicit (?google_at=) flows.
+    Handles PKCE (?code=) and implicit (?google_at=) flows.
     Returns True when user is successfully authenticated.
     """
     params = st.query_params
 
-    # ── PKCE flow: Supabase returns ?code= ──
+    # ── PKCE flow ──
     code = params.get("code", "")
     if code:
         try:
@@ -80,7 +79,7 @@ def handle_google_callback(supabase) -> bool:
             pass
         st.query_params.clear()
 
-    # ── Implicit flow fallback: JS relay sends ?google_at= ──
+    # ── Implicit / hash relay flow ──
     at = params.get("google_at", "")
     rt = params.get("google_rt", "")
     if at:
@@ -101,7 +100,6 @@ def handle_google_callback(supabase) -> bool:
 
 
 def _complete_google_login(supabase, user, access_token, refresh_token):
-    """Set all session state after successful Google auth."""
     role = get_user_role(supabase, user.id)
     st.session_state.authenticated  = True
     st.session_state.user           = {
@@ -120,20 +118,33 @@ def _complete_google_login(supabase, user, access_token, refresh_token):
 
 def _google_button(oauth_url: str, label: str = "Sign in with Google"):
     """
-    Official-style Google Sign-In button.
-    Plain <a> tag in st.markdown — navigates the main browser
-    window directly. No iframes, no JS, no sandbox issues.
+    White Google button using plain <a> tag.
+    Works in main page context — no iframe, no sandbox issues.
     """
+    # ── Diagnostic: show what URL was generated ──
     if not oauth_url:
-        st.markdown("""
-        <div style="background:#1f2a36;border:1px dashed #334155;
-            border-radius:8px;padding:12px;text-align:center;
-            color:#64748B;font-size:13px;margin:4px 0 12px 0;">
-            Google Sign-In not configured.
-            Contact the administrator.
-        </div>
-        """, unsafe_allow_html=True)
+        st.warning(
+            "Google OAuth URL is empty. "
+            "Check that APP_URL is set in Streamlit secrets "
+            "and Google is enabled in Supabase."
+        )
         return
+
+    if oauth_url.startswith("ERROR:"):
+        st.error(
+            f"Failed to generate Google OAuth URL: "
+            f"{oauth_url[6:]}"
+        )
+        return
+
+    # Show the first part of the URL for diagnosis
+    # (remove this block once Google sign-in is confirmed working)
+    with st.expander("🔍 Debug: Google OAuth URL (remove after testing)"):
+        st.code(oauth_url[:120] + "...", language=None)
+        st.caption(
+            "Verify this URL starts with: "
+            "https://accounts.google.com/o/oauth2/auth"
+        )
 
     safe_url = (oauth_url
                 .replace("&", "&amp;")
@@ -179,7 +190,7 @@ def _google_button(oauth_url: str, label: str = "Sign in with Google"):
         box-shadow: 0 1px 3px rgba(0,0,0,0.15),
                     0 1px 2px rgba(0,0,0,0.10);
         transition: background 0.15s ease, box-shadow 0.15s ease;
-        margin: 4px 0 12px 0;
+        margin: 0 0 12px 0;
         box-sizing: border-box;
     }}
     .google-btn:hover {{
@@ -230,8 +241,7 @@ def _confirmation_banner(supabase, email: str):
     with c1:
         if st.button(
             "Resend Confirmation Email",
-            use_container_width=True,
-            key="resend_btn"
+            use_container_width=True, key="resend_btn"
         ):
             with st.spinner("Sending..."):
                 ok = resend_confirmation_email(supabase, email)
@@ -242,8 +252,7 @@ def _confirmation_banner(supabase, email: str):
     with c2:
         if st.button(
             "Back to Login",
-            use_container_width=True,
-            key="back_confirm"
+            use_container_width=True, key="back_confirm"
         ):
             st.session_state.pending_confirmation_email = None
             st.rerun()
@@ -256,6 +265,16 @@ def show_login_page(supabase):
     <style>
     [data-testid="stSidebar"]        { display:none !important; }
     [data-testid="collapsedControl"] { display:none !important; }
+
+    /* ── Card styling via CSS on the column ── */
+    /* Targets the center column container     */
+    .login-card-col > div:first-child {
+        background: linear-gradient(145deg,#111827,#0b1220) !important;
+        border: 1px solid #1f2a36 !important;
+        border-radius: 20px !important;
+        padding: 32px 28px 24px 28px !important;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.5) !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -293,22 +312,12 @@ def show_login_page(supabase):
         text-align:center;
         color:#94A3B8;
         font-size:16px;
-        margin-bottom:40px;">
+        margin-bottom:32px;">
         Intelligent credit evaluation for smarter lending</div>
     """, unsafe_allow_html=True)
 
     _, col, _ = st.columns([1, 2, 1])
     with col:
-
-        # Card wrapper
-        st.markdown("""
-        <div style="
-            background:linear-gradient(145deg,#111827,#0b1220);
-            border:1px solid #1f2a36;
-            border-radius:20px;
-            padding:32px 28px 24px 28px;
-            box-shadow:0 20px 40px rgba(0,0,0,0.5);">
-        """, unsafe_allow_html=True)
 
         # ── Email confirmation pending ──
         if st.session_state.pending_confirmation_email:
@@ -454,15 +463,14 @@ def show_login_page(supabase):
                                     st.rerun()
                                 else:
                                     st.session_state\
-                                        .pending_confirmation_email \
-                                        = clean
+                                        .pending_confirmation_email = clean
                                     st.session_state.show_signup = False
                                     st.rerun()
                         except ValueError as e:
                             st.error(str(e))
 
-            if st.button("← Back to Login", use_container_width=True):
+            if st.button(
+                "← Back to Login", use_container_width=True
+            ):
                 st.session_state.show_signup = False
                 st.rerun()
-
-        st.markdown("</div>", unsafe_allow_html=True)
