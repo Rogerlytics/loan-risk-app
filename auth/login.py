@@ -273,37 +273,6 @@ def show_login_page(supabase):
         st.session_state.google_oauth_url = _get_google_oauth_url(supabase)
     oauth_url = st.session_state.google_oauth_url
 
-    # ==========================================
-    # GOOGLE OAUTH DIAGNOSTICS
-    # REMOVE AFTER TESTING
-    # ==========================================
-    st.markdown("### OAuth Diagnostics")
-    st.write("APP_URL from Streamlit Secrets:")
-    st.code(st.secrets.get("APP_URL", "NOT FOUND"))
-    st.write("Generated OAuth URL:")
-    st.code(oauth_url)
-
-    if oauth_url:
-        # IMPORTANT: Replace 'yerqsfaseucvluljaicx' with your actual Supabase project reference
-        # (the subdomain before .supabase.co in your SUPABASE_URL)
-        if "yerqsfaseucvluljaicx.supabase.co" in oauth_url:
-            st.success("✓ Correct Supabase project detected")
-        else:
-            st.error("✗ Wrong Supabase project in OAuth URL")
-            st.info("Expected: yerqsfaseucvluljaicx.supabase.co (or your actual project ref)")
-
-        if "provider=google" in oauth_url:
-            st.success("✓ Google provider detected")
-        else:
-            st.error("✗ Google provider missing")
-
-        if "redirect_to=" in oauth_url:
-            st.success("✓ Redirect URL detected")
-        else:
-            st.error("✗ Redirect URL missing")
-    else:
-        st.error("OAuth URL is empty - check Supabase credentials and secrets")
-
     # ── 3D Gradient Title ──
     st.markdown("""
     <div style="
