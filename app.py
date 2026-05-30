@@ -4,7 +4,6 @@
 import streamlit as st
 import pickle
 from supabase import create_client, Client
-
 from styles.theme import apply_theme
 from auth.login import show_login_page, logout, handle_google_callback
 from views.about import show_about_page
@@ -25,13 +24,14 @@ st.set_page_config(
 apply_theme()
 validate_secrets()
 
-# ── Supabase Client ──
+# ── Supabase ──
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ── Restore session on every rerun ──
-if st.session_state.get("access_token") and st.session_state.get("refresh_token"):
+if st.session_state.get("access_token") and \
+        st.session_state.get("refresh_token"):
     try:
         supabase.auth.set_session(
             st.session_state.access_token,
@@ -42,65 +42,62 @@ if st.session_state.get("access_token") and st.session_state.get("refresh_token"
 
 # ── Session state defaults ──
 defaults = {
-    "authenticated": False,
-    "user": None,
-    "role": None,
-    "access_token": None,
-    "refresh_token": None,
-    "google_oauth_url": None,
-    "seen_notified": set(),
-    "selected_user_id": None,
-    "selected_car_id": None,
-    "editing_car_id": None,
-    "confirm_delete_id": None,
-    "auto_refresh": False,
-    "draft_message": "",
-    "risk_result": None,
-    "repayment_result": None,
-    "show_signup": False,
+    "authenticated":              False,
+    "user":                       None,
+    "role":                       None,
+    "access_token":               None,
+    "refresh_token":              None,
+    "google_oauth_url":           None,
+    "seen_notified":              set(),
+    "selected_user_id":           None,
+    "selected_car_id":            None,
+    "editing_car_id":             None,
+    "confirm_delete_id":          None,
+    "auto_refresh":               False,
+    "draft_message":              "",
+    "risk_result":                None,
+    "repayment_result":           None,
+    "show_signup":                False,
     "pending_confirmation_email": None,
-    "last_msg_count": 0,
-    "admin_last_count": 0,
+    "last_msg_count":             0,
+    "admin_last_count":           0,
 }
 for key, value in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = value
 
-# ── ML Model (cached) ──
+# ── ML Model ──
 @st.cache_resource
 def load_model():
-    with open("loan_model.pkl", "rb") as f:
-        return pickle.load(f)
+    return pickle.load(open("loan_model.pkl", "rb"))
 
 model = load_model()
 
 # ══════════════════════════════
-# 🔐 GOOGLE OAUTH CALLBACK HANDLER
-# MUST run BEFORE any page renders to catch ?code= or ?error= params
+# GOOGLE OAUTH CALLBACK
+# Runs before anything renders.
+# Detects ?google_at= or ?code= in URL after Google redirect.
 # ══════════════════════════════
 if not st.session_state.authenticated:
     if handle_google_callback(supabase):
         st.rerun()
 
 # ══════════════════════════════
-# 🚫 NOT LOGGED IN — Show Login Page
+# NOT LOGGED IN
 # ══════════════════════════════
 if not st.session_state.authenticated:
-    # Hide sidebar on login page
     st.markdown("""
     <style>
     [data-testid="stSidebar"] { display: none !important; }
     [data-testid="collapsedControl"] { display: none !important; }
     </style>
     """, unsafe_allow_html=True)
-    
     show_login_page(supabase)
 
 # ══════════════════════════════
-# ✅ LOGGED IN — Show App with Sidebar
+# LOGGED IN
 # ══════════════════════════════
 else:
-    # ── Sidebar Navigation ──
     with st.sidebar:
         st.markdown(
             '<p style="font-size:20px;font-weight:800;color:#60A5FA;'
@@ -108,63 +105,115 @@ else:
             'Navigation</p>',
             unsafe_allow_html=True
         )
-        st.markdown('<hr style="border-color:#1f2a36;margin-top:0;">', unsafe_allow_html=True)
+        st.markdown(
+            '<hr style="border-color:#1f2a36;margin-top:0;">',
+            unsafe_allow_html=True
+        )
 
-        # Role-based menu
         if st.session_state.role == "admin":
-            menu = ["Loan Analysis", "Car Marketplace", "Car Management", "Contact", "Admin Dashboard", "About"]
+            menu = [
+                "Loan Analysis",
+                "Car Marketplace",
+                "Car Management",
+                "Contact",
+                "Admin Dashboard",
+                "About"
+            ]
         else:
-            menu = ["Loan Analysis", "Car Marketplace", "Contact", "About"]
+            menu = [
+                "Loan Analysis",
+                "Car Marketplace",
+                "Contact",
+                "About"
+            ]
 
-        page = st.radio("Navigation Menu", menu, label_visibility="collapsed")
+        page = st.radio(
+            "Navigation Menu", menu, label_visibility="collapsed"
+        )
 
-        st.markdown('<hr style="border-color:#1f2a36;">', unsafe_allow_html=True)
+        st.markdown(
+            '<hr style="border-color:#1f2a36;">',
+            unsafe_allow_html=True
+        )
 
-        # User info display
         if st.session_state.role == "user":
-            unread = get_unread_reply_count(supabase, st.session_state.user["id"])
+            unread = get_unread_reply_count(
+                supabase, st.session_state.user["id"]
+            )
             display_name = st.session_state.user["email"]
             badge = (
                 f' <span style="background:#ef4444;color:white;'
-                f'border-radius:50%;padding:1px 7px;font-size:11px;">{unread}</span>'
+                f'border-radius:50%;padding:1px 7px;'
+                f'font-size:11px;">{unread}</span>'
                 if unread > 0 else ""
             )
             st.markdown(
-                f'<p style="color:#F0F4F8;">👤 <b>{display_name}</b>{badge}</p>',
+                f'<p style="color:#F0F4F8;">👤 <b>{display_name}</b>'
+                f'{badge}</p>',
                 unsafe_allow_html=True
             )
         else:
-            safe_name = st.session_state.user.get("username", st.session_state.user.get("email"))
+            safe_name = st.session_state.user.get(
+                "username", st.session_state.user.get("email")
+            )
             st.markdown(
-                f'<p style="color:#F0F4F8;">👑 <b>Admin:</b> {safe_name}</p>',
+                f'<p style="color:#F0F4F8;">👑 <b>Admin:</b> '
+                f'{safe_name}</p>',
                 unsafe_allow_html=True
             )
 
         role_label = (st.session_state.role or "user").upper()
-        st.markdown(f'<p style="color:#94A3B8;font-size:13px;">Role: <b>{role_label}</b></p>', unsafe_allow_html=True)
-        st.markdown('<hr style="border-color:#1f2a36;">', unsafe_allow_html=True)
+        st.markdown(
+            f'<p style="color:#94A3B8;font-size:13px;">'
+            f'Role: <b>{role_label}</b></p>',
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            '<hr style="border-color:#1f2a36;">',
+            unsafe_allow_html=True
+        )
 
         if st.button("Logout", use_container_width=True):
             logout(supabase)
 
-    # ── Page Routing ──
+    # ── Page routing ──
     if page == "About":
         show_about_page()
 
     elif page == "Car Marketplace":
-        st.markdown('<div class="page-title">Car Marketplace</div>', unsafe_allow_html=True)
-        st.markdown('<div class="page-subtitle">Browse verified vehicle listings with AI-powered valuations</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="page-title">Car Marketplace</div>',
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            '<div class="page-subtitle">Browse verified vehicle listings '
+            'with AI-powered valuations</div>',
+            unsafe_allow_html=True
+        )
         show_car_marketplace(supabase)
 
     elif page == "Car Management":
-        st.markdown('<div class="page-title">Car Management</div>', unsafe_allow_html=True)
-        st.markdown('<div class="page-subtitle">Add, edit and manage car listings</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="page-title">Car Management</div>',
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            '<div class="page-subtitle">Add, edit and manage '
+            'car listings</div>',
+            unsafe_allow_html=True
+        )
         show_car_management(supabase)
 
     else:
-        st.markdown('<div class="page-title">AI Loan Risk Platform</div>', unsafe_allow_html=True)
-        st.markdown('<div class="page-subtitle">Real-time credit risk evaluation powered by machine learning</div>', unsafe_allow_html=True)
-        
+        st.markdown(
+            '<div class="page-title">AI Loan Risk Platform</div>',
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            '<div class="page-subtitle">Real-time credit risk evaluation '
+            'powered by machine learning</div>',
+            unsafe_allow_html=True
+        )
         if page == "Loan Analysis":
             show_loan_analysis(model, supabase)
         elif page == "Contact":
