@@ -30,36 +30,55 @@ def logout(supabase):
     st.rerun()
 
 
-def _get_google_oauth_url(supabase) -> str:
+def _get_google_oauth_url(supabase) -> dict:
     """
-    Generate Google OAuth URL via Supabase.
-    Kept minimal — no extra query_params that might break the URL.
+    Generate Google OAuth URL and return full diagnostic info.
     """
+    result = {
+        "url":       "",
+        "error":     "",
+        "app_url":   "",
+        "provider":  "",
+        "raw_resp":  ""
+    }
     try:
         app_url = st.secrets.get("APP_URL", "")
+        result["app_url"] = app_url
+
         if not app_url:
-            return ""
+            result["error"] = "APP_URL is not set in Streamlit secrets"
+            return result
+
         resp = supabase.auth.sign_in_with_oauth({
             "provider": "google",
             "options": {
-                "redirect_to": app_url,
+                "redirect_to":           app_url,
                 "skip_browser_redirect": True
             }
         })
-        url = getattr(resp, "url", "") or ""
-        return url
+
+        result["raw_resp"] = str(type(resp)) + " | " + str(
+            [a for a in dir(resp) if not a.startswith("_")]
+        )
+        result["url"]      = getattr(resp, "url", "") or ""
+        result["provider"] = getattr(resp, "provider", "") or ""
+
+        if not result["url"]:
+            result["error"] = (
+                "Supabase returned empty URL. "
+                "Google provider may not be enabled in Supabase."
+            )
+
     except Exception as e:
-        return f"ERROR:{e}"
+        result["error"] = str(e)
+
+    return result
 
 
 def handle_google_callback(supabase) -> bool:
-    """
-    Handles PKCE (?code=) and implicit (?google_at=) flows.
-    Returns True when user is successfully authenticated.
-    """
     params = st.query_params
 
-    # ── PKCE flow ──
+    # ── PKCE ──
     code = params.get("code", "")
     if code:
         try:
@@ -79,7 +98,7 @@ def handle_google_callback(supabase) -> bool:
             pass
         st.query_params.clear()
 
-    # ── Implicit / hash relay flow ──
+    # ── Implicit / hash relay ──
     at = params.get("google_at", "")
     rt = params.get("google_rt", "")
     if at:
@@ -116,39 +135,152 @@ def _complete_google_login(supabase, user, access_token, refresh_token):
     )
 
 
+def _render_diagnostic(oauth_info: dict, supabase_url: str):
+    """Full diagnostic panel — remove once working."""
+
+    st.markdown("""
+    <div style="background:#0f1e30;border:1px solid #2563eb;
+        border-radius:12px;padding:20px;margin-bottom:16px;">
+        <div style="color:#60A5FA;font-size:14px;font-weight:700;
+            margin-bottom:12px;">🔍 Google OAuth Diagnostics</div>
+    """, unsafe_allow_html=True)
+
+    # ── Check 1: APP_URL ──
+    app_url = oauth_info.get("app_url", "")
+    if app_url:
+        st.success(f"✅ APP_URL is set: `{app_url}`")
+    else:
+        st.error("❌ APP_URL is NOT set in Streamlit secrets")
+        st.code("""
+# Add to Streamlit Cloud → Settings → Secrets:
+APP_URL = "https://loan-risk-app-pfjcxqbqzrdqkz9q7kx7ux.streamlit.app"
+        """)
+
+    # ── Check 2: OAuth URL generated ──
+    url = oauth_info.get("url", "")
+    if url:
+        st.success("✅ Supabase generated OAuth URL successfully")
+        st.markdown("**Full OAuth URL** — copy this and open in browser:")
+        st.code(url, language=None)
+
+        # Parse the URL to show what redirect_uri Supabase is sending
+        if "redirect_uri" in url:
+            try:
+                from urllib.parse import urlparse, parse_qs
+                parsed = urlparse(url)
+                params = parse_qs(parsed.query)
+                redir  = params.get("redirect_uri", [""])[0]
+                if redir:
+                    st.warning(
+                        f"⚠️ Supabase is sending redirect_uri: `{redir}`\n\n"
+                        f"This MUST exactly match an **Authorized redirect URI** "
+                        f"in your Google Cloud Console."
+                    )
+            except Exception:
+                pass
+    else:
+        err = oauth_info.get("error", "Unknown error")
+        st.error(f"❌ OAuth URL generation failed: {err}")
+
+    # ── Check 3: Expected redirect URI ──
+    st.markdown("---")
+    st.markdown("**Expected redirect URI in Google Cloud Console:**")
+    st.code(
+        f"{supabase_url}/auth/v1/callback",
+        language=None
+    )
+    st.caption(
+        "Go to Google Cloud Console → APIs & Services → Credentials "
+        "→ your OAuth 2.0 Client ID → Edit → "
+        "Authorized redirect URIs — it must contain exactly the above."
+    )
+
+    # ── Check 4: Consent screen ──
+    st.markdown("---")
+    st.markdown("**OAuth Consent Screen checklist:**")
+    st.markdown("""
+    Go to Google Cloud Console → APIs & Services → OAuth consent screen:
+
+    - **Publishing status** should be `In production` (not `Testing`)
+    - If still `Testing` → click **Publish App** → Confirm
+    - If you see `Needs verification` that is fine — you can still test
+    """)
+
+    # ── Check 5: Manual test ──
+    st.markdown("---")
+    st.markdown("**Manual URL test:**")
+    st.markdown(
+        "Copy the full OAuth URL above, open a **new incognito window**, "
+        "paste it in the address bar and press Enter. "
+        "When you get the 403, **copy the full URL from the address bar** "
+        "and paste it below — the error code in the URL tells us exactly "
+        "what is wrong."
+    )
+
+    st.text_input(
+        "Paste the 403 error page URL here:",
+        key="debug_403_url",
+        placeholder="https://accounts.google.com/...?error=..."
+    )
+
+    if st.session_state.get("debug_403_url"):
+        error_url = st.session_state.debug_403_url
+        if "redirect_uri_mismatch" in error_url:
+            st.error(
+                "🔴 CAUSE: redirect_uri_mismatch\n\n"
+                "The redirect URI Supabase sends does NOT match "
+                "what is registered in Google Cloud Console.\n\n"
+                "Fix: Copy the exact URI shown above into Google Cloud "
+                "Console → Authorized redirect URIs."
+            )
+        elif "access_denied" in error_url:
+            st.error(
+                "🔴 CAUSE: access_denied\n\n"
+                "Your OAuth app is in Testing mode and your Google "
+                "account is not listed as a test user.\n\n"
+                "Fix: Go to OAuth consent screen → Test users → "
+                "Add your email. OR click Publish App."
+            )
+        elif "invalid_client" in error_url:
+            st.error(
+                "🔴 CAUSE: invalid_client\n\n"
+                "The Client ID or Client Secret in Supabase does not "
+                "match your Google Cloud Console credentials.\n\n"
+                "Fix: Go to Supabase → Auth → Providers → Google → "
+                "re-paste Client ID and Client Secret from Google "
+                "Cloud Console."
+            )
+        elif "unauthorized_client" in error_url:
+            st.error(
+                "🔴 CAUSE: unauthorized_client\n\n"
+                "The OAuth client type is wrong — it must be "
+                "'Web application' not 'Desktop app' or 'iOS'.\n\n"
+                "Fix: Create a new OAuth 2.0 Client ID with type "
+                "'Web application' in Google Cloud Console."
+            )
+        elif "disabled_client" in error_url:
+            st.error(
+                "🔴 CAUSE: disabled_client\n\n"
+                "Your OAuth client has been disabled.\n\n"
+                "Fix: Google Cloud Console → Credentials → "
+                "find your client and re-enable it."
+            )
+        else:
+            st.warning(
+                f"Unknown error in URL. "
+                f"Look for `error=` parameter: {error_url}"
+            )
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
 def _google_button(oauth_url: str, label: str = "Sign in with Google"):
-    """
-    White Google button using plain <a> tag.
-    Works in main page context — no iframe, no sandbox issues.
-    """
-    # ── Diagnostic: show what URL was generated ──
     if not oauth_url:
-        st.warning(
-            "Google OAuth URL is empty. "
-            "Check that APP_URL is set in Streamlit secrets "
-            "and Google is enabled in Supabase."
-        )
         return
-
-    if oauth_url.startswith("ERROR:"):
-        st.error(
-            f"Failed to generate Google OAuth URL: "
-            f"{oauth_url[6:]}"
-        )
-        return
-
-    # Show the first part of the URL for diagnosis
-    # (remove this block once Google sign-in is confirmed working)
-    with st.expander("🔍 Debug: Google OAuth URL (remove after testing)"):
-        st.code(oauth_url[:120] + "...", language=None)
-        st.caption(
-            "Verify this URL starts with: "
-            "https://accounts.google.com/o/oauth2/auth"
-        )
 
     safe_url = (oauth_url
                 .replace("&", "&amp;")
-                .replace('"',  "&quot;"))
+                .replace('"', "&quot;"))
 
     google_svg = """
     <svg width="20" height="20" viewBox="0 0 24 24"
@@ -172,34 +304,22 @@ def _google_button(oauth_url: str, label: str = "Sign in with Google"):
     st.markdown(f"""
     <style>
     .google-btn {{
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 12px;
-        width: 100%;
-        height: 50px;
-        background: #ffffff;
-        border: 1px solid #dadce0;
-        border-radius: 8px;
-        cursor: pointer;
-        font-family: 'Google Sans', Roboto, Arial, sans-serif;
-        font-size: 15px;
-        font-weight: 500;
-        color: #3c4043;
-        text-decoration: none;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.15),
-                    0 1px 2px rgba(0,0,0,0.10);
-        transition: background 0.15s ease, box-shadow 0.15s ease;
-        margin: 0 0 12px 0;
-        box-sizing: border-box;
+        display:flex; align-items:center; justify-content:center;
+        gap:12px; width:100%; height:50px; background:#ffffff;
+        border:1px solid #dadce0; border-radius:8px; cursor:pointer;
+        font-family:'Google Sans',Roboto,Arial,sans-serif;
+        font-size:15px; font-weight:500; color:#3c4043;
+        text-decoration:none;
+        box-shadow:0 1px 3px rgba(0,0,0,0.15),0 1px 2px rgba(0,0,0,0.10);
+        transition:background 0.15s ease,box-shadow 0.15s ease;
+        margin:0 0 12px 0; box-sizing:border-box;
     }}
     .google-btn:hover {{
-        background: #f8f9fa;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-        color: #3c4043;
-        text-decoration: none;
+        background:#f8f9fa;
+        box-shadow:0 2px 8px rgba(0,0,0,0.18);
+        color:#3c4043; text-decoration:none;
     }}
-    .google-btn:active {{ background: #f1f3f4; }}
+    .google-btn:active {{ background:#f1f3f4; }}
     </style>
     <a class="google-btn" href="{safe_url}" target="_self">
         {google_svg}
@@ -231,102 +351,77 @@ def _confirmation_banner(supabase, email: str):
         <div style="color:#fef3c7;font-size:13px;line-height:1.6;">
             We sent a confirmation link to
             <b style="color:#fde68a;">{email}</b>.<br>
-            Check your inbox and spam folder, then click the link
-            before logging in.
+            Check your inbox and spam folder, then click the link.
         </div>
     </div>
     """, unsafe_allow_html=True)
-
     c1, c2 = st.columns(2)
     with c1:
-        if st.button(
-            "Resend Confirmation Email",
-            use_container_width=True, key="resend_btn"
-        ):
+        if st.button("Resend Confirmation Email",
+                     use_container_width=True, key="resend_btn"):
             with st.spinner("Sending..."):
                 ok = resend_confirmation_email(supabase, email)
             if ok:
-                st.success("Confirmation email resent!")
+                st.success("Sent!")
             else:
                 st.error("Failed. Please try again.")
     with c2:
-        if st.button(
-            "Back to Login",
-            use_container_width=True, key="back_confirm"
-        ):
+        if st.button("Back to Login",
+                     use_container_width=True, key="back_confirm"):
             st.session_state.pending_confirmation_email = None
             st.rerun()
 
 
 def show_login_page(supabase):
-
-    # Hide sidebar
     st.markdown("""
     <style>
     [data-testid="stSidebar"]        { display:none !important; }
     [data-testid="collapsedControl"] { display:none !important; }
-
-    /* ── Card styling via CSS on the column ── */
-    /* Targets the center column container     */
-    .login-card-col > div:first-child {
-        background: linear-gradient(145deg,#111827,#0b1220) !important;
-        border: 1px solid #1f2a36 !important;
-        border-radius: 20px !important;
-        padding: 32px 28px 24px 28px !important;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.5) !important;
-    }
     </style>
     """, unsafe_allow_html=True)
 
-    # Session defaults
     for k, v in [
-        ("show_signup",                False),
+        ("show_signup", False),
         ("pending_confirmation_email", None),
-        ("google_oauth_url",           None),
+        ("google_oauth_info", None),
     ]:
         if k not in st.session_state:
             st.session_state[k] = v
 
-    # Generate OAuth URL once per session
-    if not st.session_state.google_oauth_url:
-        st.session_state.google_oauth_url = _get_google_oauth_url(supabase)
-    oauth_url = st.session_state.google_oauth_url
+    # Generate OAuth info once per session
+    if not st.session_state.google_oauth_info:
+        st.session_state.google_oauth_info = _get_google_oauth_url(supabase)
 
-    # ── 3D Gradient Title ──
+    oauth_info    = st.session_state.google_oauth_info
+    oauth_url     = oauth_info.get("url", "") if oauth_info else ""
+    supabase_url  = st.secrets.get("SUPABASE_URL", "")
+
+    # ── 3D Title ──
     st.markdown("""
-    <div style="
-        text-align:center;
-        font-size:52px;
-        font-weight:800;
+    <div style="text-align:center;font-size:52px;font-weight:800;
         background:linear-gradient(
             180deg,#93C5FD 0%,#3B82F6 45%,#1D4ED8 100%);
-        -webkit-background-clip:text;
-        -webkit-text-fill-color:transparent;
-        background-clip:text;
-        filter:drop-shadow(0 4px 8px rgba(0,0,0,0.6));
-        letter-spacing:-1px;
-        line-height:1.1;
-        margin-top:40px;
-        margin-bottom:10px;">AI Loan Risk Platform</div>
-    <div style="
-        text-align:center;
-        color:#94A3B8;
-        font-size:16px;
+        -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+        background-clip:text;filter:drop-shadow(0 4px 8px rgba(0,0,0,0.6));
+        letter-spacing:-1px;line-height:1.1;
+        margin-top:40px;margin-bottom:10px;">
+        AI Loan Risk Platform</div>
+    <div style="text-align:center;color:#94A3B8;font-size:16px;
         margin-bottom:32px;">
         Intelligent credit evaluation for smarter lending</div>
     """, unsafe_allow_html=True)
 
+    # ── Diagnostics panel — shown above login card ──
+    _render_diagnostic(oauth_info or {}, supabase_url)
+
     _, col, _ = st.columns([1, 2, 1])
     with col:
 
-        # ── Email confirmation pending ──
         if st.session_state.pending_confirmation_email:
             _confirmation_banner(
-                supabase,
-                st.session_state.pending_confirmation_email
+                supabase, st.session_state.pending_confirmation_email
             )
 
-        # ── Login ──
         elif not st.session_state.show_signup:
             st.markdown("""
             <div style="text-align:center;font-size:22px;font-weight:700;
@@ -358,9 +453,7 @@ def show_login_page(supabase):
                             with st.spinner("Signing in..."):
                                 r = login_user(supabase, clean, password)
                             if r is None:
-                                st.error(
-                                    "Something went wrong. Try again."
-                                )
+                                st.error("Something went wrong.")
                             elif r.get("error") == "email_not_confirmed":
                                 st.session_state\
                                     .pending_confirmation_email = clean
@@ -386,8 +479,7 @@ def show_login_page(supabase):
                                 log_action(
                                     supabase, r["id"], r["email"],
                                     "login",
-                                    f"Logged in as "
-                                    f"{st.session_state.role}"
+                                    f"Logged in as {st.session_state.role}"
                                 )
                                 st.rerun()
                             else:
@@ -403,7 +495,6 @@ def show_login_page(supabase):
                 st.session_state.pending_confirmation_email = None
                 st.rerun()
 
-        # ── Sign Up ──
         else:
             st.markdown("""
             <div style="text-align:center;font-size:22px;font-weight:700;
@@ -442,13 +533,11 @@ def show_login_page(supabase):
                             with st.spinner("Creating account..."):
                                 r = signup_user(supabase, clean, new_pw)
                             if r is None:
-                                st.error(
-                                    "Signup failed. Please try again."
-                                )
+                                st.error("Signup failed.")
                             elif r.get("error") == "already_registered":
                                 st.warning(
-                                    "That email is already registered. "
-                                    "Please log in instead."
+                                    "Email already registered. "
+                                    "Please log in."
                                 )
                             elif r.get("id"):
                                 log_action(
@@ -456,9 +545,7 @@ def show_login_page(supabase):
                                     "signup", "New account created"
                                 )
                                 if r.get("confirmed"):
-                                    st.success(
-                                        "Account created! You can log in."
-                                    )
+                                    st.success("Account created!")
                                     st.session_state.show_signup = False
                                     st.rerun()
                                 else:
@@ -469,8 +556,6 @@ def show_login_page(supabase):
                         except ValueError as e:
                             st.error(str(e))
 
-            if st.button(
-                "← Back to Login", use_container_width=True
-            ):
+            if st.button("← Back to Login", use_container_width=True):
                 st.session_state.show_signup = False
                 st.rerun()
