@@ -29,16 +29,24 @@ SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# ── Restore session on every rerun ──
-if st.session_state.get("access_token") and \
-        st.session_state.get("refresh_token"):
-    try:
-        supabase.auth.set_session(
-            st.session_state.access_token,
-            st.session_state.refresh_token
-        )
-    except Exception:
-        pass
+# ── CRITICAL: Check for OAuth callback BEFORE session restore ──
+# Must happen first — Streamlit clears query params on rerun
+_params         = st.query_params
+_has_code       = bool(_params.get("code", ""))
+_has_google_at  = bool(_params.get("google_at", ""))
+_has_error      = bool(_params.get("error", ""))
+
+# Show OAuth error if Google returned one
+if _has_error:
+    _err = _params.get("error", "")
+    _err_desc = _params.get("error_description", "")
+    st.error(
+        f"Google Sign-In failed: **{_err}**\n\n"
+        f"{_err_desc}\n\n"
+        f"Please try again or use email login."
+    )
+    st.query_params.clear()
+    st.stop()
 
 # ── Session state defaults ──
 defaults = {
@@ -47,7 +55,7 @@ defaults = {
     "role":                       None,
     "access_token":               None,
     "refresh_token":              None,
-    "google_oauth_url":           None,
+    "google_oauth_info":          None,
     "seen_notified":              set(),
     "selected_user_id":           None,
     "selected_car_id":            None,
@@ -66,6 +74,17 @@ for key, value in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = value
 
+# ── Restore session on every rerun ──
+if st.session_state.get("access_token") and \
+        st.session_state.get("refresh_token"):
+    try:
+        supabase.auth.set_session(
+            st.session_state.access_token,
+            st.session_state.refresh_token
+        )
+    except Exception:
+        pass
+
 # ── ML Model ──
 @st.cache_resource
 def load_model():
@@ -75,12 +94,24 @@ model = load_model()
 
 # ══════════════════════════════
 # GOOGLE OAUTH CALLBACK
-# Runs before anything renders.
-# Detects ?google_at= or ?code= in URL after Google redirect.
+# Process ?code= or ?google_at= BEFORE rendering anything
 # ══════════════════════════════
-if not st.session_state.authenticated:
-    if handle_google_callback(supabase):
+if not st.session_state.authenticated and (_has_code or _has_google_at):
+    with st.spinner("Completing Google Sign-In..."):
+        success = handle_google_callback(supabase)
+    if success:
         st.rerun()
+    else:
+        # Show what params we received for debugging
+        st.error("Google Sign-In callback failed.")
+        with st.expander("Debug info"):
+            st.write("Query params received:", dict(_params))
+            st.write("Has code:", _has_code)
+            st.write("Has google_at:", _has_google_at)
+        if st.button("Try again"):
+            st.query_params.clear()
+            st.rerun()
+        st.stop()
 
 # ══════════════════════════════
 # NOT LOGGED IN
@@ -179,7 +210,6 @@ else:
     # ── Page routing ──
     if page == "About":
         show_about_page()
-
     elif page == "Car Marketplace":
         st.markdown(
             '<div class="page-title">Car Marketplace</div>',
@@ -191,7 +221,6 @@ else:
             unsafe_allow_html=True
         )
         show_car_marketplace(supabase)
-
     elif page == "Car Management":
         st.markdown(
             '<div class="page-title">Car Management</div>',
@@ -203,7 +232,6 @@ else:
             unsafe_allow_html=True
         )
         show_car_management(supabase)
-
     else:
         st.markdown(
             '<div class="page-title">AI Loan Risk Platform</div>',
