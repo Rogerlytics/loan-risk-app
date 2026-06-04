@@ -24,13 +24,55 @@ def logout(supabase):
         pass
     for k in [
         "authenticated", "user", "role",
-        "access_token", "refresh_token", "google_oauth_info"
+        "access_token", "refresh_token",
+        "google_oauth_info", "_pkce_verifier"
     ]:
         st.session_state[k] = None if k != "authenticated" else False
     st.rerun()
 
 
+def _save_pkce_verifier(supabase):
+    """
+    After calling sign_in_with_oauth, gotrue-py stores the PKCE
+    code_verifier in its in-memory storage. We must copy it to
+    Streamlit session_state because Streamlit reruns Python fresh
+    on the OAuth callback — wiping the in-memory storage.
+    """
+    try:
+        storage_key = getattr(supabase.auth, '_storage_key', '')
+        if storage_key:
+            verifier = supabase.auth._storage.get_item(
+                f"{storage_key}-code-verifier"
+            )
+            if verifier:
+                st.session_state['_pkce_verifier'] = verifier
+                return
+
+        # Fallback key patterns for different gotrue-py versions
+        for key_suffix in [
+            "-code-verifier",
+            ".code-verifier",
+            "-pkce-verifier"
+        ]:
+            try:
+                sk = getattr(supabase.auth, '_storage_key', 'supabase.auth.token')
+                verifier = supabase.auth._storage.get_item(
+                    f"{sk}{key_suffix}"
+                )
+                if verifier:
+                    st.session_state['_pkce_verifier'] = verifier
+                    return
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+
 def _get_google_oauth_url(supabase) -> dict:
+    """
+    Generate Google OAuth URL via Supabase and immediately
+    extract + save the PKCE code_verifier to session_state.
+    """
     result = {"url": "", "error": "", "app_url": ""}
     try:
         app_url = st.secrets.get("APP_URL", "")
@@ -38,6 +80,7 @@ def _get_google_oauth_url(supabase) -> dict:
         if not app_url:
             result["error"] = "APP_URL not set in secrets"
             return result
+
         resp = supabase.auth.sign_in_with_oauth({
             "provider": "google",
             "options": {
@@ -46,11 +89,17 @@ def _get_google_oauth_url(supabase) -> dict:
             }
         })
         result["url"] = getattr(resp, "url", "") or ""
+
         if not result["url"]:
             result["error"] = (
-                "Supabase returned empty URL — "
-                "check Google is enabled in Supabase Auth providers."
+                "Supabase returned empty URL. "
+                "Check Google is enabled in Supabase Auth Providers."
             )
+            return result
+
+        # CRITICAL: Save verifier immediately after URL generation
+        _save_pkce_verifier(supabase)
+
     except Exception as e:
         result["error"] = str(e)
     return result
@@ -58,19 +107,31 @@ def _get_google_oauth_url(supabase) -> dict:
 
 def handle_google_callback(supabase) -> bool:
     """
-    Handles PKCE (?code=) and implicit (?google_at=) flows.
+    Handles Google OAuth callback.
     Called from app.py before any rendering.
-    Returns True when authenticated successfully.
+
+    PKCE fix: restores code_verifier from session_state and
+    passes it explicitly to exchange_code_for_session.
     """
     params = st.query_params
 
-    # ── PKCE flow ──
+    # ── PKCE flow: Google → Supabase → ?code= ──
     code = params.get("code", "")
     if code:
+        # Retrieve verifier saved before redirect
+        code_verifier = st.session_state.get('_pkce_verifier', '')
+
         try:
+            # Pass verifier directly — works even if
+            # gotrue in-memory storage was reset
+            exchange_params = {"auth_code": code}
+            if code_verifier:
+                exchange_params["code_verifier"] = code_verifier
+
             result = supabase.auth.exchange_code_for_session(
-                {"auth_code": code}
+                exchange_params
             )
+
             if result and getattr(result, "session", None):
                 _complete_google_login(
                     supabase,
@@ -78,13 +139,40 @@ def handle_google_callback(supabase) -> bool:
                     result.session.access_token,
                     result.session.refresh_token
                 )
+                # Clean up
                 st.query_params.clear()
+                st.session_state.pop('_pkce_verifier', None)
                 return True
-        except Exception as e:
-            st.error(f"PKCE exchange failed: {e}")
-        st.query_params.clear()
+            else:
+                st.session_state.pop('_pkce_verifier', None)
 
-    # ── Implicit / hash relay flow ──
+        except Exception as e:
+            err_str = str(e).lower()
+            # Code verifier mismatch — try without it
+            # (happens when Supabase is configured for implicit flow)
+            if "pkce" in err_str or "verifier" in err_str or \
+                    "code_verifier" in err_str:
+                try:
+                    result = supabase.auth.exchange_code_for_session(
+                        {"auth_code": code}
+                    )
+                    if result and getattr(result, "session", None):
+                        _complete_google_login(
+                            supabase,
+                            result.user,
+                            result.session.access_token,
+                            result.session.refresh_token
+                        )
+                        st.query_params.clear()
+                        st.session_state.pop('_pkce_verifier', None)
+                        return True
+                except Exception:
+                    pass
+
+        st.query_params.clear()
+        st.session_state.pop('_pkce_verifier', None)
+
+    # ── Implicit / hash relay: ?google_at= ──
     at = params.get("google_at", "")
     rt = params.get("google_rt", "")
     if at:
@@ -97,14 +185,15 @@ def handle_google_callback(supabase) -> bool:
                 )
                 st.query_params.clear()
                 return True
-        except Exception as e:
-            st.error(f"Implicit flow failed: {e}")
+        except Exception:
+            pass
         st.query_params.clear()
 
     return False
 
 
 def _complete_google_login(supabase, user, access_token, refresh_token):
+    """Set all session state after successful Google auth."""
     role = get_user_role(supabase, user.id)
     st.session_state.authenticated  = True
     st.session_state.user           = {
@@ -122,9 +211,13 @@ def _complete_google_login(supabase, user, access_token, refresh_token):
 
 
 def _google_button(oauth_url: str, label: str = "Sign in with Google"):
+    """
+    White Google button using plain <a> tag.
+    Navigates the main browser window — no iframes or JS needed.
+    """
     if not oauth_url:
         st.warning(
-            "Google Sign-In not available. "
+            "Google Sign-In not configured. "
             "Check APP_URL in secrets and Google provider in Supabase."
         )
         return
@@ -225,13 +318,14 @@ def show_login_page(supabase):
     """, unsafe_allow_html=True)
 
     for k, v in [
-        ("show_signup", False),
+        ("show_signup",                False),
         ("pending_confirmation_email", None),
-        ("google_oauth_info", None),
+        ("google_oauth_info",          None),
     ]:
         if k not in st.session_state:
             st.session_state[k] = v
 
+    # Generate OAuth URL + save PKCE verifier — once per session
     if not st.session_state.google_oauth_info:
         st.session_state.google_oauth_info = _get_google_oauth_url(supabase)
 
@@ -244,7 +338,8 @@ def show_login_page(supabase):
         background:linear-gradient(
             180deg,#93C5FD 0%,#3B82F6 45%,#1D4ED8 100%);
         -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-        background-clip:text;filter:drop-shadow(0 4px 8px rgba(0,0,0,0.6));
+        background-clip:text;
+        filter:drop-shadow(0 4px 8px rgba(0,0,0,0.6));
         letter-spacing:-1px;line-height:1.1;
         margin-top:40px;margin-bottom:10px;">
         AI Loan Risk Platform</div>
