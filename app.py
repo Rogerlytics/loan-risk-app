@@ -1,5 +1,5 @@
 # ==============================
-# app.py — Entry point only
+# app.py
 # ==============================
 import streamlit as st
 import pickle
@@ -15,7 +15,6 @@ from views.car_upload import show_car_management
 from services.supabase_service import get_unread_reply_count
 from config.settings import validate_secrets
 
-# ── Config ──
 st.set_page_config(
     page_title="AI Loan Risk System",
     layout="wide",
@@ -24,31 +23,17 @@ st.set_page_config(
 apply_theme()
 validate_secrets()
 
-# ── Supabase ──
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# ── CRITICAL: Check for OAuth callback BEFORE session restore ──
-# Must happen first — Streamlit clears query params on rerun
-_params         = st.query_params
-_has_code       = bool(_params.get("code", ""))
-_has_google_at  = bool(_params.get("google_at", ""))
-_has_error      = bool(_params.get("error", ""))
+# ── Read query params FIRST before any other operation ──
+_params        = dict(st.query_params)
+_has_code      = bool(_params.get("code", ""))
+_has_google_at = bool(_params.get("google_at", ""))
+_has_error     = bool(_params.get("error", ""))
 
-# Show OAuth error if Google returned one
-if _has_error:
-    _err = _params.get("error", "")
-    _err_desc = _params.get("error_description", "")
-    st.error(
-        f"Google Sign-In failed: **{_err}**\n\n"
-        f"{_err_desc}\n\n"
-        f"Please try again or use email login."
-    )
-    st.query_params.clear()
-    st.stop()
-
-# ── Session state defaults ──
+# ── Session defaults ──
 defaults = {
     "authenticated":              False,
     "user":                       None,
@@ -56,6 +41,7 @@ defaults = {
     "access_token":               None,
     "refresh_token":              None,
     "google_oauth_info":          None,
+    "_pkce_verifier":             None,
     "seen_notified":              set(),
     "selected_user_id":           None,
     "selected_car_id":            None,
@@ -74,7 +60,7 @@ for key, value in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = value
 
-# ── Restore session on every rerun ──
+# ── Restore session ──
 if st.session_state.get("access_token") and \
         st.session_state.get("refresh_token"):
     try:
@@ -93,8 +79,27 @@ def load_model():
 model = load_model()
 
 # ══════════════════════════════
+# HANDLE GOOGLE ERROR RETURN
+# ══════════════════════════════
+if _has_error and not st.session_state.authenticated:
+    err      = _params.get("error", "unknown")
+    err_desc = _params.get("error_description", "")
+    st.query_params.clear()
+    st.markdown("""
+    <style>
+    [data-testid="stSidebar"] { display:none !important; }
+    [data-testid="collapsedControl"] { display:none !important; }
+    </style>
+    """, unsafe_allow_html=True)
+    st.error(f"Google Sign-In error: **{err}**. {err_desc}")
+    if st.button("← Back to Login"):
+        st.session_state.google_oauth_info = None
+        st.rerun()
+    st.stop()
+
+# ══════════════════════════════
 # GOOGLE OAUTH CALLBACK
-# Process ?code= or ?google_at= BEFORE rendering anything
+# Process before any rendering
 # ══════════════════════════════
 if not st.session_state.authenticated and (_has_code or _has_google_at):
     with st.spinner("Completing Google Sign-In..."):
@@ -102,14 +107,19 @@ if not st.session_state.authenticated and (_has_code or _has_google_at):
     if success:
         st.rerun()
     else:
-        # Show what params we received for debugging
-        st.error("Google Sign-In callback failed.")
-        with st.expander("Debug info"):
-            st.write("Query params received:", dict(_params))
-            st.write("Has code:", _has_code)
-            st.write("Has google_at:", _has_google_at)
-        if st.button("Try again"):
+        st.markdown("""
+        <style>
+        [data-testid="stSidebar"] { display:none !important; }
+        </style>
+        """, unsafe_allow_html=True)
+        st.error(
+            "Google Sign-In could not be completed. "
+            "Please try again."
+        )
+        if st.button("← Back to Login"):
             st.query_params.clear()
+            st.session_state.google_oauth_info = None
+            st.session_state._pkce_verifier    = None
             st.rerun()
         st.stop()
 
@@ -119,8 +129,8 @@ if not st.session_state.authenticated and (_has_code or _has_google_at):
 if not st.session_state.authenticated:
     st.markdown("""
     <style>
-    [data-testid="stSidebar"] { display: none !important; }
-    [data-testid="collapsedControl"] { display: none !important; }
+    [data-testid="stSidebar"]        { display:none !important; }
+    [data-testid="collapsedControl"] { display:none !important; }
     </style>
     """, unsafe_allow_html=True)
     show_login_page(supabase)
@@ -162,10 +172,7 @@ else:
             "Navigation Menu", menu, label_visibility="collapsed"
         )
 
-        st.markdown(
-            '<hr style="border-color:#1f2a36;">',
-            unsafe_allow_html=True
-        )
+        st.markdown('<hr style="border-color:#1f2a36;">', unsafe_allow_html=True)
 
         if st.session_state.role == "user":
             unread = get_unread_reply_count(
@@ -174,9 +181,8 @@ else:
             display_name = st.session_state.user["email"]
             badge = (
                 f' <span style="background:#ef4444;color:white;'
-                f'border-radius:50%;padding:1px 7px;'
-                f'font-size:11px;">{unread}</span>'
-                if unread > 0 else ""
+                f'border-radius:50%;padding:1px 7px;font-size:11px;">'
+                f'{unread}</span>' if unread > 0 else ""
             )
             st.markdown(
                 f'<p style="color:#F0F4F8;">👤 <b>{display_name}</b>'
@@ -199,22 +205,15 @@ else:
             f'Role: <b>{role_label}</b></p>',
             unsafe_allow_html=True
         )
-        st.markdown(
-            '<hr style="border-color:#1f2a36;">',
-            unsafe_allow_html=True
-        )
-
+        st.markdown('<hr style="border-color:#1f2a36;">', unsafe_allow_html=True)
         if st.button("Logout", use_container_width=True):
             logout(supabase)
 
-    # ── Page routing ──
     if page == "About":
         show_about_page()
     elif page == "Car Marketplace":
-        st.markdown(
-            '<div class="page-title">Car Marketplace</div>',
-            unsafe_allow_html=True
-        )
+        st.markdown('<div class="page-title">Car Marketplace</div>',
+                    unsafe_allow_html=True)
         st.markdown(
             '<div class="page-subtitle">Browse verified vehicle listings '
             'with AI-powered valuations</div>',
@@ -222,10 +221,8 @@ else:
         )
         show_car_marketplace(supabase)
     elif page == "Car Management":
-        st.markdown(
-            '<div class="page-title">Car Management</div>',
-            unsafe_allow_html=True
-        )
+        st.markdown('<div class="page-title">Car Management</div>',
+                    unsafe_allow_html=True)
         st.markdown(
             '<div class="page-subtitle">Add, edit and manage '
             'car listings</div>',
@@ -233,10 +230,8 @@ else:
         )
         show_car_management(supabase)
     else:
-        st.markdown(
-            '<div class="page-title">AI Loan Risk Platform</div>',
-            unsafe_allow_html=True
-        )
+        st.markdown('<div class="page-title">AI Loan Risk Platform</div>',
+                    unsafe_allow_html=True)
         st.markdown(
             '<div class="page-subtitle">Real-time credit risk evaluation '
             'powered by machine learning</div>',
